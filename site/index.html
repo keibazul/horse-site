@@ -46,6 +46,11 @@ a{color:var(--accent)}
 .days{display:flex;gap:6px;flex-wrap:wrap}
 .days button{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:6px 12px;cursor:pointer;font-weight:600;font-size:14px}
 .days button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.days select{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:6px 30px 6px 10px;font-weight:600;font-size:14px;max-width:100%;cursor:pointer}
+.days select.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.daystat{font-size:13.5px;color:var(--muted)}
+.daystat b{color:var(--ink);font-family:var(--f-data);font-weight:600}
+.overall{color:var(--ink)}
 
 .races{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin;margin:0 -2px;padding-inline:2px}
 .races button{flex:0 0 auto;display:grid;justify-items:center;gap:0;min-width:58px;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:6px 8px 5px;cursor:pointer}
@@ -144,6 +149,7 @@ td.f small{display:block;color:var(--muted);font-size:11px;font-weight:400}
   </header>
 
   <nav class="races" id="races" aria-label="경주 번호"></nav>
+  <p class="daystat" id="dayStat" hidden></p>
 
   <main id="main" class="page" style="gap:16px">
     <section class="racecard" id="racecard" hidden>
@@ -176,6 +182,7 @@ td.f small{display:block;color:var(--muted);font-size:11px;font-weight:400}
   </main>
 
   <footer class="about">
+    <p class="overall" id="overall" hidden></p>
     <h2>읽는 법</h2>
     <ul>
       <li><b>우승 확률</b>은 경주 전 정보만 쓴 모델(v5)의 예측입니다. 경주 직전 KRA 앱의 단승 배당을 모든 말에 넣으면 시장 확률과 섞은 <b>결합 확률</b>로 바뀝니다. 과거 18년 검증에서 결합 확률이 배당만 볼 때보다 조금 더 정확했습니다.</li>
@@ -219,15 +226,40 @@ async function boot(){
   const days = INDEX.days || [];
   if (!days.length){ $("field").innerHTML = `<p class="empty">아직 출전표가 나온 경주일이 없습니다. 출전표는 보통 경주 이틀 전(목요일)에 공개됩니다.</p>`; return; }
   const q = new URLSearchParams(location.search);
-  $("days").innerHTML = days.map(d => `<button type="button" data-d="${d.date}">${dLabel(d.date)}</button>`).join("");
+  // 앞으로 열릴 날 + 가장 최근 지난 경주일 2개는 버튼, 나머지 지난 날은 월별 목록
+  const past = days.filter(d => d.past), next = days.filter(d => !d.past);
+  const quick = [...past.slice(-2), ...next];
+  const hitTxt = d => d.hits ? ` · 1순위 ${d.hits.model}/${d.hits.races}` : "";
+  let opts = `<option value="">지난 경주일 ${past.length}일</option>`, month = "";
+  for (const d of [...past].reverse()){
+    const m = `${d.date.slice(0,4)}년 ${+d.date.slice(4,6)}월`;
+    if (m !== month){ opts += `${month ? "</optgroup>" : ""}<optgroup label="${m}">`; month = m; }
+    opts += `<option value="${d.date}">${dLabel(d.date)}${hitTxt(d)}</option>`;
+  }
+  if (month) opts += "</optgroup>";
+  $("days").innerHTML = quick.map(d => `<button type="button" data-d="${d.date}">${dLabel(d.date)}</button>`).join("") +
+    (past.length > 2 ? `<select id="pastSel" aria-label="지난 경주일 고르기">${opts}</select>` : "");
   $("days").onclick = e => { const b = e.target.closest("button"); if (b) openDay(b.dataset.d); };
+  $("pastSel")?.addEventListener("change", e => { if (e.target.value) openDay(e.target.value); });
+  // 지난 경주일 전체 성적
+  const tot = past.filter(d => d.hits).reduce((a, d) => ({r: a.r + d.hits.races, m: a.m + d.hits.model, c: a.c + d.hits.comb, k: a.k + (d.hits.mkt || 0), n: a.n + 1}), {r:0,m:0,c:0,k:0,n:0});
+  if (tot.r){
+    const pc = x => (x / tot.r * 100).toFixed(1) + "%";
+    $("overall").hidden = false;
+    $("overall").innerHTML = `지난 경주일 ${tot.n}일 ${tot.r}경주에서 1순위 말이 이긴 비율: 모델 <b>${pc(tot.m)}</b> · 확정 배당과 결합 <b>${pc(tot.c)}</b> · 배당 1순위(인기마) <b>${pc(tot.k)}</b>. 지난 경주일 예측은 모두 그날보다 앞에서 학습을 끝낸 모델로 만들었습니다.`;
+  }
   const want = q.get("date"), first = days.find(d => d.date === want) || days.find(d => !d.past) || days[days.length-1];
   await openDay(first.date, +q.get("race") || null);
 }
 
 async function openDay(date, race){
   DAY = INDEX.days.find(d => d.date === date);
-  [...$("days").children].forEach(b => b.setAttribute("aria-pressed", b.dataset.d === date));
+  [...$("days").querySelectorAll("button")].forEach(b => b.setAttribute("aria-pressed", b.dataset.d === date));
+  const sel = $("pastSel");
+  if (sel){ const inQuick = !!$("days").querySelector(`button[data-d="${date}"]`); sel.value = inQuick ? "" : date; sel.classList.toggle("on", !inQuick); }
+  const st = $("dayStat"), h = DAY.hits;
+  st.hidden = !h;
+  if (h) st.innerHTML = `이날 ${h.races}경주 중 1순위 말이 이긴 경주: 모델 <b>${h.model}</b> · 확정 배당과 결합 <b>${h.comb}</b> · 배당 1순위 <b>${h.mkt ?? "-"}</b>`;
   ENT = null; PRED = null;
   try { ENT = await getJSON(`data/${DAY.entries}`); } catch { $("field").innerHTML = `<p class="empty">출전표 파일을 열지 못했습니다.</p>`; return; }
   if (DAY.pred) { try { PRED = await getJSON(`data/${DAY.pred}`); } catch { PRED = null; } }

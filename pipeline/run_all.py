@@ -61,9 +61,9 @@ def load_exporter():
 
 
 def day_stats(pred: dict) -> dict | None:
-    """끝난 경주일: 모델 1순위 / 결합(확정 배당) 1순위가 실제로 이긴 경주 수"""
+    """끝난 경주일: 모델 1순위 / 결합(확정 배당) 1순위 / 배당 1순위(인기마)가 실제로 이긴 경주 수"""
     import math
-    n = hm = hc = 0
+    n = hm = hc = hk = 0
     for r in pred.get("races", {}).values():
         res, p = r.get("result"), r.get("p") or {}
         if not res or not p:
@@ -79,7 +79,8 @@ def day_stats(pred: dict) -> dict | None:
             s = sum(1 / od[k] for k in live)
             sc = {k: ALPHA * math.log(max(v, 1e-9)) + BETA * math.log((1 / od[k]) / s) for k, v in live.items()}
             hc += max(sc, key=sc.get) == str(res[0])
-    return {"races": n, "model": hm, "comb": hc} if n else None
+            hk += min(live, key=lambda k: od[k]) == str(res[0])
+    return {"races": n, "model": hm, "comb": hc, "mkt": hk} if n else None
 
 
 def write_index(today: dt.date, connected: bool, model_name: str | None = None) -> None:
