@@ -1,0 +1,33 @@
+name: probe
+on:
+  workflow_dispatch:
+  push:
+    paths: ['.github/workflows/probe.yml', 'pipeline/kra_api.py', 'pipeline/fetch_entries.py']
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.13' }
+      - name: 출전표 API 확인
+        env:
+          KRA_API_KEY: ${{ secrets.KRA_API_KEY }}
+        run: |
+          python pipeline/fetch_entries.py --date 20261101
+          python - <<'EOF'
+          import json; d = json.load(open("site/data/entries/20261101.json"))
+          r = d["rows"][0]; print({k: r[k] for k in list(r)[:60]})
+          EOF
+          python pipeline/fetch_entries.py --days 8
+          python - <<'EOF'
+          import sys; sys.path.insert(0, "pipeline"); import kra_api, json
+          for p, prm in [("API214_1/RaceDetailResult_1", {"meet": 1, "rc_date": "20261101"}),
+                         ("API160_1/integratedInfo_1", {"meet": 1, "rc_date": "20261101", "pool": "단승식"}),
+                         ("API299/Race_Result_total", {"meet": 1, "rc_date": "20261101"})]:
+              try:
+                  d = kra_api.get(p, {**prm, "pageNo": 1, "numOfRows": 2}); it = kra_api.items(d)
+                  print(p, "총", kra_api.total_count(d), "→", (sorted(it[0].keys()) if it else "없음"))
+              except Exception as e:
+                  print(p, "실패", e)
+          EOF
