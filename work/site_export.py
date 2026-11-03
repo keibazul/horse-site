@@ -86,12 +86,21 @@ def export(date: str, rows: list[dict], data_dir: Path) -> dict:
             for rno in sorted(races, key=int):
                 name = f"sim_{date}_R{rno}.json"
                 argv = sys.argv
-                sys.argv = ["simulate_race.py", "--date", date, "--race", rno, "--entries-csv", csv, "--out", str(sim_dir / name)]
+                if "result" in races[rno]:
+                    # 끝난 경주: --backtest 로 실제 통과 순위·시간을 넣어 '실제 경주' 보기를 켬
+                    # (그날 이전 기록만 쓰고, 우승 확률은 확정 단승 배당과 결합)
+                    fv.entrant_features = orig[3]
+                    sys.argv = ["simulate_race.py", "--date", date, "--race", rno, "--backtest", "--out", str(sim_dir / name)]
+                else:
+                    fv.entrant_features = cached_features
+                    sys.argv = ["simulate_race.py", "--date", date, "--race", rno, "--entries-csv", csv, "--out", str(sim_dir / name)]
                 buf = io.StringIO()
                 try:
                     with contextlib.redirect_stdout(buf):
                         sr.main()
                     races[rno]["sim"] = name
+                    if "result" in races[rno]:
+                        races[rno]["simActual"] = True
                 except SystemExit as e:
                     print(f"  {rno}경주 시뮬레이션 건너뜀: {e}")
                 except Exception as e:  # 시뮬레이션이 실패해도 확률은 올림
@@ -103,6 +112,7 @@ def export(date: str, rows: list[dict], data_dir: Path) -> dict:
         print(f"  시뮬레이션 준비 실패: {type(e).__name__}: {e}")
     print(f"  시뮬레이션 {sum('sim' in r for r in races.values())}/{len(races)}개 경주", flush=True)
 
-    return {"races": races, "model": "v5", "trained_through": str(art.get("trained_through")),
+    done = any("result" in r for r in races.values())
+    return {"races": races, "model": "v5", "backtestDone": done, "trained_through": str(art.get("trained_through")),
             "history_through": str(hist["date"].max()),
             "notes": {"toolsGuessed": info.get("tools_guessed"), "birthdayGuessed": info.get("birthday_guessed")}}

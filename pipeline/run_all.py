@@ -77,8 +77,8 @@ def main() -> int:
         f = DATA / "pred" / f"{d}.json"
         if not f.exists():
             return True
-        races = json.loads(f.read_text(encoding="utf-8")).get("races", {})
-        return not any("result" in r for r in races.values())
+        # 결과가 들어오면 실제 구간 기록을 넣은 시뮬레이션(backtest)으로 한 번 다시 만든다
+        return not json.loads(f.read_text(encoding="utf-8")).get("backtestDone")
     upcoming += [d for d in past_keep if needs_result(d)]
 
     exporter = load_exporter()
