@@ -5,29 +5,27 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: 접속 테스트 2
+      - name: 접속 테스트 3
         env:
           KRA_API_KEY: ${{ secrets.KRA_API_KEY }}
         run: |
-          echo "== 이 서버 위치 =="
-          curl -s https://ipinfo.io/country || true
           python3 - <<'EOF'
-          import os, urllib.request, urllib.error
-          key = os.environ["KRA_API_KEY"]
-          url = f"https://apis.data.go.kr/B551015/API214_1/RaceDetailResult_1?serviceKey={key}&pageNo=1&numOfRows=3&meet=1&rc_date=20261031&_type=json"
-          heads = {
-              "A 기본(urllib)": {},
-              "B 브라우저처럼": {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36", "Accept": "application/json,*/*"},
-              "C requests처럼": {"User-Agent": "python-requests/2.32.3", "Accept": "*/*"},
-          }
-          for name, h in heads.items():
+          import os, urllib.request, urllib.error, urllib.parse
+          raw = os.environ.get("KRA_API_KEY", "")
+          key = raw.strip().strip('"').strip("'")
+          print(f"키 길이 {len(raw)} (정리 후 {len(key)}), 앞뒤 빈칸·줄바꿈 {'있음' if raw != raw.strip() else '없음'}, "
+                f"% 포함 {'예' if '%' in key else '아니오'}, + 포함 {'예' if '+' in key else '아니오'}, / 포함 {'예' if '/' in key else '아니오'}, = 포함 {'예' if '=' in key else '아니오'}")
+          base = "https://apis.data.go.kr/B551015/API214_1/RaceDetailResult_1?pageNo=1&numOfRows=3&meet=1&rc_date=20261031&_type=json&serviceKey="
+          tries = {"그대로": key, "변환해서(Decoding 키용)": urllib.parse.quote(key, safe=""),
+                   "되돌려서 다시 변환": urllib.parse.quote(urllib.parse.unquote(key), safe="")}
+          for name, k in tries.items():
               try:
-                  with urllib.request.urlopen(urllib.request.Request(url, headers=h), timeout=30) as r:
-                      print(f"{name}: 성공 HTTP {r.status} → {r.read(150).decode('utf-8','replace')}")
+                  with urllib.request.urlopen(urllib.request.Request(base + k, headers={"User-Agent": "Mozilla/5.0"}), timeout=30) as r:
+                      print(f"{name}: 성공 HTTP {r.status} → {r.read(120).decode('utf-8','replace')}")
               except urllib.error.HTTPError as e:
-                  print(f"{name}: HTTP {e.code} → 응답 내용: {e.read(300).decode('utf-8','replace')!r}")
+                  msg = e.read(400).decode("utf-8", "replace")
+                  code = "30(등록 안 된 키)" if "NOT_REGISTERED" in msg else ("22(한도 초과)" if "LIMITED" in msg else msg[:120])
+                  print(f"{name}: HTTP {e.code} → {code}")
               except Exception as e:
-                  print(f"{name}: 실패 → {type(e).__name__}: {e}")
+                  print(f"{name}: 실패 → {type(e).__name__}")
           EOF
-          echo "== curl 로 접속 =="
-          curl -s -o /dev/null -w "curl HTTP %{http_code}\n" "https://apis.data.go.kr/B551015/API214_1/RaceDetailResult_1?serviceKey=${KRA_API_KEY}&pageNo=1&numOfRows=3&meet=1&rc_date=20261031&_type=json"
