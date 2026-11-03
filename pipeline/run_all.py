@@ -60,7 +60,61 @@ def load_exporter():
     return mod
 
 
+def day_stats(pred: dict) -> dict | None:
+    """끝난 경주일: 모델 1순위 / 결합(확정 배당) 1순위가 실제로 이긴 경주 수"""
+    import math
+    n = hm = hc = 0
+    for r in pred.get("races", {}).values():
+        res, p = r.get("result"), r.get("p") or {}
+        if not res or not p:
+            continue
+        out = set(map(str, r.get("out", [])))
+        live = {k: v for k, v in p.items() if k not in out}
+        if not live:
+            continue
+        n += 1
+        hm += max(live, key=live.get) == str(res[0])
+        od = r.get("odds") or {}
+        if all(k in od and od[k] > 1 for k in live):
+            s = sum(1 / od[k] for k in live)
+            sc = {k: ALPHA * math.log(max(v, 1e-9)) + BETA * math.log((1 / od[k]) / s) for k, v in live.items()}
+            hc += max(sc, key=sc.get) == str(res[0])
+    return {"races": n, "model": hm, "comb": hc} if n else None
+
+
+def write_index(today: dt.date, connected: bool, model_name: str | None = None) -> None:
+    """사이트 목차: 예측이 있는 지난 경주일 전부 + 앞으로 열릴 경주일"""
+    t = today.strftime("%Y%m%d")
+    ent = sorted(f.stem for f in (DATA / "entries").glob("*.json"))
+    days = []
+    for d in ent:
+        past = d < t
+        pf = DATA / "pred" / f"{d}.json"
+        if past and not pf.exists():
+            continue
+        item = {"date": d, "entries": f"entries/{d}.json", "past": past}
+        if pf.exists():
+            item["pred"] = f"pred/{d}.json"
+            if past:
+                st = day_stats(json.loads(pf.read_text(encoding="utf-8")))
+                if st:
+                    item["hits"] = st
+        days.append(item)
+    idx = {
+        "updated": dt.datetime.now(KST).strftime("%Y-%m-%dT%H:%M"),
+        "alpha": ALPHA, "beta": BETA,
+        "model": {"connected": connected, "name": model_name or ("v5" if connected else None)},
+        "days": days,
+    }
+    (DATA / "index.json").write_text(json.dumps(idx, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    past = [x for x in days if x["past"]]
+    log(f"\n목차: 지난 경주일 {len(past)}일, 앞으로 {len(days) - len(past)}일")
+
+
 def main() -> int:
+    if "--index-only" in sys.argv:
+        write_index(dt.datetime.now(KST).date(), (WORK / "site_export.py").exists())
+        return 0
     today = dt.datetime.now(KST).date()
     step("출전표 수집", [sys.executable, str(ROOT / "pipeline" / "fetch_entries.py"), "--days", "8"], ROOT)
     # 지난 주말 출전표가 없으면 받아 둠 (다음 출전표가 나오기 전까지 사이트에 보여 줄 것)
@@ -106,23 +160,7 @@ def main() -> int:
     elif not exporter:
         log("work/site_export.py 가 없어 예측은 건너뜁니다 (출전표만 사이트에 표시).")
 
-    # 목차
-    keep = [f.stem for f in ent_files if f.stem >= today.strftime("%Y%m%d")]
-    past = [f.stem for f in ent_files if f.stem < today.strftime("%Y%m%d")][-KEEP_PAST_DAYS:]
-    days = []
-    for d in past + keep:
-        item = {"date": d, "entries": f"entries/{d}.json", "past": d in past}
-        if (DATA / "pred" / f"{d}.json").exists():
-            item["pred"] = f"pred/{d}.json"
-        days.append(item)
-    idx = {
-        "updated": dt.datetime.now(KST).strftime("%Y-%m-%dT%H:%M"),
-        "alpha": ALPHA, "beta": BETA,
-        "model": {"connected": exporter is not None, "name": model_name or ("v5" if exporter else None)},
-        "days": days,
-    }
-    (DATA / "index.json").write_text(json.dumps(idx, ensure_ascii=False, indent=1), encoding="utf-8")
-    log(f"\n목차: {[d['date'] for d in days]}")
+    write_index(today, exporter is not None, model_name)
     return 0
 
 

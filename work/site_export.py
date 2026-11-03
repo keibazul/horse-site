@@ -6,6 +6,9 @@ export(date, entries_rows, data_dir)
   - 경주마다 simulate_race.py 로 전개 시뮬레이션 파일(data_dir/sim/sim_날짜_R경주.json)을 만듦
   - 반환: {"races": {"1": {"p": {"3": 0.21, ...}, "n": {"3": 5, ...}, "sim": "sim_..json"}}, "model": "v5", ...}
 배당은 사이트에서 사용자가 넣으면 브라우저에서 결합하므로 여기서는 모델 확률만 만든다.
+
+모델 고르기: 경주일이 기본 모델(winner_history)의 학습 기간 안이면, 그보다 앞까지만 학습한
+winner_history_bt/ 모델을 써서 지난 경주도 '경주 전에 낸 예측'과 같은 조건으로 만든다.
 """
 from __future__ import annotations
 
@@ -24,7 +27,8 @@ import features_v5 as fv
 import predict_race as pr
 import train_sectional_model as tsm
 
-HISTORY, DETAILS, DETAILS_DIR, MODELS = "merged.csv", "race_details_all.csv.gz", "race_details", "winner_history"
+HISTORY, DETAILS, DETAILS_DIR = "merged.csv", "race_details_all.csv.gz", "race_details"
+MODEL_DIRS = ["winner_history", "winner_history_bt"]     # 최신 모델 → 과거 검증용 모델 순서
 _cache: dict = {}
 
 
@@ -33,13 +37,28 @@ def _load():
         t = time.time()
         _cache["hist"] = fv.load_history(HISTORY)
         _cache["rd"] = fv.load_details(DETAILS, DETAILS_DIR)
-        _cache["art"] = joblib.load(os.path.join(MODELS, "win_model_v5.joblib"))
         print(f"  기록 불러오기 {time.time() - t:.0f}초 (경주 기록 ~{_cache['hist']['date'].max()}, 경주성적 ~{_cache['rd']['rcDate'].max()})", flush=True)
-    return _cache["hist"], _cache["rd"], _cache["art"]
+    return _cache["hist"], _cache["rd"]
+
+
+def _art(d: str):
+    if d not in _cache:
+        _cache[d] = joblib.load(os.path.join(d, "win_model_v5.joblib"))
+    return _cache[d]
+
+
+def pick_model(date: str) -> str:
+    """학습 기간이 그 경주일보다 앞에서 끝나는 모델 중 가장 최근 것 (없으면 기본 모델)"""
+    for d in MODEL_DIRS:
+        if os.path.exists(os.path.join(d, "win_model_v5.joblib")) and str(_art(d).get("trained_through")) < date:
+            return d
+    return MODEL_DIRS[0]
 
 
 def export(date: str, rows: list[dict], data_dir: Path) -> dict:
-    hist, rd, art = _load()
+    hist, rd = _load()
+    mdir = pick_model(date)
+    art = _art(mdir)
     raw = pd.DataFrame(rows)
     entries = pr.normalize_entries(raw)
     t = time.time()
@@ -101,12 +120,10 @@ def export(date: str, rows: list[dict], data_dir: Path) -> dict:
                 argv = sys.argv
                 if "result" in races[rno]:
                     # 끝난 경주: --backtest 로 실제 통과 순위·시간을 넣어 '실제 경주' 보기를 켬
-                    # (그날 이전 기록만 쓰고, 우승 확률은 확정 단승 배당과 결합)
-                    fv.entrant_features = orig[3]
-                    sys.argv = ["simulate_race.py", "--date", date, "--race", rno, "--backtest", "--out", str(sim_dir / name)]
+                    # (특징은 위에서 그날 이전 기록으로 계산한 것을 그대로 쓰고, 우승 확률은 확정 단승 배당과 결합)
+                    sys.argv = ["simulate_race.py", "--date", date, "--race", rno, "--backtest", "--models-dir", mdir, "--out", str(sim_dir / name)]
                 else:
-                    fv.entrant_features = cached_features
-                    sys.argv = ["simulate_race.py", "--date", date, "--race", rno, "--entries-csv", csv, "--out", str(sim_dir / name)]
+                    sys.argv = ["simulate_race.py", "--date", date, "--race", rno, "--entries-csv", csv, "--models-dir", mdir, "--out", str(sim_dir / name)]
                 buf = io.StringIO()
                 try:
                     with contextlib.redirect_stdout(buf):
@@ -126,6 +143,6 @@ def export(date: str, rows: list[dict], data_dir: Path) -> dict:
     print(f"  시뮬레이션 {sum('sim' in r for r in races.values())}/{len(races)}개 경주", flush=True)
 
     done = any("result" in r for r in races.values())
-    return {"races": races, "model": "v5", "v": 2, "backtestDone": done, "trained_through": str(art.get("trained_through")),
+    return {"races": races, "model": "v5" + ("" if mdir == MODEL_DIRS[0] else " (검증용)"), "modelDir": mdir, "v": 2, "backtestDone": done, "trained_through": str(art.get("trained_through")),
             "history_through": str(hist["date"].max()),
             "notes": {"toolsGuessed": info.get("tools_guessed"), "birthdayGuessed": info.get("birthday_guessed")}}

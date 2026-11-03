@@ -1,0 +1,125 @@
+name: backfill
+# 지난 1년 경주일을 사이트에 채우기:
+#   1) 2025-11-01 이전 기록으로만 검증용 모델 학습 (work/winner_history_bt/)
+#   2) 2025-11-01 ~ 2026-10-31 경주일을 6대로 나눠 예측·시뮬레이션
+#   3) 결과를 모아 커밋하고 사이트 배포
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/backfill.yml', 'work/backfill.py']
+
+env:
+  BT_UNTIL: '20251101'
+  BF_START: '20251101'
+  BF_END: '20261031'
+  PYTHONUTF8: '1'
+
+jobs:
+  train:
+    strategy:
+      matrix:
+        model: [win, sect]
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.13' }
+      - run: pip install -r requirements.txt
+      - name: 이미 있으면 건너뛰기
+        id: have
+        run: |
+          f=work/winner_history_bt/$([ "${{ matrix.model }}" = win ] && echo win_model_v5 || echo sect_model_v1).joblib
+          if [ -f "$f" ]; then echo "skip=1" >> $GITHUB_OUTPUT; fi
+      - name: 학습 (${{ env.BT_UNTIL }} 이전 기록만)
+        if: steps.have.outputs.skip != '1'
+        working-directory: work
+        run: |
+          python update_history.py --no-fetch
+          if [ "${{ matrix.model }}" = win ]; then
+            python train_win_model_v5.py --until $BT_UNTIL --out winner_history_bt/win_model_v5.joblib
+          else
+            python train_sectional_model.py --until $BT_UNTIL --out winner_history_bt/sect_model_v1.joblib
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: model-${{ matrix.model }}
+          path: work/winner_history_bt/
+          if-no-files-found: error
+
+  backfill:
+    needs: train
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [0, 1, 2, 3, 4, 5]
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.13' }
+      - run: pip install -r requirements.txt
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: model-*
+          path: work/winner_history_bt/
+          merge-multiple: true
+      - name: 지난 경주일 예측 (몫 ${{ matrix.part }})
+        working-directory: work
+        run: |
+          python update_history.py --no-fetch
+          python backfill.py --start $BF_START --end $BF_END --part ${{ matrix.part }} --parts 6
+      - uses: actions/upload-artifact@v4
+        with:
+          name: data-${{ matrix.part }}
+          path: |
+            site/data/entries/
+            site/data/pred/
+            site/data/sim/
+
+  finish:
+    needs: backfill
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    concurrency:
+      group: update-site
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.13' }
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: data-*
+          path: site/data/
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: model-*
+          path: work/winner_history_bt/
+          merge-multiple: true
+      - name: 목차 만들기
+        run: python pipeline/run_all.py --index-only
+      - name: 커밋
+        run: |
+          git config user.name "horse-site bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A site/data work/winner_history_bt
+          if git diff --cached --quiet; then echo "바뀐 것 없음"; else
+            git commit -q -m "지난 1년 경주일 채우기 ($BF_START~$BF_END, 검증용 모델 $BT_UNTIL 이전 학습)"
+            git pull --rebase -X theirs -q origin main && git push -q origin HEAD:main
+          fi
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: site }
+      - id: deploy
+        uses: actions/deploy-pages@v4
