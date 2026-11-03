@@ -1,0 +1,32 @@
+name: api-test
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 공공데이터포털 접속 테스트
+        env:
+          KRA_API_KEY: ${{ secrets.KRA_API_KEY }}
+        run: |
+          python3 - <<'EOF'
+          import os, json, time, urllib.request
+          key = os.environ["KRA_API_KEY"]
+          tests = {
+              "출전표(API26_2)": f"https://apis.data.go.kr/B551015/API26_2/entrySheet_2?serviceKey={key}&pageNo=1&numOfRows=5&meet=1&rc_date=20261101&_type=json",
+              "경주성적(API214_1)": f"https://apis.data.go.kr/B551015/API214_1/RaceDetailResult_1?serviceKey={key}&pageNo=1&numOfRows=5&meet=1&rc_date=20261031&_type=json",
+          }
+          for name, url in tests.items():
+              t = time.time()
+              try:
+                  with urllib.request.urlopen(url, timeout=30) as r:
+                      body = r.read().decode("utf-8", "replace")
+                  try:
+                      resp = json.loads(body).get("response", {})
+                      h, b = resp.get("header", {}), resp.get("body", {})
+                      print(f"{name}: 접속 성공, resultCode={h.get('resultCode')} {h.get('resultMsg')}, totalCount={b.get('totalCount')} ({time.time()-t:.1f}초)")
+                  except ValueError:
+                      print(f"{name}: 응답은 왔지만 JSON이 아님 → {body[:200]}")
+              except Exception as e:
+                  print(f"{name}: 접속 실패 → {type(e).__name__}: {e}")
+          EOF
