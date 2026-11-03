@@ -1,0 +1,11 @@
+__pycache__/
+work/merged.csv
+work/merged.json
+work/merged.xlsx
+work/race_data/
+work/predictions_*.csv
+work/bets_predictions_*.csv
+work/odds_input_*.csv
+work/sim_*.json
+work/race_details/daily_usage.json
+work/kra_race_collector.py

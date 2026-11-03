@@ -42,14 +42,11 @@ def step(name: str, cmd: list[str], cwd: Path) -> bool:
     return True
 
 
-def refresh_history() -> None:
-    """work/ 의 기존 수집 스크립트로 경주 기록을 최신으로 (있을 때만)."""
-    py = sys.executable
-    for script in ("kra_race_collector.py", "merge_to_excel.py", "fetch_race_details.py"):
-        if (WORK / script).exists():
-            if not step(script, [py, script], WORK):
-                log("  기록 갱신이 중간에 멈췄습니다. 예측은 있는 기록으로 계속합니다.")
-                return
+def refresh_history(fetch: bool = True) -> None:
+    """work/update_history.py 로 경주 기록(merged.csv, race_details/rd_*.csv)을 최신으로."""
+    cmd = [sys.executable, "update_history.py"] + ([] if fetch else ["--no-fetch"])
+    if not step("경주 기록 갱신", cmd, WORK):
+        log("  기록 갱신이 중간에 멈췄습니다. 예측은 있는 기록으로 계속합니다.")
 
 
 def load_exporter():
@@ -74,12 +71,21 @@ def main() -> int:
 
     ent_files = sorted((DATA / "entries").glob("*.json"))
     upcoming = [f.stem for f in ent_files if f.stem >= today.strftime("%Y%m%d")]
+    # 사이트에 남겨 두는 지난 경주일도 예측이 없으면 만든다 (그날 이전 기록만 쓰므로 사전 예측과 같음)
+    past_keep = [f.stem for f in ent_files if f.stem < today.strftime("%Y%m%d")][-KEEP_PAST_DAYS:]
+    def needs_result(d):
+        f = DATA / "pred" / f"{d}.json"
+        if not f.exists():
+            return True
+        races = json.loads(f.read_text(encoding="utf-8")).get("races", {})
+        return not any("result" in r for r in races.values())
+    upcoming += [d for d in past_keep if needs_result(d)]
 
     exporter = load_exporter()
     model_name = None
+    if exporter:
+        refresh_history(fetch=os.environ.get("SKIP_HISTORY") != "1")
     if exporter and upcoming:
-        if os.environ.get("SKIP_HISTORY") != "1":
-            refresh_history()
         os.chdir(WORK)
         (DATA / "pred").mkdir(parents=True, exist_ok=True)
         (DATA / "sim").mkdir(parents=True, exist_ok=True)

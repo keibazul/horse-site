@@ -61,6 +61,7 @@ a{color:var(--accent)}
 .rc-main h2{font-size:24px;font-weight:700;letter-spacing:-.01em}
 .conds{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 0;padding:0;list-style:none}
 .conds li{font-size:13px;border:1px solid var(--line);background:var(--panel);padding:1px 9px;border-radius:999px}
+.conds li.res{display:inline-flex;align-items:center;gap:4px;border-color:var(--ink);font-weight:600}
 .simlink{display:inline-flex;align-items:center;gap:8px;background:var(--sim);color:var(--sim-ink);text-decoration:none;font-weight:600;font-size:14px;padding:8px 14px;border-radius:6px}
 .simlink svg{width:16px;height:16px;fill:currentColor}
 
@@ -178,7 +179,8 @@ td.f small{display:block;color:var(--muted);font-size:11px;font-weight:400}
       <li><b>우승 확률</b>은 경주 전 정보만 쓴 모델(v5)의 예측입니다. 경주 직전 KRA 앱의 단승 배당을 모든 말에 넣으면 시장 확률과 섞은 <b>결합 확률</b>로 바뀝니다. 과거 18년 검증에서 결합 확률이 배당만 볼 때보다 조금 더 정확했습니다.</li>
       <li><b>적정 배당</b>은 확률로 본 손익분기 배당입니다. 실제 배당이 이보다 높아야 기대값이 1을 넘습니다. 단승 환급률이 약 80%라서 대부분의 말은 실제 배당이 적정 배당보다 낮습니다.</li>
       <li>승식 조합 확률은 우승 확률에서 2·3착 확률을 계산하는 하빌 방식(2착 0.8, 3착 0.7 보정)으로 만듭니다. 연승식은 출전 7두 이하면 2착 안, 8두 이상이면 3착 안입니다.</li>
-      <li>출전 취소된 말은 번호를 눌러 빼면 나머지 말로 다시 계산합니다.</li>
+      <li>출전 취소된 말은 번호를 눌러 빼면 나머지 말로 다시 계산합니다. '첫 출전' 말은 기록이 없어 확률을 믿기 어렵습니다.</li>
+      <li>지난 경주일은 그날 이전 기록만으로 낸 예측과 실제 1~3착을 함께 보여 줍니다.</li>
       <li class="warn">2009~2026년 확정배당 백테스트에서 꾸준히 100%를 넘긴 승식·전략은 없었습니다. 이 사이트는 경주를 이해하기 위한 도구이며 수익을 보장하지 않습니다.</li>
     </ul>
   </footer>
@@ -254,6 +256,7 @@ function openRace(n){
   $("conds").innerHTML = [r0.rcDist && `${r0.rcDist}m`, r0.rank, r0.budam, r0.ageCond, r0.sexCond, `${rows.length}두`, stTime(r0) && `출발 ${stTime(r0)}`]
     .filter(Boolean).map(t => `<li>${esc(t)}</li>`).join("");
   const pr = PRED?.races?.[n];
+  if (pr?.result?.length) $("conds").insertAdjacentHTML("beforeend", `<li class="res">실제 결과 ${pr.result.map(x => chip(x, "sm")).join("")}</li>`);
   if (pr?.sim){ $("simLink").hidden = false; $("simLink").href = `sim.html?f=${encodeURIComponent(pr.sim)}`; } else $("simLink").hidden = true;
   history.replaceState(null, "", `?date=${DAY.date}&race=${n}`);
   render();
@@ -302,7 +305,8 @@ function render(){
   $("field").innerHTML = head + rows.map(r => {
     const i = +r.chulNo, out = state.out.has(i), p = P.final?.[i];
     const [bg, fg] = saddle(i);
-    const meta = [`${r.sex ?? ""}${r.age ?? ""}`, r.jkName, r.wgBudam && `${r.wgBudam}kg`, r.rating && r.rating !== "-" && +r.rating > 0 && `R${r.rating}`].filter(Boolean).join(" · ");
+    const nPrior = PRED?.races?.[RACE]?.n?.[i];
+    const meta = [`${r.sex ?? ""}${r.age ?? ""}`, r.jkName, r.wgBudam && `${r.wgBudam}kg`, r.rating && r.rating !== "-" && +r.rating > 0 && `R${r.rating}`, nPrior === 0 && "첫 출전"].filter(Boolean).join(" · ");
     let prc;
     if (out) prc = `<span class="na">출전 제외</span>`;
     else if (p != null){
