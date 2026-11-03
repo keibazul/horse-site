@@ -60,9 +60,9 @@ button:focus-visible,input:focus-visible,label.btn:focus-within{outline:2px soli
 .hud .tag.actual{background:var(--ink);color:var(--bg)}
 .call{position:absolute;left:10px;right:10px;bottom:10px;background:color-mix(in srgb,var(--ink) 86%,transparent);color:var(--bg);border-radius:4px;padding:7px 11px;font-size:14px;font-weight:500;pointer-events:none;min-height:36px}
 .call .num{opacity:.8;margin-right:8px;font-size:12.5px}
-.bigplay{position:absolute;right:12px;bottom:60px;display:flex;align-items:center;gap:10px;background:var(--accent);color:var(--accent-ink);border:0;border-radius:999px;padding:13px 24px 13px 20px;font-size:17px;font-weight:700;cursor:pointer;box-shadow:0 6px 22px rgb(0 0 0 / .25)}
-.bigplay svg{width:20px;height:20px;fill:currentColor}
-@media (max-width:520px){.bigplay{padding:9px 16px 9px 13px;font-size:15px;bottom:64px;right:10px}.bigplay svg{width:16px;height:16px}}
+.vp-col{display:grid;gap:8px;min-width:0}
+.bigplay{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;background:var(--accent);color:var(--accent-ink);border:0;border-radius:6px;padding:11px 16px;font-size:16px;font-weight:700;cursor:pointer}
+.bigplay svg{width:17px;height:17px;fill:currentColor}
 
 .board{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 12px 10px;display:grid;gap:8px;min-width:0}
 .board-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
@@ -172,11 +172,13 @@ tr.win td{background:color-mix(in srgb,var(--accent) 8%,transparent)}
   </div>
 
   <section class="stage" aria-label="경주 화면">
+    <div class="vp-col">
     <div class="viewport">
       <canvas id="track" aria-label="서울 경마장 트랙 위에서 본 경주 화면"></canvas>
       <div class="hud" aria-hidden="true"><span class="tag" id="hudTag">예측 전개</span><span class="num" id="hudTime">0.0초</span><span id="hudLeft">남은 거리</span><span id="hudLead">선두 -</span></div>
       <div class="call" id="call" aria-live="polite"></div>
-      <button class="bigplay" id="bigPlay" type="button"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 3l12 7-12 7z"/></svg>경주 재생</button>
+    </div>
+    <button class="bigplay" id="bigPlay" type="button"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 3l12 7-12 7z"/></svg>경주 재생</button>
     </div>
     <aside class="board" aria-label="실시간 순위">
       <div class="board-head"><h2>실시간 순위</h2><p>선두와 간격 (마신) · 속도</p></div>
@@ -611,10 +613,12 @@ function frame(now){
 }
 const ICON_PLAY = `<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 3l12 7-12 7z"/></svg>재생`;
 const ICON_PAUSE = `<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 3h4v14H4zM12 3h4v14h-4z"/></svg>일시정지`;
-function setPlaying(p){ if (p && SCN && state.t >= SCN.T_END - 0.01) state.t = 0; state.playing = p; $("playBtn").innerHTML = p ? ICON_PAUSE : ICON_PLAY; $("bigPlay").hidden = p || state.t > 0; }
-function seek(t){ state.t = Math.max(0, Math.min(SCN.T_END, t)); state.snap = true; $("bigPlay").hidden = state.playing || state.t > 0; draw(); }
+function setPlaying(p){ if (p && SCN && state.t >= SCN.T_END - 0.01) state.t = 0; state.playing = p; $("playBtn").innerHTML = p ? ICON_PAUSE : ICON_PLAY; bigLabel(); }
+function seek(t){ state.t = Math.max(0, Math.min(SCN.T_END, t)); state.snap = true; bigLabel(); draw(); }
+function bigLabel(){ const end = SCN && state.t >= SCN.T_END - 0.01;
+  $("bigPlay").innerHTML = state.playing ? ICON_PAUSE.replace("일시정지","일시 정지") : (end ? ICON_PLAY.replace("재생","다시 재생") : (state.t > 0 ? ICON_PLAY.replace("재생","이어서 재생") : ICON_PLAY.replace("재생","경주 재생"))); }
 $("playBtn").addEventListener("click", ()=>setPlaying(!state.playing));
-$("bigPlay").addEventListener("click", ()=>setPlaying(true));
+$("bigPlay").addEventListener("click", ()=>setPlaying(!state.playing));
 $("restartBtn").addEventListener("click", ()=>{ seek(0); setPlaying(false); shown = -1; draw(); });
 $("scrub").addEventListener("input", e=>seek(+e.target.value));
 cv.addEventListener("click", ()=>setPlaying(!state.playing));
