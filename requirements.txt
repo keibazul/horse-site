@@ -1,0 +1,6 @@
+# 모델 파일(joblib)을 만든 PC 환경과 같은 버전이어야 불러올 수 있음
+numpy==2.5.3
+scikit-learn==1.9.1
+joblib==1.6.0
+pandas==3.0.5
+openpyxl

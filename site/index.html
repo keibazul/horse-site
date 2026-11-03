@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>서울 경주 예측</title>
+<meta name="description" content="렛츠런파크 서울 다음 경주의 말별 우승 확률과 승식별 조합 확률">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%231b6a45'/%3E%3Ctext x='16' y='23' font-size='18' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='700'%3E1%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* 한 화면 = 한 경주. 경주일 → 경주 번호 → 출전마(확률·배당 입력) → 승식별 조합 → 안내 */
+:root{
+  --bg:#eef2ed; --panel:#fbfcfa; --ink:#15211b; --muted:#5b6b62; --line:#d3ddd5; --soft:#e3eae4;
+  --accent:#1b6a45; --accent-ink:#fff; --good:#1b7a3e; --bad:#a3392d; --sim:#6a4bb8; --sim-ink:#fff;
+  --bar:#1b6a45; --bar-mkt:#8aa596; --warn-bg:#fff6dc; --warn-ink:#6b5310;
+  --f-display:"Black Han Sans","IBM Plex Sans KR",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-data:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1512; --panel:#151f1a; --ink:#e4ece6; --muted:#97a79e; --line:#28362e; --soft:#1c2822;
+  --accent:#52c08a; --accent-ink:#0b1510; --good:#5fd08f; --bad:#ff8a7a; --sim:#a48cf0; --sim-ink:#120b24;
+  --bar:#52c08a; --bar-mkt:#4f6a5c; --warn-bg:#2d2610; --warn-ink:#f1d98a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1512; --panel:#151f1a; --ink:#e4ece6; --muted:#97a79e; --line:#28362e; --soft:#1c2822;
+  --accent:#52c08a; --accent-ink:#0b1510; --good:#5fd08f; --bad:#ff8a7a; --sim:#a48cf0; --sim-ink:#120b24;
+  --bar:#52c08a; --bar-mkt:#4f6a5c; --warn-bg:#2d2610; --warn-ink:#f1d98a; color-scheme:dark}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55;
+  padding:16px max(16px,env(safe-area-inset-right)) 48px max(16px,env(safe-area-inset-left))}
+.page{max-width:980px;margin:0 auto;display:grid;gap:16px}
+h1,h2,h3{margin:0;text-wrap:balance}
+p{margin:0}
+.num{font-family:var(--f-data);font-variant-numeric:tabular-nums}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a{color:var(--accent)}
+
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 16px;justify-content:space-between}
+.brand h1{font-family:var(--f-display);font-weight:400;font-size:30px;line-height:1;letter-spacing:-.01em}
+.brand p{font-size:13px;color:var(--muted);margin-top:6px}
+.days{display:flex;gap:6px;flex-wrap:wrap}
+.days button{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:6px 12px;cursor:pointer;font-weight:600;font-size:14px}
+.days button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+.races{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin;margin:0 -2px;padding-inline:2px}
+.races button{flex:0 0 auto;display:grid;justify-items:center;gap:0;min-width:58px;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:6px 8px 5px;cursor:pointer}
+.races button b{font-family:var(--f-display);font-weight:400;font-size:20px;line-height:1.05}
+.races button span{font-size:11.5px;color:var(--muted)}
+.races button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.races button[aria-pressed="true"] span{color:inherit;opacity:.85}
+
+.racecard{display:flex;gap:14px;align-items:center;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:12px}
+.rno{font-family:var(--f-display);font-size:52px;line-height:.9;background:var(--ink);color:var(--bg);padding:10px 12px 6px;border-radius:4px;min-width:80px;text-align:center}
+.rno small{font-size:22px;margin-left:2px}
+.rc-main{flex:1 1 260px;min-width:0;display:grid;gap:4px}
+.rc-main h2{font-size:24px;font-weight:700;letter-spacing:-.01em}
+.conds{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 0;padding:0;list-style:none}
+.conds li{font-size:13px;border:1px solid var(--line);background:var(--panel);padding:1px 9px;border-radius:999px}
+.simlink{display:inline-flex;align-items:center;gap:8px;background:var(--sim);color:var(--sim-ink);text-decoration:none;font-weight:600;font-size:14px;padding:8px 14px;border-radius:6px}
+.simlink svg{width:16px;height:16px;fill:currentColor}
+
+.notice{background:var(--warn-bg);color:var(--warn-ink);border-radius:6px;padding:10px 12px;font-size:13.5px}
+.srcbar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between}
+.srcbar p{font-size:13.5px;color:var(--muted);flex:1 1 300px}
+.srcbar b{color:var(--ink)}
+.tools{display:flex;gap:8px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:6px 12px;cursor:pointer;font-size:13.5px;font-weight:600}
+
+.field{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.row{display:grid;grid-template-columns:34px minmax(0,1fr) minmax(92px,1.1fr) 84px;gap:10px;align-items:center;padding:9px 12px;border-top:1px solid var(--line)}
+.row.head{border-top:0;padding-block:7px;font-size:12px;color:var(--muted);font-weight:600;background:var(--soft)}
+.row.out{opacity:.45}
+.row.out .nm b{text-decoration:line-through}
+.chip{display:inline-grid;place-items:center;width:30px;height:28px;border-radius:4px;border:0;font-family:var(--f-data);font-weight:600;font-size:14px;box-shadow:inset 0 0 0 1px rgb(0 0 0 / .25);cursor:pointer;padding:0}
+.chip.sm{width:24px;height:22px;font-size:12.5px;cursor:default}
+.nm{min-width:0}
+.nm b{display:block;font-size:15.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nm span{display:block;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pr{display:grid;gap:3px;min-width:0}
+.pr .v{font-family:var(--f-data);font-weight:600;font-size:15px;display:flex;align-items:baseline;gap:6px}
+.pr .v small{font-weight:500;font-size:11.5px;color:var(--muted)}
+.pr .track{height:7px;background:var(--soft);border-radius:2px;overflow:hidden}
+.pr .track i{display:block;height:100%;background:var(--bar);border-radius:2px}
+.pr .track i.mkt{background:var(--bar-mkt)}
+.pr .na{font-size:12.5px;color:var(--muted)}
+.od{display:grid;gap:2px;justify-items:end}
+.od input{width:76px;text-align:right;border:1px solid var(--line);background:var(--bg);border-radius:5px;padding:5px 7px;font-family:var(--f-data);font-size:15px}
+.od input::placeholder{color:var(--muted);opacity:.7}
+.od .ev{font-family:var(--f-data);font-size:11.5px;color:var(--muted);white-space:nowrap}
+.od .ev.plus{color:var(--good);font-weight:600}
+.empty{padding:22px 14px;color:var(--muted);font-size:14px}
+
+.bets{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;display:grid;gap:10px}
+.bets h2{font-size:17px}
+.bets .sub{font-size:13px;color:var(--muted)}
+.pools{display:flex;gap:4px;flex-wrap:wrap}
+.pools button{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:4px 11px;font-size:13.5px;cursor:pointer}
+.pools button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:600}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{font-size:12px;color:var(--muted);font-weight:600}
+td.r,th.r{text-align:right}
+td .combo{display:inline-flex;gap:3px;align-items:center}
+td .combo em{font-style:normal;color:var(--muted);font-size:12px;margin:0 1px}
+td.p{font-family:var(--f-data);font-weight:600}
+td.f{font-family:var(--f-data)}
+td.f small{display:block;color:var(--muted);font-size:11px;font-weight:400}
+.pbar{display:inline-block;height:6px;background:var(--bar);border-radius:2px;vertical-align:middle;margin-right:6px}
+
+.about{font-size:13.5px;color:var(--muted);display:grid;gap:8px;max-width:72ch}
+.about h2{font-size:15px;color:var(--ink)}
+.about ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.about .warn{color:var(--ink);font-weight:600}
+
+@media (max-width:560px){
+  .row{grid-template-columns:30px minmax(0,1fr) 84px;grid-template-areas:"c n o" "c p o";row-gap:4px}
+  .row > :nth-child(1){grid-area:c;align-self:start}
+  .row > :nth-child(2){grid-area:n}
+  .row > :nth-child(3){grid-area:p}
+  .row > :nth-child(4){grid-area:o}
+  .row.head{display:none}
+  .rno{font-size:42px;min-width:66px}
+  .rc-main h2{font-size:20px}
+  th.hide-s,td.hide-s{display:none}
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="top">
+    <div class="brand">
+      <h1>서울 경주 예측</h1>
+      <p id="updated">불러오는 중…</p>
+    </div>
+    <div class="days" id="days" role="group" aria-label="경주일"></div>
+  </header>
+
+  <nav class="races" id="races" aria-label="경주 번호"></nav>
+
+  <main id="main" class="page" style="gap:16px">
+    <section class="racecard" id="racecard" hidden>
+      <div class="rno" aria-hidden="true"><span id="rnoNum">-</span><small>R</small></div>
+      <div class="rc-main">
+        <h2 id="rcTitle"></h2>
+        <ul class="conds" id="conds"></ul>
+      </div>
+      <a class="simlink" id="simLink" href="#" hidden><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 3l12 7-12 7z"/></svg>전개 시뮬레이션</a>
+    </section>
+
+    <p class="notice" id="notice" hidden></p>
+
+    <div class="srcbar" id="srcbar" hidden>
+      <p id="srcNote"></p>
+      <div class="tools">
+        <button class="btn" type="button" id="clearOdds">배당 지우기</button>
+      </div>
+    </div>
+
+    <section class="field" id="field" aria-label="출전마"></section>
+
+    <section class="bets" id="bets" hidden>
+      <h2>승식별 가능성 높은 조합</h2>
+      <p class="sub" id="betSub"></p>
+      <div class="pools" id="pools" role="group" aria-label="승식"></div>
+      <div style="overflow-x:auto"><table id="betTable"></table></div>
+      <p class="sub" id="betFoot"></p>
+    </section>
+  </main>
+
+  <footer class="about">
+    <h2>읽는 법</h2>
+    <ul>
+      <li><b>우승 확률</b>은 경주 전 정보만 쓴 모델(v5)의 예측입니다. 경주 직전 KRA 앱의 단승 배당을 모든 말에 넣으면 시장 확률과 섞은 <b>결합 확률</b>로 바뀝니다. 과거 18년 검증에서 결합 확률이 배당만 볼 때보다 조금 더 정확했습니다.</li>
+      <li><b>적정 배당</b>은 확률로 본 손익분기 배당입니다. 실제 배당이 이보다 높아야 기대값이 1을 넘습니다. 단승 환급률이 약 80%라서 대부분의 말은 실제 배당이 적정 배당보다 낮습니다.</li>
+      <li>승식 조합 확률은 우승 확률에서 2·3착 확률을 계산하는 하빌 방식(2착 0.8, 3착 0.7 보정)으로 만듭니다. 연승식은 출전 7두 이하면 2착 안, 8두 이상이면 3착 안입니다.</li>
+      <li>출전 취소된 말은 번호를 눌러 빼면 나머지 말로 다시 계산합니다.</li>
+      <li class="warn">2009~2026년 확정배당 백테스트에서 꾸준히 100%를 넘긴 승식·전략은 없었습니다. 이 사이트는 경주를 이해하기 위한 도구이며 수익을 보장하지 않습니다.</li>
+    </ul>
+  </footer>
+</div>
+
+<script>
+(() => {
+"use strict";
+const $ = id => document.getElementById(id);
+const GAMMA = 0.8, DELTA = 0.7;
+const SADDLE = {1:["#f4f4f1","#111"],2:["#1e1e22","#fff"],3:["#d8392b","#fff"],4:["#2c66d6","#fff"],5:["#f3c533","#111"],6:["#2c9b55","#fff"],
+  7:["#f08a24","#111"],8:["#e46aa3","#111"],9:["#7a4fd6","#fff"],10:["#47b9cb","#111"],11:["#8a5a3a","#fff"],12:["#b7c43a","#111"],
+  13:["#3a4a8c","#fff"],14:["#c9c9c9","#111"],15:["#9b2f5e","#fff"],16:["#2f6f6f","#fff"]};
+const saddle = n => SADDLE[n] || ["#888","#fff"];
+const chip = (n, cls="") => { const [bg, fg] = saddle(n); return `<span class="chip ${cls}" style="background:${bg};color:${fg}">${n}</span>`; };
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pct = p => p >= 0.1 ? (p*100).toFixed(1) + "%" : p >= 0.001 ? (p*100).toFixed(2) + "%" : "<0.1%";
+const fair = p => p > 0 ? (1/p >= 100 ? (1/p).toFixed(0) : (1/p).toFixed(1)) : "-";
+const dLabel = d => { const dt = new Date(+d.slice(0,4), +d.slice(4,6)-1, +d.slice(6,8)); return `${+d.slice(4,6)}/${+d.slice(6,8)} (${"일월화수목금토"[dt.getDay()]})`; };
+const store = {
+  get(k){ try { return JSON.parse(localStorage.getItem(k) || "null"); } catch { return null; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
+
+let INDEX = null, DAY = null, ENT = null, PRED = null, RACE = null, POOL = "단승식";
+const state = { odds: {}, out: new Set() };
+
+async function getJSON(url){ const r = await fetch(url, {cache:"no-cache"}); if (!r.ok) throw new Error(r.status); return r.json(); }
+
+async function boot(){
+  try { INDEX = await getJSON("data/index.json"); }
+  catch { $("updated").textContent = "예측 데이터를 아직 받지 못했습니다."; $("field").innerHTML = `<p class="empty">자동 업데이트가 한 번 돌고 나면 다음 경주일이 여기에 나옵니다.</p>`; return; }
+  $("updated").textContent = `업데이트 ${INDEX.updated.replace("T"," ")} · ${INDEX.model?.connected ? "모델 " + esc(INDEX.model.name) : "모델 연결 전"}`;
+  const days = INDEX.days || [];
+  if (!days.length){ $("field").innerHTML = `<p class="empty">아직 출전표가 나온 경주일이 없습니다. 출전표는 보통 경주 이틀 전(목요일)에 공개됩니다.</p>`; return; }
+  const q = new URLSearchParams(location.search);
+  $("days").innerHTML = days.map(d => `<button type="button" data-d="${d.date}">${dLabel(d.date)}</button>`).join("");
+  $("days").onclick = e => { const b = e.target.closest("button"); if (b) openDay(b.dataset.d); };
+  const want = q.get("date"), first = days.find(d => d.date === want) || days.find(d => !d.past) || days[days.length-1];
+  await openDay(first.date, +q.get("race") || null);
+}
+
+async function openDay(date, race){
+  DAY = INDEX.days.find(d => d.date === date);
+  [...$("days").children].forEach(b => b.setAttribute("aria-pressed", b.dataset.d === date));
+  ENT = null; PRED = null;
+  try { ENT = await getJSON(`data/${DAY.entries}`); } catch { $("field").innerHTML = `<p class="empty">출전표 파일을 열지 못했습니다.</p>`; return; }
+  if (DAY.pred) { try { PRED = await getJSON(`data/${DAY.pred}`); } catch { PRED = null; } }
+  const races = [...new Set(ENT.rows.map(r => +r.rcNo))].sort((a,b) => a-b);
+  $("races").innerHTML = races.map(n => {
+    const r = ENT.rows.find(x => +x.rcNo === n);
+    return `<button type="button" data-r="${n}"><b>${n}R</b><span>${esc(stTime(r))}</span></button>`;
+  }).join("");
+  $("races").onclick = e => { const b = e.target.closest("button"); if (b) openRace(+b.dataset.r); };
+  const now = new Date(), nextR = DAY.date === ymd(now) ? races.find(n => { const t = stTime(ENT.rows.find(x => +x.rcNo === n)); if (!t) return false; const [h,m] = t.split(":").map(Number); return h*60+m >= now.getHours()*60+now.getMinutes(); }) : null;
+  openRace(race && races.includes(race) ? race : (nextR || races[0]));
+}
+const ymd = d => `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}`;
+const stTime = r => { const m = String(r?.stTime ?? "").match(/(\d{1,2}):?(\d{2})/); return m ? `${m[1].padStart(2,"0")}:${m[2]}` : ""; };
+
+function openRace(n){
+  RACE = n;
+  [...$("races").children].forEach(b => b.setAttribute("aria-pressed", +b.dataset.r === n));
+  $("races").querySelector(`[data-r="${n}"]`)?.scrollIntoView({block:"nearest", inline:"center"});
+  const key = `odds:${DAY.date}:${n}`, saved = store.get(key) || {};
+  state.odds = saved.odds || {}; state.out = new Set(saved.out || []);
+  const rows = horses();
+  const r0 = rows[0] || {};
+  // 경주 카드
+  $("racecard").hidden = false;
+  $("rnoNum").textContent = n;
+  $("rcTitle").textContent = `${dLabel(DAY.date)} ${r0.rcName && r0.rcName !== "일반" ? r0.rcName : n + "경주"}`;
+  $("conds").innerHTML = [r0.rcDist && `${r0.rcDist}m`, r0.rank, r0.budam, r0.ageCond, r0.sexCond, `${rows.length}두`, stTime(r0) && `출발 ${stTime(r0)}`]
+    .filter(Boolean).map(t => `<li>${esc(t)}</li>`).join("");
+  const pr = PRED?.races?.[n];
+  if (pr?.sim){ $("simLink").hidden = false; $("simLink").href = `sim.html?f=${encodeURIComponent(pr.sim)}`; } else $("simLink").hidden = true;
+  history.replaceState(null, "", `?date=${DAY.date}&race=${n}`);
+  render();
+}
+
+function horses(){ return ENT.rows.filter(r => +r.rcNo === RACE).sort((a,b) => a.chulNo - b.chulNo); }
+
+/* 확률: 모델(p) · 시장(배당) · 결합 */
+function probs(){
+  const rows = horses().filter(r => !state.out.has(+r.chulNo));
+  const ids = rows.map(r => +r.chulNo);
+  const pm = PRED?.races?.[RACE]?.p || null;           // {chulNo: 모델 확률}
+  let model = null;
+  if (pm){
+    const v = ids.map(i => Math.max(+pm[i] || 0, 1e-6)), s = v.reduce((a,b) => a+b, 0);
+    model = Object.fromEntries(ids.map((i,k) => [i, v[k]/s]));
+  }
+  const oddsOK = ids.length > 1 && ids.every(i => +state.odds[i] > 1);
+  let market = null;
+  if (oddsOK){ const v = ids.map(i => 1/(+state.odds[i])), s = v.reduce((a,b) => a+b, 0); market = Object.fromEntries(ids.map((i,k) => [i, v[k]/s])); }
+  let final = null, src = "none";
+  if (model && market){
+    const a = INDEX.alpha ?? 0.1689, b = INDEX.beta ?? 0.9219;
+    const v = ids.map(i => Math.exp(a*Math.log(model[i]) + b*Math.log(market[i]))), s = v.reduce((x,y) => x+y, 0);
+    final = Object.fromEntries(ids.map((i,k) => [i, v[k]/s])); src = "comb";
+  } else if (model){ final = model; src = "model"; }
+  else if (market){ final = market; src = "market"; }
+  return { ids, model, market, final, src };
+}
+
+function render(){
+  const rows = horses(), P = probs();
+  const entered = Object.keys(state.odds).filter(k => +state.odds[k] > 1 && !state.out.has(+k)).length;
+  const pm = !!PRED?.races?.[RACE]?.p;
+  // 안내 줄
+  $("srcbar").hidden = false;
+  const srcText = {comb:"<b>결합 확률</b> (모델 + 입력한 단승 배당)", model:"<b>모델 확률</b>", market:"<b>시장 확률</b> (입력한 단승 배당만)", none:"확률 없음"}[P.src];
+  const need = P.ids.length - entered;
+  $("srcNote").innerHTML = `${srcText}${need > 0 && entered > 0 ? ` · 배당 ${need}두 더 넣으면 ${pm ? "결합" : "시장"} 확률로 바뀝니다` : ""}${entered === 0 ? " · 경주 직전 KRA 앱의 단승 배당을 넣으면 더 정확해집니다" : ""}`;
+  const nt = $("notice");
+  if (!pm){ nt.hidden = false; nt.textContent = INDEX.model?.connected ? "이 경주는 아직 모델 예측이 없습니다. 출전표가 바뀌었거나 다음 업데이트 전일 수 있습니다." : "예측 모델이 아직 사이트에 연결되지 않아 출전표만 보여 줍니다. 단승 배당을 모두 넣으면 시장 확률로 승식 조합을 계산할 수 있습니다."; }
+  else nt.hidden = true;
+
+  const top = P.final ? Math.max(...Object.values(P.final)) : 1;
+  const head = `<div class="row head"><span>번호</span><span>마명 · 기수 · 부담중량</span><span>우승 확률</span><span style="text-align:right">단승 배당</span></div>`;
+  $("field").innerHTML = head + rows.map(r => {
+    const i = +r.chulNo, out = state.out.has(i), p = P.final?.[i];
+    const [bg, fg] = saddle(i);
+    const meta = [`${r.sex ?? ""}${r.age ?? ""}`, r.jkName, r.wgBudam && `${r.wgBudam}kg`, r.rating && r.rating !== "-" && +r.rating > 0 && `R${r.rating}`].filter(Boolean).join(" · ");
+    let prc;
+    if (out) prc = `<span class="na">출전 제외</span>`;
+    else if (p != null){
+      const sub = P.src === "comb" ? `<small>모델 ${pct(P.model[i])}</small>` : "";
+      prc = `<span class="v">${pct(p)}${sub}</span><span class="track"><i class="${P.src === "market" ? "mkt" : ""}" style="width:${(p/top*100).toFixed(1)}%"></i></span>`;
+    } else prc = `<span class="na">-</span>`;
+    const o = +state.odds[i];
+    let ev = "";
+    if (!out && p != null){
+      if (o > 1 && P.src !== "market"){ const e = p*o; ev = `<span class="ev ${e >= 1 ? "plus" : ""}">기대값 ${e.toFixed(2)}</span>`; }
+      else ev = `<span class="ev">적정 ${fair(p)}</span>`;
+    }
+    return `<div class="row ${out ? "out" : ""}">
+      <button type="button" class="chip" style="background:${bg};color:${fg}" data-out="${i}" aria-pressed="${out}" title="${out ? "다시 넣기" : "출전 제외로 표시"}" aria-label="${i}번 ${out ? "다시 넣기" : "출전 제외"}">${i}</button>
+      <div class="nm"><b>${esc(r.hrName)}</b><span>${esc(meta)}</span></div>
+      <div class="pr">${prc}</div>
+      <div class="od"><input inputmode="decimal" aria-label="${i}번 단승 배당" placeholder="배당" data-odds="${i}" value="${state.odds[i] ?? ""}" ${out ? "disabled" : ""}>${ev}</div>
+    </div>`;
+  }).join("");
+  renderBets(P);
+}
+
+function save(){ store.set(`odds:${DAY.date}:${RACE}`, { odds: state.odds, out: [...state.out] }); }
+
+$("field").addEventListener("click", e => {
+  const b = e.target.closest("[data-out]"); if (!b) return;
+  const i = +b.dataset.out; state.out.has(i) ? state.out.delete(i) : state.out.add(i); save(); render();
+});
+let tmr = null;
+$("field").addEventListener("input", e => {
+  const t = e.target.closest("[data-odds]"); if (!t) return;
+  const v = t.value.replace(",", ".").trim(); const i = t.dataset.odds;
+  if (v === "") delete state.odds[i]; else state.odds[i] = v;
+  save(); clearTimeout(tmr);
+  tmr = setTimeout(() => { const pos = t.selectionStart, id = i; render(); const n = document.querySelector(`[data-odds="${id}"]`); if (n){ n.focus(); try { n.setSelectionRange(pos, pos); } catch {} } }, 450);
+});
+$("clearOdds").onclick = () => { state.odds = {}; save(); render(); };
+
+/* 승식: 하빌 방식 (2착 γ, 3착 δ 보정) */
+const POOLS = [
+  ["단승식","1착 맞히기"],["연승식","3착(7두 이하 2착) 안에 들기"],["복승식","1·2착 두 마리, 순서 무관"],["쌍승식","1·2착 순서대로"],
+  ["복연승식","3착 안에 두 마리"],["삼복승식","1~3착 세 마리, 순서 무관"],["삼쌍승식","1~3착 순서대로"]];
+function combos(final){
+  const ids = Object.keys(final).map(Number), n = ids.length;
+  const p = ids.map(i => final[i]);
+  const pw = (e) => { const v = p.map(x => Math.pow(x, e)); const s = v.reduce((a,b) => a+b, 0); return v.map(x => x/s); };
+  const q = pw(GAMMA), r = pw(DELTA);
+  const out = {"단승식":new Map(),"연승식":new Map(),"복승식":new Map(),"쌍승식":new Map(),"복연승식":new Map(),"삼복승식":new Map(),"삼쌍승식":new Map()};
+  const add = (m, k, v) => m.set(k, (m.get(k) || 0) + v);
+  const placeN = n <= 7 ? 2 : 3;
+  for (let a = 0; a < n; a++){
+    add(out["단승식"], `${ids[a]}`, p[a]);
+    for (let b = 0; b < n; b++){ if (b === a) continue;
+      const pab = p[a] * q[b] / (1 - q[a]);
+      add(out["쌍승식"], `${ids[a]}>${ids[b]}`, pab);
+      add(out["복승식"], [ids[a],ids[b]].sort((x,y)=>x-y).join("-"), pab);
+      if (placeN === 2){ add(out["연승식"], `${ids[a]}`, pab); add(out["연승식"], `${ids[b]}`, pab); }
+      if (n < 3) continue;
+      for (let c = 0; c < n; c++){ if (c === a || c === b) continue;
+        const pabc = pab * r[c] / (1 - r[a] - r[b]);
+        add(out["삼쌍승식"], `${ids[a]}>${ids[b]}>${ids[c]}`, pabc);
+        const s3 = [ids[a],ids[b],ids[c]].sort((x,y)=>x-y);
+        add(out["삼복승식"], s3.join("-"), pabc);
+        if (placeN === 3){ add(out["연승식"], `${ids[a]}`, pabc); add(out["연승식"], `${ids[b]}`, pabc); add(out["연승식"], `${ids[c]}`, pabc); }
+        add(out["복연승식"], `${s3[0]}-${s3[1]}`, pabc); add(out["복연승식"], `${s3[0]}-${s3[2]}`, pabc); add(out["복연승식"], `${s3[1]}-${s3[2]}`, pabc);
+      }
+    }
+  }
+  // 연승식: 위 합은 '그 말이 포함된 순열' 확률이므로 말마다 한 번씩 더해진 값 = 입상 확률
+  return out;
+}
+function renderBets(P){
+  if (!P.final || P.ids.length < 2){ $("bets").hidden = true; return; }
+  $("bets").hidden = false;
+  $("pools").innerHTML = POOLS.map(([k]) => `<button type="button" data-p="${k}" aria-pressed="${k === POOL}">${k.replace("식","")}</button>`).join("");
+  $("pools").onclick = e => { const b = e.target.closest("button"); if (b){ POOL = b.dataset.p; renderBets(probs()); } };
+  const C = combos(P.final)[POOL];
+  const list = [...C.entries()].sort((a,b) => b[1]-a[1]).slice(0, POOL === "단승식" || POOL === "연승식" ? 16 : 12);
+  const maxp = list[0]?.[1] || 1;
+  const desc = POOLS.find(x => x[0] === POOL)[1];
+  const srcWord = {comb:"결합 확률", model:"모델 확률", market:"시장 확률"}[P.src];
+  $("betSub").textContent = `${POOL}: ${desc}. ${srcWord} 기준, 가능성 높은 순서.`;
+  const sep = POOL.includes("쌍") ? "<em>→</em>" : "<em>·</em>";
+  $("betTable").innerHTML = `<thead><tr><th>조합</th><th>확률</th><th class="r">적정 배당</th></tr></thead><tbody>` +
+    list.map(([k, v]) => `<tr><td><span class="combo">${k.split(/[>-]/).map(x => chip(+x, "sm")).join(sep)}</span></td>
+      <td class="p"><span class="pbar" style="width:${Math.max(2, v/maxp*70).toFixed(0)}px"></span>${pct(v)}</td>
+      <td class="f r">${fair(v)}</td></tr>`).join("") + `</tbody>`;
+  $("betFoot").textContent = POOL === "단승식" || POOL === "연승식"
+    ? "적정 배당은 원금을 포함한 손익분기 배당입니다. 단승·연승 환급률은 약 80%입니다."
+    : "적정 배당은 원금을 포함한 손익분기 배당입니다. 이 승식의 환급률은 약 73%이고, 인기 조합일수록 배당이 낮게 형성되는 경향이 있었습니다.";
+}
+
+boot();
+})();
+</script>
+</body>
+</html>
