@@ -1,0 +1,21 @@
+{
+ "updated": "2026-11-03T20:22",
+ "alpha": 0.1689,
+ "beta": 0.9219,
+ "model": {
+  "connected": false,
+  "name": null
+ },
+ "days": [
+  {
+   "date": "20261031",
+   "entries": "entries/20261031.json",
+   "past": true
+  },
+  {
+   "date": "20261101",
+   "entries": "entries/20261101.json",
+   "past": true
+  }
+ ]
+}
