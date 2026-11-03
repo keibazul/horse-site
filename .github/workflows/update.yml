@@ -31,7 +31,7 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
-        with: { lfs: true }
+        with: { ref: main }   # 앞선 실행이 올린 데이터 커밋까지 받아 시작
       - uses: actions/setup-python@v5
         with: { python-version: '3.13' }
       - name: 라이브러리 설치 (예측 코드가 있을 때)
@@ -50,7 +50,8 @@ jobs:
           git add -A site/data work 2>/dev/null || git add -A site/data
           if git diff --cached --quiet; then echo "바뀐 것 없음"; else
             git commit -m "데이터 업데이트 $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')"
-            git pull --rebase -q origin main && git push -q origin HEAD:main
+            # 겹쳐 돈 실행과 같은 데이터 파일을 고쳤으면 이번 실행 결과를 우선 (rebase 에서 theirs = 이번 커밋)
+            git pull --rebase -X theirs -q origin main && git push -q origin HEAD:main
           fi
       - uses: actions/upload-pages-artifact@v3
         with: { path: site }
