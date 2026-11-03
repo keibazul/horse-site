@@ -1,0 +1,33 @@
+name: api-test
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 접속 테스트 2
+        env:
+          KRA_API_KEY: ${{ secrets.KRA_API_KEY }}
+        run: |
+          echo "== 이 서버 위치 =="
+          curl -s https://ipinfo.io/country || true
+          python3 - <<'EOF'
+          import os, urllib.request, urllib.error
+          key = os.environ["KRA_API_KEY"]
+          url = f"https://apis.data.go.kr/B551015/API214_1/RaceDetailResult_1?serviceKey={key}&pageNo=1&numOfRows=3&meet=1&rc_date=20261031&_type=json"
+          heads = {
+              "A 기본(urllib)": {},
+              "B 브라우저처럼": {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36", "Accept": "application/json,*/*"},
+              "C requests처럼": {"User-Agent": "python-requests/2.32.3", "Accept": "*/*"},
+          }
+          for name, h in heads.items():
+              try:
+                  with urllib.request.urlopen(urllib.request.Request(url, headers=h), timeout=30) as r:
+                      print(f"{name}: 성공 HTTP {r.status} → {r.read(150).decode('utf-8','replace')}")
+              except urllib.error.HTTPError as e:
+                  print(f"{name}: HTTP {e.code} → 응답 내용: {e.read(300).decode('utf-8','replace')!r}")
+              except Exception as e:
+                  print(f"{name}: 실패 → {type(e).__name__}: {e}")
+          EOF
+          echo "== curl 로 접속 =="
+          curl -s -o /dev/null -w "curl HTTP %{http_code}\n" "https://apis.data.go.kr/B551015/API214_1/RaceDetailResult_1?serviceKey=${KRA_API_KEY}&pageNo=1&numOfRows=3&meet=1&rc_date=20261031&_type=json"
