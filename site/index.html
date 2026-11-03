@@ -295,6 +295,7 @@ function openRace(n){
     .filter(Boolean).map(t => `<li>${esc(t)}</li>`).join("");
   const pr = PRED?.races?.[n];
   if (pr?.result?.length) $("conds").insertAdjacentHTML("beforeend", `<li class="res">실제 결과 ${pr.result.map(x => chip(x, "sm")).join("")}</li>`);
+  if (pr?.void) $("conds").insertAdjacentHTML("beforeend", `<li class="res">${esc(pr.void)} · 마권 환불</li>`);
   if (pr?.sim){ $("simLink").hidden = false; $("simLink").href = `sim.html?f=${encodeURIComponent(pr.sim)}`; } else $("simLink").hidden = true;
   history.replaceState(null, "", `?date=${DAY.date}&race=${n}`);
   render();

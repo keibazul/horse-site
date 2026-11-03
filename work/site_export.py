@@ -83,6 +83,13 @@ def export(date: str, rows: list[dict], data_dir: Path) -> dict:
             g = g.assign(o=pd.to_numeric(g["ord"])).sort_values("o")
             races[str(int(rno))]["result"] = [int(float(c)) for c in g["chulNo"]]
 
+    # 경주 불성립(98)·경주 취소(99): 모든 말이 그 코드면 표시 (결과·배당 없음, 마권 환불)
+    dd = hist[hist["date"] == date]
+    for rno, g in dd.groupby("race_no"):
+        o = pd.to_numeric(g["ord"], errors="coerce")
+        if str(int(rno)) in races and len(o) and o.isin([98, 99]).all():
+            races[str(int(rno))]["void"] = "경주 불성립" if (o == 98).all() else "경주 취소"
+
     # 끝난 경주의 확정 단승 배당(경주성적정보 winOdds, 마감 후 값)과 출전 취소마 → 사이트가 배당 칸을 미리 채움
     d_rd = rd[rd["rcDate"] == date]
     for rno, g in d_rd.groupby(pd.to_numeric(d_rd["rcNo"], errors="coerce")):

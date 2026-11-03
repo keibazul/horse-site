@@ -71,13 +71,15 @@ jobs:
         run: |
           python update_history.py --no-fetch
           python backfill.py --start $BF_START --end $BF_END --part ${{ matrix.part }} --parts 6
+      - name: 이 몫에서 새로 만들거나 바뀐 파일만 모으기
+        run: |
+          mkdir -p out
+          git ls-files -m -o --exclude-standard site/data | while read f; do mkdir -p "out/$(dirname "$f")"; cp "$f" "out/$f"; done
+          echo "모은 파일 $(find out -type f | wc -l)개"
       - uses: actions/upload-artifact@v4
         with:
           name: data-${{ matrix.part }}
-          path: |
-            site/data/entries/
-            site/data/pred/
-            site/data/sim/
+          path: out/site/data/
 
   finish:
     needs: backfill
