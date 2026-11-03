@@ -60,8 +60,9 @@ button:focus-visible,input:focus-visible,label.btn:focus-within{outline:2px soli
 .hud .tag.actual{background:var(--ink);color:var(--bg)}
 .call{position:absolute;left:10px;right:10px;bottom:10px;background:color-mix(in srgb,var(--ink) 86%,transparent);color:var(--bg);border-radius:4px;padding:7px 11px;font-size:14px;font-weight:500;pointer-events:none;min-height:36px}
 .call .num{opacity:.8;margin-right:8px;font-size:12.5px}
-.bigplay{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:10px;background:var(--accent);color:var(--accent-ink);border:0;border-radius:999px;padding:13px 24px 13px 20px;font-size:17px;font-weight:700;cursor:pointer;box-shadow:0 6px 22px rgb(0 0 0 / .25)}
+.bigplay{position:absolute;right:12px;bottom:60px;display:flex;align-items:center;gap:10px;background:var(--accent);color:var(--accent-ink);border:0;border-radius:999px;padding:13px 24px 13px 20px;font-size:17px;font-weight:700;cursor:pointer;box-shadow:0 6px 22px rgb(0 0 0 / .25)}
 .bigplay svg{width:20px;height:20px;fill:currentColor}
+@media (max-width:520px){.bigplay{padding:9px 16px 9px 13px;font-size:15px;bottom:64px;right:10px}.bigplay svg{width:16px;height:16px}}
 
 .board{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 12px 10px;display:grid;gap:8px;min-width:0}
 .board-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
