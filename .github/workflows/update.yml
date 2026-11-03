@@ -33,10 +33,7 @@ jobs:
       - uses: actions/checkout@v4
         with: { lfs: true }
       - uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-          cache: pip
-          cache-dependency-path: requirements.txt
+        with: { python-version: '3.13' }
       - name: 라이브러리 설치 (예측 코드가 있을 때)
         if: hashFiles('work/site_export.py') != ''
         run: pip install -r requirements.txt
