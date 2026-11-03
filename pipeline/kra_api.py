@@ -33,11 +33,15 @@ def _key_variants() -> list[str]:
 
 
 _good_key: str | None = None
+_net_fail = 0          # 연속 접속 실패 횟수: 서버가 응답하지 않으면 나머지 호출은 바로 포기 (실행이 수십 분 늘어지지 않게)
+NET_FAIL_LIMIT = 2
 
 
-def get(path: str, params: dict, retries: int = 3, timeout: int = 40) -> dict:
+def get(path: str, params: dict, retries: int = 2, timeout: int = 25) -> dict:
     """path 예: 'API26_2/entrySheet_2'. JSON 응답 dict 를 돌려준다."""
-    global _good_key
+    global _good_key, _net_fail
+    if _net_fail >= NET_FAIL_LIMIT:
+        raise ApiError("공공데이터포털 서버가 응답하지 않아 이번 실행에서는 더 묻지 않습니다")
     q = urllib.parse.urlencode({**params, "_type": "json"})
     keys = [_good_key] if _good_key else _key_variants()
     last = None
@@ -63,6 +67,7 @@ def get(path: str, params: dict, retries: int = 3, timeout: int = 40) -> dict:
                 if hdr.get("resultCode") not in ("00", None):
                     raise ApiError(f"{hdr.get('resultCode')} {hdr.get('resultMsg')}")
                 _good_key = key
+                _net_fail = 0
                 return data
             except urllib.error.HTTPError as e:
                 msg = e.read(400).decode("utf-8", "replace")
@@ -72,8 +77,14 @@ def get(path: str, params: dict, retries: int = 3, timeout: int = 40) -> dict:
                 if "LIMITED" in msg:
                     raise ApiError("하루 호출 한도 초과")
                 last = ApiError(f"HTTP {e.code}: {msg[:150]}")
-            except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
-                last = ApiError(f"{type(e).__name__}: {e}")
+            except (urllib.error.URLError, TimeoutError) as e:
+                # 접속 자체가 안 되면 키를 바꿔도 소용없음 → 같은 키로 한 번만 더 시도하고 포기
+                last = ApiError(f"접속 실패 ({type(e).__name__}: {e})")
+                if attempt + 1 >= retries:
+                    _net_fail += 1
+                    raise last
+            except json.JSONDecodeError as e:
+                last = ApiError(f"JSON 아님: {e}")
             time.sleep(2 * (attempt + 1))
     raise last or ApiError("알 수 없는 오류")
 
