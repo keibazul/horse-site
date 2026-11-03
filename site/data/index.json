@@ -1,21 +1,23 @@
 {
- "updated": "2026-11-03T20:34",
+ "updated": "2026-11-03T21:21",
  "alpha": 0.1689,
  "beta": 0.9219,
  "model": {
-  "connected": false,
-  "name": null
+  "connected": true,
+  "name": "v5"
  },
  "days": [
   {
    "date": "20261031",
    "entries": "entries/20261031.json",
-   "past": true
+   "past": true,
+   "pred": "pred/20261031.json"
   },
   {
    "date": "20261101",
    "entries": "entries/20261101.json",
-   "past": true
+   "past": true,
+   "pred": "pred/20261101.json"
   }
  ]
 }
