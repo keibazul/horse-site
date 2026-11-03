@@ -64,6 +64,19 @@ def export(date: str, rows: list[dict], data_dir: Path) -> dict:
             g = g.assign(o=pd.to_numeric(g["ord"])).sort_values("o")
             races[str(int(rno))]["result"] = [int(float(c)) for c in g["chulNo"]]
 
+    # 끝난 경주의 확정 단승 배당(경주성적정보 winOdds, 마감 후 값)과 출전 취소마 → 사이트가 배당 칸을 미리 채움
+    d_rd = rd[rd["rcDate"] == date]
+    for rno, g in d_rd.groupby(pd.to_numeric(d_rd["rcNo"], errors="coerce")):
+        key = str(int(rno))
+        if key not in races or "result" not in races[key]:
+            continue
+        o = pd.to_numeric(g["winOdds"], errors="coerce")
+        ordv = pd.to_numeric(g["ord"], errors="coerce")
+        ch = pd.to_numeric(g["chulNo"], errors="coerce")
+        ran = (o > 0) & ~ordv.between(93, 99)
+        races[key]["odds"] = {str(int(c)): float(v) for c, v in zip(ch[ran], o[ran])}
+        races[key]["out"] = sorted(int(c) for c in races[key]["p"] if int(c) not in set(ch[ran].astype(int)))
+
     # ---- 전개 시뮬레이션: simulate_race.py 를 경주마다 실행 (불러온 기록·특징은 재사용) ----
     sim_dir = Path(data_dir) / "sim"
     sim_dir.mkdir(parents=True, exist_ok=True)
@@ -113,6 +126,6 @@ def export(date: str, rows: list[dict], data_dir: Path) -> dict:
     print(f"  시뮬레이션 {sum('sim' in r for r in races.values())}/{len(races)}개 경주", flush=True)
 
     done = any("result" in r for r in races.values())
-    return {"races": races, "model": "v5", "backtestDone": done, "trained_through": str(art.get("trained_through")),
+    return {"races": races, "model": "v5", "v": 2, "backtestDone": done, "trained_through": str(art.get("trained_through")),
             "history_through": str(hist["date"].max()),
             "notes": {"toolsGuessed": info.get("tools_guessed"), "birthdayGuessed": info.get("birthday_guessed")}}

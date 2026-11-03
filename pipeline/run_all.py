@@ -78,7 +78,8 @@ def main() -> int:
         if not f.exists():
             return True
         # 결과가 들어오면 실제 구간 기록을 넣은 시뮬레이션(backtest)으로 한 번 다시 만든다
-        return not json.loads(f.read_text(encoding="utf-8")).get("backtestDone")
+        j = json.loads(f.read_text(encoding="utf-8"))
+        return not (j.get("backtestDone") and j.get("v", 1) >= 2)   # v2: 확정 배당·출전 취소 포함
     upcoming += [d for d in past_keep if needs_result(d)]
 
     exporter = load_exporter()
