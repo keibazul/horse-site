@@ -1,0 +1,86 @@
+name: retrain
+# 한 달에 한 번 최신 기록으로 우승 확률 모델(v5)과 구간 기록 모델을 다시 학습
+#  1) 먼저 평소 업데이트를 한 번 돌려, 결과가 들어온 지난 경주일을 '지금 모델'로 마무리
+#     (새 모델은 그 경주들을 학습하므로, 지난 경주 예측은 반드시 옛 모델로 남겨야 함)
+#  2) 학습 → 새 모델이 정상인지 확인 → work/winner_history/ 교체 → 다음 경주일 예측 다시
+on:
+  schedule:
+    - cron: '47 4 3 * *'   # 매달 3일 13:47 KST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: update-site
+  cancel-in-progress: false
+
+env:
+  PYTHONUTF8: '1'
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.13' }
+      - run: pip install -r requirements.txt
+      - name: 지난 경주일 마무리 (지금 모델)
+        env:
+          KRA_API_KEY: ${{ secrets.KRA_API_KEY }}
+        run: python pipeline/run_all.py
+      - name: 학습
+        working-directory: work
+        run: |
+          mkdir -p new
+          python train_win_model_v5.py --out new/win_model_v5.joblib
+          python train_sectional_model.py --out new/sect_model_v1.joblib
+      - name: 새 모델 확인 후 교체
+        working-directory: work
+        run: |
+          python - <<'EOF'
+          import joblib, sys
+          old = joblib.load("winner_history/win_model_v5.joblib"); new = joblib.load("new/win_model_v5.joblib")
+          s = joblib.load("new/sect_model_v1.joblib")
+          print(f"기존: 학습 ~{old['trained_through']} 검증 손실 {old['val_loss']:.4f}")
+          print(f"새로: 학습 ~{new['trained_through']} 검증 손실 {new['val_loss']:.4f}, 구간 모델 ~{s['trained_through']}")
+          ok = (str(new["trained_through"]) > str(old["trained_through"]) and 1.7 < new["val_loss"] < 2.05
+                and len(new["features"]) == len(old["features"]))
+          if not ok:
+              sys.exit("새 모델이 이상해서 교체하지 않습니다 (학습 기간이 늘지 않았거나 검증 손실이 범위를 벗어남)")
+          EOF
+          mv new/win_model_v5.joblib winner_history/win_model_v5.joblib
+          mv new/sect_model_v1.joblib winner_history/sect_model_v1.joblib
+      - name: 다음 경주일 예측 다시 (새 모델)
+        env:
+          KRA_API_KEY: ${{ secrets.KRA_API_KEY }}
+          SKIP_HISTORY: '1'
+        run: |
+          rm -f $(ls site/data/pred/*.json | awk -F/ -v t=$(TZ=Asia/Seoul date +%Y%m%d) '{d=substr($NF,1,8); if (d>=t) print}')
+          python pipeline/run_all.py
+      - name: 커밋
+        run: |
+          git config user.name "horse-site bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A site/data work/winner_history work/results work/race_details
+          if git diff --cached --quiet; then echo "바뀐 것 없음"; else
+            git commit -q -m "월간 재학습 $(TZ=Asia/Seoul date '+%Y-%m-%d')"
+            git pull --rebase -X theirs -q origin main && git push -q origin HEAD:main
+          fi
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: site }
+
+  deploy:
+    needs: retrain
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
