@@ -1,0 +1,31 @@
+name: probe-kra
+# 서울출전마현황(API314) 확인용 (임시)
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/probe-kra.yml']
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.13' }
+      - name: API314 조회
+        env:
+          KRA_API_KEY: ${{ secrets.KRA_API_KEY }}
+        run: |
+          python - <<'EOF'
+          import sys, json; sys.path.insert(0, "pipeline"); import kra_api
+          for d in ["20261107", "20261101", "20260607", "20251102", "20241103", "20221106"]:
+              try:
+                  r = kra_api.get("API314/textDataHoldSePtinInfo", {"race_dt": d, "pageNo": 1, "numOfRows": 300})
+                  it = kra_api.items(r); print(d, "총", kra_api.total_count(r), "건, 경주", sorted({x.get("raceNo") for x in it})[:20])
+                  if it and d in ("20261107", "20251102"):
+                      for x in it[:3]: print("  ", json.dumps(x, ensure_ascii=False))
+                      print("   장구 예:", sorted({str(x.get(k)) for x in it for k in ("asisEquip1","asisEquip2","asisEquip3")})[:40])
+                      print("   폐출혈 예:", sorted({str(x.get(k)) for x in it for k in ("latstBledg1","latstBledg2")})[:20])
+                      print("   진료 예:", [x.get("latstTrea1Txt") for x in it if x.get("latstTrea1Txt")][:12])
+              except Exception as e:
+                  print(d, "실패:", e)
+          EOF
