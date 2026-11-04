@@ -209,6 +209,12 @@ def main() -> int:
     elif not exporter:
         log("work/site_export.py 가 없어 예측은 건너뜁니다 (출전표만 사이트에 표시).")
 
+    # 참고 정보(진료·조교 등, 예측에는 안 씀): 앞으로 열릴 날은 매번, 지난 날은 파일이 없을 때만 (한 번에 4일까지)
+    t8 = today.strftime("%Y%m%d")
+    have_x = {f.stem for f in (DATA / "extra").glob("*.json")} if (DATA / "extra").exists() else set()
+    xd = [f.stem for f in ent_files if f.stem >= t8] + [f.stem for f in ent_files if f.stem < t8 and f.stem not in have_x][-4:]
+    if xd:
+        step("참고 정보", [sys.executable, str(ROOT / "pipeline" / "extra_site.py"), "--dates", ",".join(xd)], ROOT)
     if exporter and (WORK / "merged.csv").exists():
         # 출전마 지난 성적 (앞으로 열릴 날은 매번 새로, 지난 날은 없을 때만)
         step("지난 성적", [sys.executable, str(ROOT / "pipeline" / "form.py"), "--missing"] +

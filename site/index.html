@@ -82,6 +82,9 @@ a{color:var(--accent)}
 .nmbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .form{border-top:1px dashed var(--line);padding:8px 12px 10px 56px;background:var(--soft);display:grid;gap:6px}
 .form .fx{font-size:12.5px;color:var(--muted);margin:0}
+.form .extra{display:grid;gap:3px;border-top:1px dotted var(--line);padding-top:6px}
+.form .fx.warnx{color:var(--bad)}
+.form .fx.note{font-size:11.5px;opacity:.85}
 .fwrap{overflow-x:auto}
 .ftab{font-size:12.5px;border-collapse:collapse;width:100%;white-space:nowrap}
 .ftab th,.ftab td{padding:3px 6px;border-bottom:1px solid var(--line);text-align:left}
@@ -215,7 +218,7 @@ td.f small{display:block;color:var(--muted);font-size:11px;font-weight:400}
       <li><b>우승 확률</b>은 경주 전 정보만 쓴 모델(v5)의 예측입니다. 경주 직전 KRA 앱의 단승 배당을 모든 말에 넣으면 시장 확률과 섞은 <b>결합 확률</b>로 바뀝니다. 과거 18년 검증에서 결합 확률이 배당만 볼 때보다 조금 더 정확했습니다.</li>
       <li><b>적정 배당</b>은 확률로 본 손익분기 배당입니다. 실제 배당이 이보다 높아야 기대값이 1을 넘습니다. 단승 환급률이 약 80%라서 대부분의 말은 실제 배당이 적정 배당보다 낮습니다.</li>
       <li>승식 조합 확률은 우승 확률에서 2·3착 확률을 계산하는 하빌 방식(2착 0.8, 3착 0.7 보정)으로 만듭니다. 연승식은 출전 7두 이하면 2착 안, 8두 이상이면 3착 안입니다.</li>
-      <li><b>말 이름</b>을 누르면 그날 이전 최근 5경주 성적(거리, 착순, 기록, 단승 배당, 마체중, 기수)과 기수의 최근 성적이 펼쳐집니다.</li>
+      <li><b>말 이름</b>을 누르면 그날 이전 최근 5경주 성적(거리, 착순, 기록, 단승 배당, 마체중, 기수)과 기수의 최근 성적, 참고 정보(조교 횟수, 출전 주기, 장구, 최근 진료, 폐출혈, 특이사항)가 펼쳐집니다.</li>
       <li><b>배당 한꺼번에 넣기</b>: KRA 앱에서 복사한 단승 배당을 붙여넣으면 번호 순서대로 들어갑니다.</li>
       <li>출전 취소된 말은 번호를 눌러 빼면 나머지 말로 다시 계산합니다. '첫 출전' 말은 기록이 없어 확률을 믿기 어렵습니다.</li>
       <li><b>마체중</b>은 경주 당일 KRA 홈페이지에 경주마다 올라오면 30분 안에 예측에 넣습니다. 지난 1년 검증에서 마체중을 넣으면 모델 확률이 확실히 더 정확했습니다. <em class="flag" style="margin:0">체중 +2%</em> 표시는 4세 이상 말이 직전보다 2% 넘게 늘었다는 뜻으로, 이런 말은 배당 예상보다 덜 이기는 경향이 있었습니다.</li>
@@ -244,7 +247,7 @@ const store = {
   set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 };
 
-let INDEX = null, DAY = null, ENT = null, PRED = null, RACE = null, POOL = "단승식", FORM = null;
+let INDEX = null, DAY = null, ENT = null, PRED = null, RACE = null, POOL = "단승식", FORM = null, EXTRA = null;
 const openForms = new Set();
 const state = { odds: {}, user: {}, official: {}, out: new Set() };   // odds = 실제로 쓰는 값 (user 수정 > 확정 배당)
 
@@ -291,7 +294,8 @@ async function openDay(date, race){
   const st = $("dayStat"), h = DAY.hits;
   st.hidden = !h;
   if (h) st.innerHTML = `이날 ${h.races}경주 중 1순위 말이 이긴 경주: 모델 <b>${h.model}</b> · 확정 배당과 결합 <b>${h.comb}</b> · 배당 1순위 <b>${h.mkt ?? "-"}</b>`;
-  ENT = null; PRED = null; FORM = null; openForms.clear();
+  ENT = null; PRED = null; FORM = null; EXTRA = null; openForms.clear();
+  getJSON(`data/extra/${date}.json`).then(f => { if (DAY && DAY.date === date){ EXTRA = f; openForms.forEach(fillForm); } }).catch(() => {});
   getJSON(`data/form/${date}.json`).then(f => { if (DAY && DAY.date === date){ FORM = f; openForms.forEach(fillForm); } }).catch(() => {});
   try { ENT = await getJSON(`data/${DAY.entries}`); } catch { $("field").innerHTML = `<p class="empty">출전표 파일을 열지 못했습니다.</p>`; return; }
   if (DAY.pred) { try { PRED = await getJSON(`data/${DAY.pred}`); } catch { PRED = null; } }
@@ -454,7 +458,25 @@ function fillForm(i){
     <td class="r ${x[4] === 1 ? "win" : ""}"><b>${x[4] > 16 ? "실격" : x[4]}</b>/${x[5]}</td><td class="r">${t(x[6])}</td><td class="r">${x[7] ?? "-"}</td>
     <td class="r">${esc(x[8] || "-")}</td><td>${esc(x[9] || "")}</td><td>${esc(x[10] || "")}</td></tr>`).join("");
   box.innerHTML = (f.h.length ? `<div class="fwrap"><table class="ftab"><thead><tr><th>날짜</th><th class="r">거리</th><th>등급</th><th class="r">착순</th><th class="r">기록</th><th class="r">단승</th><th class="r">마체중</th><th>기수</th><th>주로</th></tr></thead><tbody>${rows}</tbody></table></div>`
-    : `<p class="fx">이전 출주 기록이 없습니다 (첫 출전).</p>`) + `<p class="fx">${esc(jk)}</p>`;
+    : `<p class="fx">이전 출주 기록이 없습니다 (첫 출전).</p>`) + `<p class="fx">${esc(jk)}</p>` + extraLine(i);
+}
+
+/* 참고 정보: 진료·폐출혈·조교·출전 주기·장구·특이사항 (예측에는 쓰지 않음) */
+function extraLine(i){
+  const x = EXTRA?.races?.[RACE]?.[i];
+  if (!x) return EXTRA ? "" : "";
+  const md = d => d ? `${+d.slice(4,6)}/${+d.slice(6,8)}` : "";
+  const ago = d => { if (!d || !DAY) return ""; const a = new Date(+d.slice(0,4), +d.slice(4,6)-1, +d.slice(6,8)), b = new Date(+DAY.date.slice(0,4), +DAY.date.slice(4,6)-1, +DAY.date.slice(6,8)); const n = Math.round((b-a)/864e5); return n >= 0 ? ` (${n}일 전)` : ""; };
+  const parts = [];
+  if (x.trng != null) parts.push(`조교 ${x.trng}회${x.trngRel != null ? ` (경주 평균 ${x.trngRel > 0 ? "+" : ""}${x.trngRel})` : ""}`);
+  if (x.cycle != null) parts.push(`출전 주기 ${x.cycle}주`);
+  if (x.equip) parts.push(`장구 ${x.equip}`);
+  const tr = (x.trea || []).map(t => `${md(t[0])} ${t[1]}${ago(t[0])}`).join(", ");
+  const rows = [`<p class="fx">${esc(parts.join(" · "))}</p>`];
+  if (tr) rows.push(`<p class="fx">최근 진료: ${esc(tr)}</p>`);
+  if ((x.bleed || []).length) rows.push(`<p class="fx warnx">폐출혈 기록: ${esc(x.bleed.join(", "))}</p>`);
+  if (x.spn) rows.push(`<p class="fx warnx">특이사항: ${esc(x.spn)}</p>`);
+  return `<div class="extra">${rows.join("")}<p class="fx note">참고 정보입니다. 2019~2026년 검증에서 진료·조교·장구 정보는 예측을 나아지게 하지 않아 확률에는 넣지 않았습니다.</p></div>`;
 }
 
 /* 배당 한꺼번에 넣기: 번호 순서 배당만, 또는 (번호, 배당) 짝 */
