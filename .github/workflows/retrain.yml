@@ -7,6 +7,9 @@ on:
   schedule:
     - cron: '47 4 3 * *'   # 매달 3일 13:47 KST
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/retrain.yml']   # 이 파일을 고치면 한 번 돌려 확인
 
 permissions:
   contents: write
