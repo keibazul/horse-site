@@ -27,11 +27,17 @@ UA = {"User-Agent": "Mozilla/5.0 (horse-site; personal research; weekly race-day
 KST = dt.timezone(dt.timedelta(hours=9))
 
 
-def get(url: str, data: dict | None = None) -> str:
+def get(url: str, data: dict | None = None, tries: int = 3) -> str:
     body = urllib.parse.urlencode(data).encode() if data else None
-    req = urllib.request.Request(url, data=body, headers=UA)
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return r.read().decode("euc-kr", "replace")
+    for k in range(tries):
+        try:
+            req = urllib.request.Request(url, data=body, headers=UA)
+            with urllib.request.urlopen(req, timeout=20) as r:
+                return r.read().decode("euc-kr", "replace")
+        except Exception:
+            if k + 1 == tries:
+                raise
+            time.sleep(5 * (k + 1))
 
 
 def list_status(date: str) -> dict[int, bool]:
@@ -98,13 +104,15 @@ def main() -> int:
             if w:
                 saved["races"][str(n)] = w
                 print(f"  {n}경주 {len(w)}두: " + ", ".join(f"{k}번 {v['kg']}({v['chg']:+d})" for k, v in list(w.items())[:4]) + " …")
+                save(f, saved)                       # 경주마다 저장 (중간에 끊겨도 받은 만큼은 남김)
     except Exception as e:      # 홈페이지가 안 열려도 나머지 업데이트는 계속
-        print(f"마체중 받기 실패: {type(e).__name__}: {e}")
-        return 0
-    if saved["races"]:
-        saved["fetched"] = dt.datetime.now(KST).isoformat(timespec="minutes")
-        f.write_text(json.dumps(saved, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        print(f"마체중 받기 실패 (받은 경주 {len(saved['races'])}개는 저장): {type(e).__name__}: {e}")
     return 0
+
+
+def save(f: Path, saved: dict) -> None:
+    saved["fetched"] = dt.datetime.now(KST).isoformat(timespec="minutes")
+    f.write_text(json.dumps(saved, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
 
 if __name__ == "__main__":
