@@ -4,7 +4,7 @@ on:
   schedule:
     - cron: '7 9 * * 4,5'    # 목·금 18:07 (출전표 공개 후)
     - cron: '17 22 * * 5,6'  # 토·일 07:17 (경주 당일 아침)
-    - cron: '17 3 * * 6,0'   # 토·일 12:17 (출전 취소 반영)
+    - cron: '7,37 0-8 * * 6,0'  # 토·일 09:07~17:37 30분마다 (당일 마체중이 들어온 경주 예측 다시, 출전 취소 반영)
     - cron: '27 0 * * 1'     # 월 09:27 (주말 결과로 기록 갱신)
   workflow_dispatch:
     inputs:
@@ -40,7 +40,7 @@ jobs:
       - name: 수집·예측
         env:
           KRA_API_KEY: ${{ secrets.KRA_API_KEY }}
-          SKIP_HISTORY: ${{ inputs.skip_history && '1' || '0' }}
+          SKIP_HISTORY: ${{ (inputs.skip_history || github.event.schedule == '7,37 0-8 * * 6,0') && '1' || '0' }}
           PYTHONUTF8: '1'
         run: python pipeline/run_all.py
       - name: 바뀐 데이터 커밋

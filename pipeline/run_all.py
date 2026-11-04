@@ -83,6 +83,34 @@ def day_stats(pred: dict) -> dict | None:
     return {"races": n, "model": hm, "comb": hc, "mkt": hk} if n else None
 
 
+def add_weights(d: str, rows: list[dict]) -> list[dict]:
+    """site/data/weights/날짜.json 의 당일 마체중을 출전표 행에 wgHr('510(+7)', 변화 없으면 '465()')로 붙임"""
+    f = DATA / "weights" / f"{d}.json"
+    if not f.exists():
+        return rows
+    w = json.loads(f.read_text(encoding="utf-8")).get("races", {})
+    out = []
+    for r in rows:
+        x = w.get(str(int(r.get("rcNo", 0))), {}).get(str(int(r.get("chulNo", 0))))
+        r = dict(r)
+        if x and x.get("kg"):
+            r["wgHr"] = f"{x['kg']}({x['chg']:+d})" if x.get("chg") else f"{x['kg']}()"
+        out.append(r)
+    return out
+
+
+def signature(rows: list[dict]) -> str:
+    """예측을 다시 만들어야 하는지 판단: 출전표+마체중, 경주 기록 크기, 모델 파일"""
+    import hashlib
+    h = hashlib.sha1(json.dumps(rows, ensure_ascii=False, sort_keys=True).encode())
+    for f in [WORK / "merged.csv", *sorted((WORK / "winner_history").glob("*.joblib"))]:
+        if f.exists():
+            h.update(f"{f.name}:{f.stat().st_size}".encode())
+    for f in sorted((WORK / "winner_history").glob("*.joblib")):
+        h.update(hashlib.sha1(f.read_bytes()).digest())
+    return h.hexdigest()[:16]
+
+
 def write_index(today: dt.date, connected: bool, model_name: str | None = None) -> None:
     """사이트 목차: 예측이 있는 지난 경주일 전부 + 앞으로 열릴 경주일"""
     t = today.strftime("%Y%m%d")
@@ -143,6 +171,11 @@ def main() -> int:
         return not (j.get("backtestDone") and j.get("v", 1) >= 2)   # v2: 확정 배당·출전 취소 포함
     upcoming += [d for d in past_keep if needs_result(d)]
 
+    # 경주 당일(또는 지난 이틀 안) 마체중: KRA 홈페이지에 입력된 경주만 받아 둠
+    for d in sorted(set(upcoming)):
+        if d <= today.strftime("%Y%m%d") and d >= (today - dt.timedelta(days=1)).strftime("%Y%m%d"):
+            step("당일 마체중", [sys.executable, str(ROOT / "pipeline" / "fetch_weights.py"), "--date", d], ROOT)
+
     exporter = load_exporter()
     model_name = None
     if exporter:
@@ -152,9 +185,18 @@ def main() -> int:
         (DATA / "pred").mkdir(parents=True, exist_ok=True)
         (DATA / "sim").mkdir(parents=True, exist_ok=True)
         for d in upcoming:
-            rows = json.loads((DATA / "entries" / f"{d}.json").read_text(encoding="utf-8"))["rows"]
+            rows = add_weights(d, json.loads((DATA / "entries" / f"{d}.json").read_text(encoding="utf-8"))["rows"])
+            sig = signature(rows)
+            pf = DATA / "pred" / f"{d}.json"
+            if pf.exists() and d >= today.strftime("%Y%m%d"):
+                old = json.loads(pf.read_text(encoding="utf-8"))
+                if old.get("sig") == sig:
+                    log(f"예측 그대로: {d} (출전표·마체중·기록·모델 변화 없음)")
+                    model_name = old.get("model", model_name)
+                    continue
             try:
                 res = exporter.export(d, rows, DATA)
+                res["sig"] = sig
                 res["date"] = d
                 res["made"] = dt.datetime.now(KST).isoformat(timespec="minutes")
                 (DATA / "pred" / f"{d}.json").write_text(json.dumps(res, ensure_ascii=False), encoding="utf-8")

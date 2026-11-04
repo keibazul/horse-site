@@ -87,7 +87,8 @@ a{color:var(--accent)}
 .chip.sm{width:24px;height:22px;font-size:12.5px;cursor:default}
 .nm{min-width:0}
 .nm b{display:block;font-size:15.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.nm span{display:block;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nm span{display:block;font-size:12.5px;color:var(--muted);white-space:normal;line-height:1.35}
+.flag{font-style:normal;font-size:11.5px;font-weight:600;margin-left:6px;padding:1px 6px;border-radius:999px;border:1px solid var(--bad);color:var(--bad);vertical-align:2px}
 .pr{display:grid;gap:3px;min-width:0}
 .pr .v{font-family:var(--f-data);font-weight:600;font-size:15px;display:flex;align-items:baseline;gap:6px}
 .pr .v small{font-weight:500;font-size:11.5px;color:var(--muted)}
@@ -190,6 +191,7 @@ td.f small{display:block;color:var(--muted);font-size:11px;font-weight:400}
       <li><b>적정 배당</b>은 확률로 본 손익분기 배당입니다. 실제 배당이 이보다 높아야 기대값이 1을 넘습니다. 단승 환급률이 약 80%라서 대부분의 말은 실제 배당이 적정 배당보다 낮습니다.</li>
       <li>승식 조합 확률은 우승 확률에서 2·3착 확률을 계산하는 하빌 방식(2착 0.8, 3착 0.7 보정)으로 만듭니다. 연승식은 출전 7두 이하면 2착 안, 8두 이상이면 3착 안입니다.</li>
       <li>출전 취소된 말은 번호를 눌러 빼면 나머지 말로 다시 계산합니다. '첫 출전' 말은 기록이 없어 확률을 믿기 어렵습니다.</li>
+      <li><b>마체중</b>은 경주 당일 KRA 홈페이지에 경주마다 올라오면 30분 안에 예측에 넣습니다. 지난 1년 검증에서 마체중을 넣으면 모델 확률이 확실히 더 정확했습니다. <em class="flag" style="margin:0">체중 +2%</em> 표시는 4세 이상 말이 직전보다 2% 넘게 늘었다는 뜻으로, 이런 말은 배당 예상보다 덜 이기는 경향이 있었습니다.</li>
       <li>지난 경주일은 그날 이전 기록만으로 낸 예측과 실제 1~3착을 함께 보여 줍니다.</li>
       <li class="warn">2009~2026년 확정배당 백테스트에서 꾸준히 100%를 넘긴 승식·전략은 없었습니다. 이 사이트는 경주를 이해하기 위한 도구이며 수익을 보장하지 않습니다.</li>
     </ul>
@@ -345,7 +347,9 @@ function render(){
   $("clearOdds").textContent = off ? "확정 배당으로 되돌리기" : "배당 지우기";
   $("clearOdds").hidden = off ? !edited && [...state.out].join() === (PRED?.races?.[RACE]?.out || []).join() : false;
   const need = P.ids.length - entered;
-  $("srcNote").innerHTML = `${srcText}${need > 0 && entered > 0 ? ` · 배당 ${need}두 더 넣으면 ${pm ? "결합" : "시장"} 확률로 바뀝니다` : ""}${entered === 0 ? " · 경주 직전 KRA 앱의 단승 배당을 넣으면 더 정확해집니다" : ""}${off ? " · 배당 칸은 고칠 수 있고, 고친 칸은 굵게 표시됩니다" : ""}`;
+  const wgN = Object.keys(PRED?.races?.[RACE]?.wg || {}).length;
+  const wgNote = wgN ? " · 당일 마체중 반영" : (DAY && !DAY.past ? " · 마체중은 경주 당일 입력되면 30분 안에 반영" : "");
+  $("srcNote").innerHTML = `${srcText}${wgNote}${need > 0 && entered > 0 ? ` · 배당 ${need}두 더 넣으면 ${pm ? "결합" : "시장"} 확률로 바뀝니다` : ""}${entered === 0 ? " · 경주 직전 KRA 앱의 단승 배당을 넣으면 더 정확해집니다" : ""}${off ? " · 배당 칸은 고칠 수 있고, 고친 칸은 굵게 표시됩니다" : ""}`;
   const nt = $("notice");
   const inSample = PRED?.trained_through && PRED.trained_through >= DAY.date;
   if (pm && inSample){ nt.hidden = false; nt.textContent = `이 경주일은 모델 학습(~${PRED.trained_through.slice(0,4)}.${PRED.trained_through.slice(4,6)}.${PRED.trained_through.slice(6)})에 들어간 경주라 확률이 실제보다 잘 맞아 보입니다. 예측 성능은 그 뒤 경주로 보세요.`; }
@@ -358,7 +362,11 @@ function render(){
     const i = +r.chulNo, out = state.out.has(i), p = P.final?.[i];
     const [bg, fg] = saddle(i);
     const nPrior = PRED?.races?.[RACE]?.n?.[i];
-    const meta = [`${r.sex ?? ""}${r.age ?? ""}`, r.jkName, r.wgBudam && `${r.wgBudam}kg`, r.rating && r.rating !== "-" && +r.rating > 0 && `R${r.rating}`, nPrior === 0 && "첫 출전"].filter(Boolean).join(" · ");
+    const wg = PRED?.races?.[RACE]?.wg?.[i];
+    const wgRate = wg && wg[0] - wg[1] > 0 ? wg[1] / (wg[0] - wg[1]) * 100 : null;
+    const wgTxt = wg ? `마체중 ${wg[0]}(${wg[1] > 0 ? "+" : ""}${wg[1] || 0})` : "";
+    const meta = esc([`${r.sex ?? ""}${r.age ?? ""}`, r.jkName, r.wgBudam && `부담 ${r.wgBudam}kg`, wgTxt, r.rating && r.rating !== "-" && +r.rating > 0 && `R${r.rating}`, nPrior === 0 && "첫 출전"].filter(Boolean).join(" · "));
+    const flag = wgRate != null && +r.age >= 4 && wgRate >= 2 ? `<em class="flag" title="4세 이상이 직전보다 2% 넘게 늘면 배당 예상보다 덜 이기는 경향 (2010~2026년 16% 덜)">체중 +${wgRate.toFixed(1)}%</em>` : "";
     let prc;
     if (out) prc = `<span class="na">출전 제외</span>`;
     else if (p != null){
@@ -373,7 +381,7 @@ function render(){
     }
     return `<div class="row ${out ? "out" : ""}">
       <button type="button" class="chip" style="background:${bg};color:${fg}" data-out="${i}" aria-pressed="${out}" title="${out ? "다시 넣기" : "출전 제외로 표시"}" aria-label="${i}번 ${out ? "다시 넣기" : "출전 제외"}">${i}</button>
-      <div class="nm"><b>${esc(r.hrName)}</b><span>${esc(meta)}</span></div>
+      <div class="nm"><b>${esc(r.hrName)}${flag}</b><span>${meta}</span></div>
       <div class="pr">${prc}</div>
       <div class="od"><input inputmode="decimal" aria-label="${i}번 단승 배당" placeholder="배당" data-odds="${i}" value="${state.odds[i] ?? ""}" class="${(i in state.official) && !(i in state.user) ? "auto" : (i in state.user ? "edited" : "")}" ${out ? "disabled" : ""}>${ev}</div>
     </div>`;

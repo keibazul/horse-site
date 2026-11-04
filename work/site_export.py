@@ -76,6 +76,13 @@ def export(date: str, rows: list[dict], data_dir: Path) -> dict:
             "n": {str(int(c)): int(v) for c, v in zip(g["chulNo"], g["n_prior_races"])},
         }
 
+    # 당일 마체중 (있으면): 사이트 표시용 [kg, 증감]
+    if "wgHr" in raw.columns:
+        wg = raw["wgHr"].astype(str).str.extract(r"^\s*(\d+)\s*(?:\(\s*([+-]?\d*)\s*\))?")
+        for (rno, ch), kg, cg in zip(zip(pd.to_numeric(raw["rcNo"]), pd.to_numeric(raw["chulNo"])), wg[0], wg[1]):
+            if pd.notna(kg) and str(int(rno)) in races:
+                races[str(int(rno))].setdefault("wg", {})[str(int(ch))] = [int(kg), int(cg) if cg not in ("", None) and pd.notna(cg) else 0]
+
     # 지난 경주일이면 실제 1~3착 (사이트에서 예측과 비교)
     day = hist[(hist["date"] == date) & pd.to_numeric(hist["ord"], errors="coerce").between(1, 3)]
     for rno, g in day.groupby("race_no"):
