@@ -108,6 +108,12 @@ def write_index(today: dt.date, connected: bool, model_name: str | None = None) 
         "days": days,
     }
     (DATA / "index.json").write_text(json.dumps(idx, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    try:
+        sys.path.insert(0, str(ROOT / "pipeline"))
+        import strategy
+        strategy.write()
+    except Exception as e:  # 수익 계산이 실패해도 사이트 갱신은 계속
+        log(f"전략 계산 실패: {e}")
     past = [x for x in days if x["past"]]
     log(f"\n목차: 지난 경주일 {len(past)}일, 앞으로 {len(days) - len(past)}일")
 

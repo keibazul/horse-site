@@ -101,6 +101,8 @@ def export(date: str, rows: list[dict], data_dir: Path) -> dict:
         ch = pd.to_numeric(g["chulNo"], errors="coerce")
         ran = (o > 0) & ~ordv.between(93, 99)
         races[key]["odds"] = {str(int(c)): float(v) for c, v in zip(ch[ran], o[ran])}
+        po = pd.to_numeric(g["plcOdds"], errors="coerce")
+        races[key]["plc"] = {str(int(c)): float(v) for c, v in zip(ch[ran & (po > 0)], po[ran & (po > 0)])}
         races[key]["out"] = sorted(int(c) for c in races[key]["p"] if int(c) not in set(ch[ran].astype(int)))
 
     # ---- 전개 시뮬레이션: simulate_race.py 를 경주마다 실행 (불러온 기록·특징은 재사용) ----

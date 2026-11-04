@@ -247,7 +247,7 @@ async function boot(){
   if (tot.r){
     const pc = x => (x / tot.r * 100).toFixed(1) + "%";
     $("overall").hidden = false;
-    $("overall").innerHTML = `지난 경주일 ${tot.n}일 ${tot.r}경주에서 1순위 말이 이긴 비율: 모델 <b>${pc(tot.m)}</b> · 확정 배당과 결합 <b>${pc(tot.c)}</b> · 배당 1순위(인기마) <b>${pc(tot.k)}</b>. 지난 경주일 예측은 모두 그날보다 앞에서 학습을 끝낸 모델로 만들었습니다.`;
+    $("overall").innerHTML = `지난 경주일 ${tot.n}일 ${tot.r}경주에서 1순위 말이 이긴 비율: 모델 <b>${pc(tot.m)}</b> · 확정 배당과 결합 <b>${pc(tot.c)}</b> · 배당 1순위(인기마) <b>${pc(tot.k)}</b>. 지난 경주일 예측은 모두 그날보다 앞에서 학습을 끝낸 모델로 만들었습니다. <a href="results.html">방법별로 샀다면 얼마가 돌아왔는지 보기</a>`;
   }
   const want = q.get("date"), first = days.find(d => d.date === want) || days.find(d => !d.past) || days[days.length-1];
   await openDay(first.date, +q.get("race") || null);
