@@ -1,5 +1,5 @@
 name: probe-kra
-# 서울출전마현황(API314) 확인용 (임시)
+# 서울출전마현황(API314)·출전표정보(API78) 확인용 (임시)
 on:
   push:
     branches: [main]
@@ -11,27 +11,23 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: '3.13' }
-      - name: API314 조회
+      - name: API314, API78 조회
         env:
           KRA_API_KEY: ${{ secrets.KRA_API_KEY }}
         run: |
           python - <<'EOF'
-          import sys, json, time; sys.path.insert(0, "pipeline"); import kra_api
+          import sys, json; sys.path.insert(0, "pipeline"); import kra_api
           kra_api.NET_FAIL_LIMIT = 99
-          for p, q in [("API26_2/entrySheet_2", {"meet": 1, "rc_date": "20261107"}), ("API314/textDataHoldSePtinInfo", {"race_dt": "20261107", "race_no": 1})]:
-              t = time.time()
-              try:
-                  r = kra_api.get(p, {**q, "pageNo": 1, "numOfRows": 5}, timeout=60); print("대조", p, "성공", kra_api.total_count(r), f"{time.time()-t:.1f}s")
-              except Exception as e: print("대조", p, "실패", e, f"{time.time()-t:.1f}s")
-          for d in ["20261107", "20261101", "20260607", "20251102", "20241103", "20221106"]:
-              try:
-                  r = kra_api.get("API314/textDataHoldSePtinInfo", {"race_dt": d, "pageNo": 1, "numOfRows": 300}, timeout=60)
-                  it = kra_api.items(r); print(d, "총", kra_api.total_count(r), "건, 경주", sorted({x.get("raceNo") for x in it})[:20])
-                  if it and d in ("20261107", "20251102"):
-                      for x in it[:3]: print("  ", json.dumps(x, ensure_ascii=False))
-                      print("   장구 예:", sorted({str(x.get(k)) for x in it for k in ("asisEquip1","asisEquip2","asisEquip3")})[:40])
-                      print("   폐출혈 예:", sorted({str(x.get(k)) for x in it for k in ("latstBledg1","latstBledg2")})[:20])
-                      print("   진료 예:", [x.get("latstTrea1Txt") for x in it if x.get("latstTrea1Txt")][:12])
-              except Exception as e:
-                  print(d, "실패:", e)
+          tests = [("API314/textDataHoldSePtinInfo", lambda d: {"race_dt": d}),
+                   ("API78/chulmainfo", lambda d: {"rccrs_cd": 1, "race_dt": d})]
+          for path, q in tests:
+              print("########", path)
+              for d in ["20261107", "20261101", "20260607", "20251102", "20241103", "20221106", "20191103"]:
+                  try:
+                      r = kra_api.get(path, {**q(d), "pageNo": 1, "numOfRows": 300}, timeout=60)
+                      it = kra_api.items(r); print(d, "총", kra_api.total_count(r), "건")
+                      if it and d in ("20261107", "20251102"):
+                          for x in it[:2]: print("  ", json.dumps(x, ensure_ascii=False)[:900])
+                  except Exception as e:
+                      print(d, "실패:", e)
           EOF
