@@ -1,33 +1,36 @@
 name: probe-kra
-# 서울출전마현황(API314)·출전표정보(API78) 확인용 (임시)
+# 경주 전 추가 정보(API314·API78) 과거 기록 모으기 (임시, 이어받기)
 on:
   push:
     branches: [main]
     paths: ['.github/workflows/probe-kra.yml']
+permissions:
+  contents: write
+concurrency:
+  group: update-site
+  cancel-in-progress: false
 jobs:
-  probe:
+  collect:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
+        with: { ref: main }
       - uses: actions/setup-python@v5
         with: { python-version: '3.13' }
-      - name: API314, API78 조회
+      - run: pip install pandas==3.0.5 numpy==2.5.3
+      - name: 모으기 (2019년~)
         env:
           KRA_API_KEY: ${{ secrets.KRA_API_KEY }}
         run: |
-          python - <<'EOF'
-          import sys, json; sys.path.insert(0, "pipeline"); import kra_api
-          kra_api.NET_FAIL_LIMIT = 99
-          tests = [("API314/textDataHoldSePtinInfo", lambda d: {"race_dt": d}),
-                   ("API78/chulmainfo", lambda d: {"rccrs_cd": 1, "race_dt": d})]
-          for path, q in tests:
-              print("########", path)
-              for d in ["20261107", "20261101", "20260607", "20251102", "20241103", "20221106", "20191103"]:
-                  try:
-                      r = kra_api.get(path, {**q(d), "pageNo": 1, "numOfRows": 300}, timeout=60)
-                      it = kra_api.items(r); print(d, "총", kra_api.total_count(r), "건")
-                      if it and d in ("20261107", "20251102"):
-                          for x in it[:2]: print("  ", json.dumps(x, ensure_ascii=False)[:900])
-                  except Exception as e:
-                      print(d, "실패:", e)
+          cd work && python - <<'EOF'
+          import zipfile; zipfile.ZipFile("merged.zip").extractall(".")
           EOF
+          cd .. && python pipeline/fetch_extra.py --from 20190101 --to 20261101 --limit 1700
+          ls -la work/extra
+      - name: 커밋
+        run: |
+          git config user.name "horse-site bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add work/extra
+          git diff --cached --quiet || (git commit -q -m "경주 전 추가 정보(진료·조교 등) 과거 기록" && git pull --rebase -X theirs -q origin main && git push -q origin HEAD:main)
