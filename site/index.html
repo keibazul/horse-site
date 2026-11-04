@@ -76,6 +76,25 @@ a{color:var(--accent)}
 .srcbar p{font-size:13.5px;color:var(--muted);flex:1 1 300px}
 .srcbar b{color:var(--ink)}
 .tools{display:flex;gap:8px;flex-wrap:wrap}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.nmbtn{all:unset;cursor:pointer;display:block;max-width:100%}
+.nmbtn b{border-bottom:1px dotted var(--muted)}
+.nmbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.form{border-top:1px dashed var(--line);padding:8px 12px 10px 56px;background:var(--soft);display:grid;gap:6px}
+.form .fx{font-size:12.5px;color:var(--muted);margin:0}
+.fwrap{overflow-x:auto}
+.ftab{font-size:12.5px;border-collapse:collapse;width:100%;white-space:nowrap}
+.ftab th,.ftab td{padding:3px 6px;border-bottom:1px solid var(--line);text-align:left}
+.ftab th{font-weight:600;color:var(--muted);font-size:11.5px}
+.ftab .r{text-align:right;font-family:var(--f-data)}
+.ftab td.win b{color:var(--accent)}
+@media (max-width:560px){.form{padding-left:12px}}
+.paste{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px;display:grid;gap:8px}
+.paste label{font-size:13px;color:var(--muted)}
+.paste textarea{width:100%;font-family:var(--f-data);font-size:15px;border:1px solid var(--line);border-radius:6px;padding:8px;background:var(--bg);resize:vertical}
+.paste-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.paste-row p{font-size:13px;margin:0}
+.paste-row p.err{color:var(--bad)}
 .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:6px 12px;cursor:pointer;font-size:13.5px;font-weight:600}
 
 .field{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
@@ -168,8 +187,14 @@ td.f small{display:block;color:var(--muted);font-size:11px;font-weight:400}
     <div class="srcbar" id="srcbar" hidden>
       <p id="srcNote"></p>
       <div class="tools">
+        <button class="btn" type="button" id="pasteBtn" aria-expanded="false" aria-controls="pastePanel">배당 한꺼번에 넣기</button>
         <button class="btn" type="button" id="clearOdds">배당 지우기</button>
       </div>
+    </div>
+    <div class="paste" id="pastePanel" hidden>
+      <label for="pasteIn">KRA 앱이나 화면에서 복사한 단승 배당을 붙여넣으세요. 번호 순서대로 배당만 있거나("3.2 12.5 4.1 …"), 번호와 배당이 짝지어 있어도("1 3.2 / 2 12.5 …") 됩니다.</label>
+      <textarea id="pasteIn" rows="3" inputmode="decimal" placeholder="예: 3.2 12.5 4.1 8.8 27.0 6.4 15.3 9.9 41.2 5.6"></textarea>
+      <div class="paste-row"><button class="btn primary" type="button" id="pasteApply">넣기</button><p id="pasteMsg" aria-live="polite"></p></div>
     </div>
 
     <section class="field" id="field" aria-label="출전마"></section>
@@ -190,6 +215,8 @@ td.f small{display:block;color:var(--muted);font-size:11px;font-weight:400}
       <li><b>우승 확률</b>은 경주 전 정보만 쓴 모델(v5)의 예측입니다. 경주 직전 KRA 앱의 단승 배당을 모든 말에 넣으면 시장 확률과 섞은 <b>결합 확률</b>로 바뀝니다. 과거 18년 검증에서 결합 확률이 배당만 볼 때보다 조금 더 정확했습니다.</li>
       <li><b>적정 배당</b>은 확률로 본 손익분기 배당입니다. 실제 배당이 이보다 높아야 기대값이 1을 넘습니다. 단승 환급률이 약 80%라서 대부분의 말은 실제 배당이 적정 배당보다 낮습니다.</li>
       <li>승식 조합 확률은 우승 확률에서 2·3착 확률을 계산하는 하빌 방식(2착 0.8, 3착 0.7 보정)으로 만듭니다. 연승식은 출전 7두 이하면 2착 안, 8두 이상이면 3착 안입니다.</li>
+      <li><b>말 이름</b>을 누르면 그날 이전 최근 5경주 성적(거리, 착순, 기록, 단승 배당, 마체중, 기수)과 기수의 최근 성적이 펼쳐집니다.</li>
+      <li><b>배당 한꺼번에 넣기</b>: KRA 앱에서 복사한 단승 배당을 붙여넣으면 번호 순서대로 들어갑니다.</li>
       <li>출전 취소된 말은 번호를 눌러 빼면 나머지 말로 다시 계산합니다. '첫 출전' 말은 기록이 없어 확률을 믿기 어렵습니다.</li>
       <li><b>마체중</b>은 경주 당일 KRA 홈페이지에 경주마다 올라오면 30분 안에 예측에 넣습니다. 지난 1년 검증에서 마체중을 넣으면 모델 확률이 확실히 더 정확했습니다. <em class="flag" style="margin:0">체중 +2%</em> 표시는 4세 이상 말이 직전보다 2% 넘게 늘었다는 뜻으로, 이런 말은 배당 예상보다 덜 이기는 경향이 있었습니다.</li>
       <li>지난 경주일은 그날 이전 기록만으로 낸 예측과 실제 1~3착을 함께 보여 줍니다.</li>
@@ -217,7 +244,8 @@ const store = {
   set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 };
 
-let INDEX = null, DAY = null, ENT = null, PRED = null, RACE = null, POOL = "단승식";
+let INDEX = null, DAY = null, ENT = null, PRED = null, RACE = null, POOL = "단승식", FORM = null;
+const openForms = new Set();
 const state = { odds: {}, user: {}, official: {}, out: new Set() };   // odds = 실제로 쓰는 값 (user 수정 > 확정 배당)
 
 async function getJSON(url){ const r = await fetch(url, {cache:"no-cache"}); if (!r.ok) throw new Error(r.status); return r.json(); }
@@ -263,7 +291,8 @@ async function openDay(date, race){
   const st = $("dayStat"), h = DAY.hits;
   st.hidden = !h;
   if (h) st.innerHTML = `이날 ${h.races}경주 중 1순위 말이 이긴 경주: 모델 <b>${h.model}</b> · 확정 배당과 결합 <b>${h.comb}</b> · 배당 1순위 <b>${h.mkt ?? "-"}</b>`;
-  ENT = null; PRED = null;
+  ENT = null; PRED = null; FORM = null; openForms.clear();
+  getJSON(`data/form/${date}.json`).then(f => { if (DAY && DAY.date === date){ FORM = f; openForms.forEach(fillForm); } }).catch(() => {});
   try { ENT = await getJSON(`data/${DAY.entries}`); } catch { $("field").innerHTML = `<p class="empty">출전표 파일을 열지 못했습니다.</p>`; return; }
   if (DAY.pred) { try { PRED = await getJSON(`data/${DAY.pred}`); } catch { PRED = null; } }
   const races = [...new Set(ENT.rows.map(r => +r.rcNo))].sort((a,b) => a-b);
@@ -280,6 +309,7 @@ const stTime = r => { const m = String(r?.stTime ?? "").match(/(\d{1,2}):?(\d{2}
 
 function openRace(n){
   RACE = n;
+  $("pasteMsg").textContent = "";
   [...$("races").children].forEach(b => b.setAttribute("aria-pressed", +b.dataset.r === n));
   $("races").querySelector(`[data-r="${n}"]`)?.scrollIntoView({block:"nearest", inline:"center"});
   const key = `odds:${DAY.date}:${n}`, saved = store.get(key) || {};
@@ -381,17 +411,22 @@ function render(){
     }
     return `<div class="row ${out ? "out" : ""}">
       <button type="button" class="chip" style="background:${bg};color:${fg}" data-out="${i}" aria-pressed="${out}" title="${out ? "다시 넣기" : "출전 제외로 표시"}" aria-label="${i}번 ${out ? "다시 넣기" : "출전 제외"}">${i}</button>
-      <div class="nm"><b>${esc(r.hrName)}${flag}</b><span>${meta}</span></div>
+      <div class="nm"><button type="button" class="nmbtn" data-form="${i}" aria-expanded="${openForms.has(i)}" aria-controls="form-${i}"><b>${esc(r.hrName)}${flag}</b></button><span>${meta}</span></div>
       <div class="pr">${prc}</div>
       <div class="od"><input inputmode="decimal" aria-label="${i}번 단승 배당" placeholder="배당" data-odds="${i}" value="${state.odds[i] ?? ""}" class="${(i in state.official) && !(i in state.user) ? "auto" : (i in state.user ? "edited" : "")}" ${out ? "disabled" : ""}>${ev}</div>
-    </div>`;
+    </div>
+    <div class="form" id="form-${i}" ${openForms.has(i) ? "" : "hidden"}></div>`;
   }).join("");
+  openForms.forEach(fillForm);
   renderBets(P);
 }
 
 function save(){ store.set(`odds:${DAY.date}:${RACE}`, { user: state.user, out: [...state.out] }); }
 
 $("field").addEventListener("click", e => {
+  const fb = e.target.closest("[data-form]");
+  if (fb){ const i = +fb.dataset.form; openForms.has(i) ? openForms.delete(i) : openForms.add(i);
+    fb.setAttribute("aria-expanded", openForms.has(i)); $(`form-${i}`).hidden = !openForms.has(i); fillForm(i); return; }
   const b = e.target.closest("[data-out]"); if (!b) return;
   const i = +b.dataset.out; state.out.has(i) ? state.out.delete(i) : state.out.add(i); save(); render();
 });
@@ -405,6 +440,52 @@ $("field").addEventListener("input", e => {
   mergeOdds(); save(); clearTimeout(tmr);
   tmr = setTimeout(() => { const pos = t.selectionStart, id = i; render(); const n = document.querySelector(`[data-odds="${id}"]`); if (n){ n.focus(); try { n.setSelectionRange(pos, pos); } catch {} } }, 450);
 });
+/* 지난 성적 펼치기 */
+function fillForm(i){
+  const box = $(`form-${i}`); if (!box || box.hidden) return;
+  const f = FORM?.races?.[RACE]?.[i];
+  if (!FORM){ box.innerHTML = `<p class="fx">지난 성적을 불러오는 중…</p>`; return; }
+  if (!f){ box.innerHTML = `<p class="fx">지난 성적 자료가 없습니다.</p>`; return; }
+  const ymd = d => `${d.slice(2,4)}.${+d.slice(4,6)}.${+d.slice(6,8)}`;
+  const t = s => s == null ? "-" : s >= 60 ? `${Math.floor(s/60)}:${(s%60).toFixed(1).padStart(4,"0")}` : s.toFixed(1);
+  const j = f.j;
+  const jk = j ? `기수 최근 ${j[0]}회: 1착 ${j[1]} (${Math.round(j[1]/j[0]*100)}%) · 3착 안 ${j[2]} (${Math.round(j[2]/j[0]*100)}%) · 최근 30일 ${j[3]}회 ${j[4]}승` : "기수 기록 없음";
+  const rows = f.h.map(x => `<tr><td>${ymd(x[0])} ${x[1]}R</td><td class="r">${x[2] ?? "-"}m</td><td>${esc(x[3] || "")}</td>
+    <td class="r ${x[4] === 1 ? "win" : ""}"><b>${x[4] > 16 ? "실격" : x[4]}</b>/${x[5]}</td><td class="r">${t(x[6])}</td><td class="r">${x[7] ?? "-"}</td>
+    <td class="r">${esc(x[8] || "-")}</td><td>${esc(x[9] || "")}</td><td>${esc(x[10] || "")}</td></tr>`).join("");
+  box.innerHTML = (f.h.length ? `<div class="fwrap"><table class="ftab"><thead><tr><th>날짜</th><th class="r">거리</th><th>등급</th><th class="r">착순</th><th class="r">기록</th><th class="r">단승</th><th class="r">마체중</th><th>기수</th><th>주로</th></tr></thead><tbody>${rows}</tbody></table></div>`
+    : `<p class="fx">이전 출주 기록이 없습니다 (첫 출전).</p>`) + `<p class="fx">${esc(jk)}</p>`;
+}
+
+/* 배당 한꺼번에 넣기: 번호 순서 배당만, 또는 (번호, 배당) 짝 */
+$("pasteBtn").onclick = () => { const p = $("pastePanel"); p.hidden = !p.hidden; $("pasteBtn").setAttribute("aria-expanded", !p.hidden); if (!p.hidden) $("pasteIn").focus(); };
+function parseOdds(text, all, live){
+  const nums = (text.replace(/,/g, ".").match(/\d+(?:\.\d+)?/g) || []).map(Number);
+  const allN = all.map(Number), liveN = live.map(Number);
+  // 짝: 홀수 자리가 말 번호 전부(또는 출전하는 말 전부)
+  if (nums.length >= 4 && nums.length % 2 === 0){
+    const ids = nums.filter((_, k) => k % 2 === 0), od = nums.filter((_, k) => k % 2 === 1);
+    const set = new Set(ids);
+    if (ids.every(x => Number.isInteger(x) && allN.includes(x)) && set.size === ids.length && ids.length >= liveN.length && od.every(v => v >= 1))
+      return { map: Object.fromEntries(ids.map((x, k) => [x, od[k]])) };
+  }
+  const od = nums.filter(v => v >= 1);
+  if (od.length === allN.length) return { map: Object.fromEntries(allN.map((x, k) => [x, od[k]])) };
+  if (od.length === liveN.length) return { map: Object.fromEntries(liveN.map((x, k) => [x, od[k]])) };
+  return { err: `배당 ${od.length}개를 찾았는데 이 경주는 ${liveN.length}두${allN.length !== liveN.length ? `(출전 취소 포함 ${allN.length}두)` : ""}입니다. 번호 순서대로 모든 말의 배당을 넣어 주세요.` };
+}
+$("pasteApply").onclick = () => {
+  const all = horses().map(r => +r.chulNo), live = all.filter(i => !state.out.has(i));
+  const r = parseOdds($("pasteIn").value, all, live);
+  const msg = $("pasteMsg");
+  if (r.err){ msg.className = "err"; msg.textContent = r.err; return; }
+  for (const [i, v] of Object.entries(r.map)){
+    if (String(state.official[i] ?? "") === String(v)) delete state.user[i]; else state.user[i] = String(v);
+  }
+  mergeOdds(); save(); render();
+  msg.className = ""; msg.textContent = `${Object.keys(r.map).length}두 배당을 넣었습니다: ` + Object.entries(r.map).map(([i, v]) => `${i}번 ${v}`).join(", ");
+  $("pasteIn").value = "";
+};
 $("clearOdds").onclick = () => { state.user = {}; if (!hasOfficial()) state.out = new Set(); else state.out = new Set(PRED?.races?.[RACE]?.out || []); mergeOdds(); save(); render(); };
 
 /* 승식: 하빌 방식 (2착 γ, 3착 δ 보정) */

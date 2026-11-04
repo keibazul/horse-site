@@ -209,6 +209,10 @@ def main() -> int:
     elif not exporter:
         log("work/site_export.py 가 없어 예측은 건너뜁니다 (출전표만 사이트에 표시).")
 
+    if exporter and (WORK / "merged.csv").exists():
+        # 출전마 지난 성적 (앞으로 열릴 날은 매번 새로, 지난 날은 없을 때만)
+        step("지난 성적", [sys.executable, str(ROOT / "pipeline" / "form.py"), "--missing"] +
+             sum([["--date", d] for d in upcoming if d >= today.strftime("%Y%m%d")], []), ROOT)
     write_index(today, exporter is not None, model_name)
     return 0
 
