@@ -1,5 +1,5 @@
 name: probe-kra
-# KRA 경마 홈페이지 '출전마체중' 페이지 구조 확인용 (임시)
+# KRA 경마 홈페이지 '출전마체중' 상세 응답 형식 확인용 (임시)
 on:
   workflow_dispatch:
   push:
@@ -9,21 +9,18 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: 페이지 받기
+      - name: 경주별 마체중 상세
         run: |
           UA="Mozilla/5.0 (horse-site; personal research)"
           B=https://race.kra.co.kr
-          curl -sS -A "$UA" -c jar -b jar "$B/thisweekrace/ThisWeekWeight.do?Act=04&Sub=2&meet=1" -o w.html -w "HTTP %{http_code} %{size_download}B %{content_type}\n"
-          echo "== 인코딩"; file w.html; iconv -f euc-kr -t utf-8 w.html > w8.html 2>/dev/null || cp w.html w8.html
-          echo "== script src"; grep -o '<script[^>]*src="[^"]*"' w8.html | head -20
-          echo "== form"; grep -n -i -A12 '<form' w8.html | head -60
-          echo "== onclick / javascript: / function"; grep -n -o -i 'onclick="[^"]*"\|href="javascript:[^"]*"' w8.html | head -40
-          echo "== inline script"; awk '/<script/{f=1} f{print} /<\/script>/{f=0}' w8.html | grep -v '^\s*$' | grep -v 'google\|gtag\|dataLayer' | head -120
-          echo "== table rows"; grep -n -i 'tr\|td' w8.html | grep -i '경주\|2026\|입력' | head -20
-          awk '/<table/{f=1} f{print} /<\/table>/{f=0}' w8.html | head -80
-      - name: 연결된 스크립트에서 관련 함수 찾기
-        run: |
-          UA="Mozilla/5.0 (horse-site; personal research)"
-          for s in $(grep -o '<script[^>]*src="[^"]*"' w8.html | sed 's/.*src="//;s/"$//' | grep -v 'http' | head -15); do
-            echo "== $s"; curl -sS -A "$UA" "https://race.kra.co.kr$s" | iconv -f euc-kr -t utf-8 2>/dev/null | grep -n -i -B2 -A15 'weight\|Weight\|체중' | head -60
+          for q in "rcNo=7&date=20261101&meet=1" "rcNo=1&date=20261108&meet=1"; do
+            echo "######## $q"
+            curl -sS -A "$UA" -X POST -d "$q&Act=03&Sub=4" "$B/raceFastreport/ChuljumaWeightList.do" -o d.html -w "HTTP %{http_code} %{size_download}B %{content_type}\n"
+            iconv -f euc-kr -t utf-8 d.html > d8.html 2>/dev/null || cp d.html d8.html
+            awk '/<table/{f=1} f{print} /<\/table>/{f=0}' d8.html | sed 's/^[ \t]*//' | grep -v '^$' | head -150
+            echo "== table 수: $(grep -c '<table' d8.html)"
+            grep -n -i '입력\|자료가 없\|없습니다' d8.html | sed 's/^[ \t]*//' | head -5
           done
+          echo "######## GET 도 되는지"
+          curl -sS -A "$UA" "$B/raceFastreport/ChuljumaWeightList.do?rcNo=7&date=20261101&meet=1&Act=03&Sub=4" -o g.html -w "HTTP %{http_code} %{size_download}B\n"
+          iconv -f euc-kr -t utf-8 g.html | grep -c '<tr'
