@@ -1,7 +1,6 @@
 name: probe-kra
-# KRA 경마 홈페이지 '출전마체중' 상세 응답 형식 확인용 (임시)
+# 마체중 수집기 확인용 (임시): 11/1 모든 경주를 받아 경주 기록(merged)의 마체중과 비교
 on:
-  workflow_dispatch:
   push:
     branches: [main]
     paths: ['.github/workflows/probe-kra.yml']
@@ -9,18 +8,25 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: 경주별 마체중 상세
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.13' }
+      - run: pip install pandas==3.0.5 numpy==2.5.3
+      - name: 받기와 비교
         run: |
-          UA="Mozilla/5.0 (horse-site; personal research)"
-          B=https://race.kra.co.kr
-          for q in "rcNo=7&date=20261101&meet=1" "rcNo=1&date=20261108&meet=1"; do
-            echo "######## $q"
-            curl -sS -A "$UA" -X POST -d "$q&Act=03&Sub=4" "$B/raceFastreport/ChuljumaWeightList.do" -o d.html -w "HTTP %{http_code} %{size_download}B %{content_type}\n"
-            iconv -f euc-kr -t utf-8 d.html > d8.html 2>/dev/null || cp d.html d8.html
-            awk '/<table/{f=1} f{print} /<\/table>/{f=0}' d8.html | sed 's/^[ \t]*//' | grep -v '^$' | head -150
-            echo "== table 수: $(grep -c '<table' d8.html)"
-            grep -n -i '입력\|자료가 없\|없습니다' d8.html | sed 's/^[ \t]*//' | head -5
-          done
-          echo "######## GET 도 되는지"
-          curl -sS -A "$UA" "$B/raceFastreport/ChuljumaWeightList.do?rcNo=7&date=20261101&meet=1&Act=03&Sub=4" -o g.html -w "HTTP %{http_code} %{size_download}B\n"
-          iconv -f euc-kr -t utf-8 g.html | grep -c '<tr'
+          rm -f site/data/weights/20261101.json
+          python pipeline/fetch_weights.py --date 20261101 --all --races 1,2,3,4,5,6,7,8,9,10,11,12
+          python pipeline/fetch_weights.py --date 20261108
+          cd work && python update_history.py --no-fetch > /dev/null && python - <<'EOF'
+          import json, pandas as pd
+          w = json.load(open("../site/data/weights/20261101.json"))["races"]
+          m = pd.read_csv("merged.csv", dtype=str, usecols=["date","race_no","chulNo","wgHr"]); m = m[m.date == "20261101"]
+          ok = bad = miss = 0
+          for r in m.itertuples():
+              x = w.get(str(int(r.race_no)), {}).get(str(int(r.chulNo)))
+              s = None if not x else (f"{x['kg']}({x['chg']:+d})" if x["chg"] else f"{x['kg']}()")
+              if s is None: miss += 1; print("없음", r.race_no, r.chulNo, r.wgHr)
+              elif s == r.wgHr: ok += 1
+              else: bad += 1; print("다름", r.race_no, r.chulNo, s, r.wgHr)
+          print(f"일치 {ok} / 다름 {bad} / 없음 {miss} (경주 {len(w)}개)")
+          EOF
