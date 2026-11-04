@@ -16,10 +16,16 @@ jobs:
           KRA_API_KEY: ${{ secrets.KRA_API_KEY }}
         run: |
           python - <<'EOF'
-          import sys, json; sys.path.insert(0, "pipeline"); import kra_api
+          import sys, json, time; sys.path.insert(0, "pipeline"); import kra_api
+          kra_api.NET_FAIL_LIMIT = 99
+          for p, q in [("API26_2/entrySheet_2", {"meet": 1, "rc_date": "20261107"}), ("API314/textDataHoldSePtinInfo", {"race_dt": "20261107", "race_no": 1})]:
+              t = time.time()
+              try:
+                  r = kra_api.get(p, {**q, "pageNo": 1, "numOfRows": 5}, timeout=60); print("대조", p, "성공", kra_api.total_count(r), f"{time.time()-t:.1f}s")
+              except Exception as e: print("대조", p, "실패", e, f"{time.time()-t:.1f}s")
           for d in ["20261107", "20261101", "20260607", "20251102", "20241103", "20221106"]:
               try:
-                  r = kra_api.get("API314/textDataHoldSePtinInfo", {"race_dt": d, "pageNo": 1, "numOfRows": 300})
+                  r = kra_api.get("API314/textDataHoldSePtinInfo", {"race_dt": d, "pageNo": 1, "numOfRows": 300}, timeout=60)
                   it = kra_api.items(r); print(d, "총", kra_api.total_count(r), "건, 경주", sorted({x.get("raceNo") for x in it})[:20])
                   if it and d in ("20261107", "20251102"):
                       for x in it[:3]: print("  ", json.dumps(x, ensure_ascii=False))
