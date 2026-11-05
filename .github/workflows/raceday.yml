@@ -1,0 +1,39 @@
+name: raceday-ticker
+# 경주일(토·일) 업데이트 시계: GitHub 예약 실행은 수십 분씩 늦거나 빠질 수 있어서,
+# 예약은 아침·이른 오후 두 번만 걸고, 각 작업이 약 6시간 동안 15분마다 update-site 를 직접 실행시킨다.
+# (GITHUB_TOKEN 으로 보낸 workflow_dispatch 는 새 실행을 만든다. update-site 는 같은 묶음이라 겹치지 않는다)
+on:
+  schedule:
+    - cron: '37 23 * * 5,6'   # 토·일 08:37 KST
+    - cron: '7 5 * * 6,0'     # 토·일 14:07 KST
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/raceday.yml']   # 이 파일을 고치면 update-site 를 한 번만 실행시켜 동작 확인
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: raceday-ticker
+  cancel-in-progress: true     # 오후 작업이 시작되면 아침 작업은 멈춤
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - name: 15분마다 업데이트 실행 (마지막 경주 무렵 18:30 KST 까지)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = push ]; then gh workflow run update.yml -R "$REPO" --ref main -f skip_history=true && echo "확인용 1회 실행 요청 완료"; exit 0; fi
+          end=$(TZ=Asia/Seoul date -d 'today 18:30' +%s)
+          while [ "$(date +%s)" -lt "$end" ]; do
+            echo "$(TZ=Asia/Seoul date '+%H:%M') update-site 실행"
+            gh workflow run update.yml -R "$REPO" --ref main -f skip_history=true || echo "실행 요청 실패 (다음에 다시)"
+            sleep 900
+          done
+          echo "오늘 경주일 업데이트 끝"
