@@ -219,6 +219,8 @@ def main() -> int:
         # 출전마 지난 성적 (앞으로 열릴 날은 매번 새로, 지난 날은 없을 때만)
         step("지난 성적", [sys.executable, str(ROOT / "pipeline" / "form.py"), "--missing"] +
              sum([["--date", d] for d in upcoming if d >= today.strftime("%Y%m%d")], []), ROOT)
+    # 끝난 경주일 확정 배당 (마권 기록장 정산용): 최근 날부터 한 번에 4일
+    step("확정 배당", [sys.executable, str(ROOT / "pipeline" / "dividends.py"), "--missing", "--max", "4"], ROOT)
     write_index(today, exporter is not None, model_name)
     return 0
 
