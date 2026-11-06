@@ -1,6 +1,6 @@
 """끝난 경주의 확정 배당 (적중 조합만) → site/data/div/날짜.json  (마권 기록장 정산용)
 
-확정배당율 통합정보 API160_1/integratedInfo_1 을 승식마다 받아, 실제 1~3착으로 적중 조합을 골라 배당만 남긴다.
+확정배당율 통합정보 API160_1/integratedInfo_1 을 하루치 받아, 실제 1~3착으로 적중 조합을 골라 배당만 남긴다.
   단승 1착 / 연승 3착 안(7두 이하 2착 안) 말마다 / 복승 1·2착(순서 무관) / 쌍승 1→2착
   복연승 3착 안 두 마리 3조합 / 삼복승 1~3착(순서 무관) / 삼쌍승 1→2→3착
 배당은 원금 포함 배수 (100원 × 배당 = 환급금).
@@ -50,18 +50,19 @@ def build(date: str) -> dict | None:
     if not any(r.get("result") for r in races.values()):
         return None
     table: dict = {}
-    for pool in POOLS:
-        rows = kra_api.get_all("API160_1/integratedInfo_1", {"meet": 1, "rc_date": date, "pool": pool}, rows=1000)
-        for x in rows:
-            if str(x.get("pool", pool)) != pool:
-                continue
-            nums = [int(x.get(c) or 0) for c in ("chulNo", "chulNo2", "chulNo3")]
-            nums = [v for v in nums if v > 0]
-            try:
-                od = float(x.get("odds"))
-            except (TypeError, ValueError):
-                continue
-            table.setdefault(str(int(x.get("rcNo"))), {}).setdefault(pool, {})[key(pool, nums)] = od
+    # pool 파라미터는 영문 코드(WIN 등)라서, 빼고 하루치 전 승식을 한 번에 받는다 (응답의 pool 은 한글 이름)
+    rows = kra_api.get_all("API160_1/integratedInfo_1", {"meet": 1, "rc_date": date}, rows=1000)
+    for x in rows:
+        pool = str(x.get("pool", ""))
+        if pool not in POOLS:
+            continue
+        nums = [int(x.get(c) or 0) for c in ("chulNo", "chulNo2", "chulNo3")]
+        nums = [v for v in nums if v > 0]
+        try:
+            od = float(x.get("odds"))
+        except (TypeError, ValueError):
+            continue
+        table.setdefault(str(int(x.get("rcNo"))), {}).setdefault(pool, {})[key(pool, nums)] = od
     out = {"date": date, "races": {}}
     for rno, r in races.items():
         res = r.get("result")
