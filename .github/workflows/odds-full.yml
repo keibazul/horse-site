@@ -1,0 +1,31 @@
+name: odds-full
+# 베팅 계획 검증용: 지난 경주일 모든 조합 확정 배당을 work/odds_full 에 받아 둠 (이 파일을 고치면 실행)
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/odds-full.yml']
+permissions:
+  contents: write
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with: { python-version: '3.13' }
+      - name: 받기
+        env:
+          KRA_API_KEY: ${{ secrets.KRA_API_KEY }}
+          PYTHONUTF8: '1'
+        run: python pipeline/fetch_odds_full.py --since 20251101 --max 200
+      - name: 커밋
+        run: |
+          git config user.name "horse-site bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add work/odds_full
+          if git diff --cached --quiet; then echo "바뀐 것 없음"; else
+            git commit -q -m "확정 배당 전체 (베팅 계획 검증용)"
+            for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && break; sleep 5; done
+          fi
