@@ -1,0 +1,15 @@
+name: probe-live
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['pipeline/checks/probe_live.py', '.github/workflows/probe-live.yml']
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: python3 pipeline/checks/probe_live.py
+        env:
+          KRA_API_KEY: ${{ secrets.KRA_API_KEY }}
+          PYTHONUTF8: '1'
