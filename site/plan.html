@@ -100,7 +100,7 @@
     </div>
     <div class="fld"><span class="lab" id="poolLab">살 승식</span>
       <div class="toggles" id="pools" role="group" aria-labelledby="poolLab"></div>
-      <p class="hint" id="poolHint">조합 확률이 낮은 고배당 마권일수록 과거에 손실이 컸습니다. 처음에는 단승·연승 위주를 권합니다.</p>
+      <p class="hint" id="poolHint">지난 1년 검증에서 승식별 회수율은 모두 90~99% 안팎으로 비슷했습니다. 쌍승·삼복승·삼쌍승은 적중이 드물어 하루·한 달 결과가 크게 흔들립니다. 처음에는 단승·연승 위주를 권합니다.</p>
     </div>
   </section>
 
@@ -269,13 +269,14 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) rend
 
 async function showCheck(){
   const c = await get("data/plan_check.json");
-  if (c?.note === "exotic pending") $("poolHint").textContent = "단승·연승은 지난 1년 검증을 마쳤고, 복승부터는 검증 자료를 받는 중입니다. 조합 확률이 낮은 고배당 마권일수록 과거에 손실이 컸습니다.";
   if (!c){ $("check").innerHTML = `<p class="muted" style="font-size:14px">검증 결과가 아직 없습니다.</p>`; return; }
-  const row = (lab, x) => `<tr><td>${lab}</td><td>${x.bets.toLocaleString()}장</td><td>${x.hits.toLocaleString()}</td><td><b>${(x.roi*100).toFixed(1)}%</b></td><td>${(x.ci[0]*100).toFixed(0)}~${(x.ci[1]*100).toFixed(0)}%</td></tr>`;
-  const pools = Object.entries(c.main.byPool).map(([k, v]) => `<tr><td>　${SHORT[k]}</td><td>${v.n.toLocaleString()}장</td><td>${v.hit}</td><td>${(v.r / v.s * 100).toFixed(1)}%</td><td></td></tr>`).join("");
-  $("check").innerHTML = `<p style="font-size:14px;color:var(--muted);line-height:1.65;margin-bottom:8px">${esc(c.period)} 경주일 ${c.main.days}일, 그날보다 앞서 학습을 끝낸 모델로 이 계산을 그대로 돌리고 확정 배당으로 정산했습니다. 단승 배당은 마감 후 값을 넣었다고 가정해 실제보다 조금 유리합니다. <b style="color:var(--ink)">어느 설정도 확실하게 본전(100%)을 넘지 못했습니다.</b> 회수율 95% 구간이 100%를 걸치는 것은 운에 따라 이익이 날 수도 있다는 뜻이지 이익이 난다는 뜻이 아닙니다.</p>
-    <div style="overflow-x:auto"><table class="chk"><thead><tr><th>설정</th><th>산 마권</th><th>적중</th><th>회수율</th><th>95% 구간</th></tr></thead><tbody>
-    ${c.rows.map(x => row(x.label, x)).join("")}${pools}</tbody></table></div>`;
+  const ci = x => `${(x.ci[0]*100).toFixed(0)}~${(x.ci[1]*100).toFixed(0)}%`;
+  const row = (lab, x, note) => `<tr><td>${lab}</td><td>${x.bets.toLocaleString()}장</td><td>${x.hits.toLocaleString()}</td><td><b>${(x.roi*100).toFixed(1)}%</b></td><td>${ci(x)}${note ? ` <span class="muted">${note}</span>` : ""}</td></tr>`;
+  const head = `<thead><tr><th>설정</th><th>산 마권</th><th>적중</th><th>회수율</th><th>95% 구간</th></tr></thead>`;
+  $("check").innerHTML = `<p style="font-size:14px;color:var(--muted);line-height:1.65;margin-bottom:8px">${esc(c.period)} 경주일 ${c.days}일(${c.races.toLocaleString()}경주)에 그날보다 앞서 학습을 끝낸 모델로 이 계산을 그대로 돌렸습니다. 조건부 마권은 그 조합의 확정 배당이 최소 배당 이상일 때만 산 것으로 보고 확정 배당으로 정산했습니다(확정 배당은 마감 후 값이라 실제보다 조금 유리합니다). <b style="color:var(--ink)">어느 설정도 확실하게 본전(100%)을 넘지 못했습니다.</b> 95% 구간이 100%를 걸치는 것은 운에 따라 이익이 날 수도 있다는 뜻이지 이익이 난다는 뜻이 아닙니다. 그래도 같은 기간 아무 기준 없이 산 평균(단승·연승 약 80%, 다른 승식 약 73%)보다는 손실이 작았습니다.</p>
+    <div style="overflow-x:auto"><table class="chk">${head}<tbody>${c.rows.map(x => row(x.label, x)).join("")}</tbody></table></div>
+    <h3 style="font-size:15px;font-weight:800;margin:14px 0 6px">승식별 (그 승식만 산 경우, 조건만)</h3>
+    <div style="overflow-x:auto"><table class="chk">${head.replace("설정", "승식")}<tbody>${c.pools.map(x => row(SHORT[x.pool], x, x.hits < 10 ? "적중이 적어 믿기 어려움" : "")).join("")}</tbody></table></div>`;
 }
 
 (async () => {
