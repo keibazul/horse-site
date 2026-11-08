@@ -20,8 +20,9 @@ Actions 탭의 **update-site → Run workflow** 로 언제든 직접 돌릴 수 
 
 ```
 pipeline/   kra_api.py(API 호출), fetch_entries.py(출전표), run_all.py(전체 순서)
-site/       index.html(예측 화면), sim.html(전개 시뮬레이터), results.html(이렇게 샀다면), review.html(주간 복기),
-            bets.html(내 마권 기록장), manifest.webmanifest·sw.js(홈 화면 앱), data/(자동 생성)
+site/       index.html(홈: 경주일 현황·경주별 1순위), race.html(경주 예측), sim.html(전개 시뮬레이터),
+            review.html(주간 복기), bets.html(내 마권), results.html(수익 검증), guide.html(사용법),
+            assets/app.css·app.js(공통 디자인·메뉴), manifest.webmanifest·sw.js(홈 화면 앱), data/(자동 생성)
 work/       PC 경마분석기 폴더의 예측 코드·모델 (work/README.md)
 ```
 

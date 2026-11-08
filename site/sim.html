@@ -1,48 +1,30 @@
 <!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>서울 경주 시뮬레이터</title>
+<title>전개 시뮬레이션 · 서울 경주 예측</title>
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="assets/app.css">
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#1b6a45">
+<meta name="theme-color" content="#0f3a2a">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-title" content="경주 예측">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<script>if("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));</script>
-</head><body>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+</head><body data-page="sim">
+<script src="assets/app.js"></script>
 <style>
 /* 레이아웃: 경주 카드 머리띠(+파일 열기) → 트랙(주인공) + 실시간 순위판 → 재생 조작 → 고저 단면·중계 → 4,000번 요약·공식 기록 */
-:root{
-  --bg:#eef2ed; --panel:#fbfcfa; --ink:#15211b; --muted:#5b6b62; --line:#d3ddd5; --soft:#e3eae4;
-  --accent:#1b6a45; --accent-ink:#ffffff; --goal:#c8362a; --sim:#6a4bb8; --sim-ink:#ffffff;
-  --field:#dfe7da; --sand:#d6bd8f; --sand-in:#e4d2ab; --turf:#8db76a; --turf-in:#78a659; --rail:#ffffff;
-  --stand:#4a5b6d; --stand-ink:#ffffff; --track-ink:#3d311f; --horse:#5a3a22;
-  --f-display:"Black Han Sans","IBM Plex Sans KR",system-ui,sans-serif;
-  --f-body:"IBM Plex Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
-  --f-data:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0e1512; --panel:#151f1a; --ink:#e4ece6; --muted:#97a79e; --line:#28362e; --soft:#1c2822;
-  --accent:#52c08a; --accent-ink:#0b1510; --goal:#ff6253; --sim:#a48cf0; --sim-ink:#120b24;
-  --field:#122019; --sand:#9f865c; --sand-in:#8a7550; --turf:#2f5b3b; --turf-in:#284f33; --rail:#e8e6dd;
-  --stand:#34434f; --stand-ink:#dfe7ee; --track-ink:#f3e6cc; --horse:#3e2716; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#0e1512; --panel:#151f1a; --ink:#e4ece6; --muted:#97a79e; --line:#28362e; --soft:#1c2822;
-  --accent:#52c08a; --accent-ink:#0b1510; --goal:#ff6253; --sim:#a48cf0; --sim-ink:#120b24;
-  --field:#122019; --sand:#9f865c; --sand-in:#8a7550; --turf:#2f5b3b; --turf-in:#284f33; --rail:#e8e6dd;
-  --stand:#34434f; --stand-ink:#dfe7ee; --track-ink:#f3e6cc; --horse:#3e2716; color-scheme:dark}
-*{box-sizing:border-box}
-body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55;
-  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
-.page{max-width:1240px;margin:0 auto;display:grid;gap:18px}
-h1,h2,h3{text-wrap:balance;margin:0}
-.num{font-family:var(--f-data);font-variant-numeric:tabular-nums}
+:root{--goal:#c8362a; --field:#dfe7da; --sand:#d6bd8f; --sand-in:#e4d2ab; --turf:#8db76a; --turf-in:#78a659; --rail:#ffffff;
+  --stand:#4a5b6d; --stand-ink:#ffffff; --track-ink:#3d311f; --horse:#5a3a22}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--goal:#ff6253; --field:#122019; --sand:#9f865c; --sand-in:#8a7550; --turf:#2f5b3b; --turf-in:#284f33; --rail:#e8e6dd;
+  --stand:#34434f; --stand-ink:#dfe7ee; --track-ink:#f3e6cc; --horse:#3e2716}}
+:root[data-theme="dark"]{--goal:#ff6253; --field:#122019; --sand:#9f865c; --sand-in:#8a7550; --turf:#2f5b3b; --turf-in:#284f33; --rail:#e8e6dd;
+  --stand:#34434f; --stand-ink:#dfe7ee; --track-ink:#f3e6cc; --horse:#3e2716}
+.page{max-width:1240px;gap:18px}
 button,input{font:inherit;color:inherit}
 button:focus-visible,input:focus-visible,label.btn:focus-within{outline:2px solid var(--accent);outline-offset:2px}
 
 .racecard{display:flex;gap:18px;align-items:center;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:14px}
-.rno{font-family:var(--f-display);font-size:56px;line-height:.9;letter-spacing:-.02em;background:var(--ink);color:var(--bg);padding:10px 14px 6px;border-radius:4px;min-width:84px;text-align:center}
+.rno{font-weight:800;font-size:52px;line-height:.95;letter-spacing:-.04em;background:var(--brand);color:var(--brand-ink);padding:10px 14px 8px;border-radius:9px;min-width:84px;text-align:center}
 .rno small{font-size:24px;margin-left:2px}
 .rc-main{flex:1 1 320px;min-width:0;display:grid;gap:2px}
 .eyebrow{font-size:12.5px;letter-spacing:.06em;color:var(--muted);margin:0}
@@ -81,7 +63,7 @@ button:focus-visible,input:focus-visible,label.btn:focus-within{outline:2px soli
 .order button:hover{background:var(--soft)}
 .order button[aria-pressed="true"]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent)}
 .order .rk{font-family:var(--f-data);font-size:13px;color:var(--muted);text-align:right}
-.chip{display:inline-grid;place-items:center;width:24px;height:22px;border-radius:3px;font-family:var(--f-data);font-weight:600;font-size:13px;box-shadow:inset 0 0 0 1px rgb(0 0 0 / .25)}
+.chip{display:inline-grid;place-items:center;width:24px;height:22px;border-radius:4px;font-weight:800;font-size:13px;box-shadow:inset 0 0 0 1px rgb(0 0 0 / .25)}
 .order .nm{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:14px;font-weight:600}
 .order .nm small{font-weight:400;color:var(--muted);margin-left:5px;font-size:12px}
 .order .gp{font-family:var(--f-data);font-size:12px;color:var(--muted);text-align:right;line-height:1.15}
@@ -157,11 +139,11 @@ tr.win td{background:color-mix(in srgb,var(--accent) 8%,transparent)}
 @media (prefers-reduced-motion: reduce){ .order li{transition:none} .feed{scroll-behavior:auto} }
 </style>
 
-<div class="page">
+<div class="page" id="main">
   <header class="racecard">
     <div class="rno" aria-hidden="true"><span id="rnoNum">-</span><small>R</small></div>
     <div class="rc-main">
-      <p class="eyebrow"><a href="./" style="color:inherit">← 예측으로 돌아가기</a></p>
+      <p class="eyebrow"><a id="backRace" href="race.html" style="color:inherit">경주 예측으로 돌아가기</a></p>
       <p class="eyebrow" id="eyebrow">렛츠런파크 서울</p>
       <h1 id="title">경주 시뮬레이션</h1>
       <ul class="conds" id="conds"></ul>
@@ -785,7 +767,9 @@ $("fileIn").addEventListener("change", e=>{
 });
 
 {
-  const qf = new URLSearchParams(location.search).get("f"), demo = () => loadRace(JSON.parse($("raceData").textContent));
+  const qf = new URLSearchParams(location.search).get("f"), qm = String(qf || "").match(/sim_(\d{8})_R(\d+)/);
+  if (qm) $("backRace").href = `race.html?date=${qm[1]}&race=${qm[2]}`;
+  const demo = () => loadRace(JSON.parse($("raceData").textContent));
   if (qf && /^[\w.-]+\.json$/.test(qf)) {
     fetch("data/sim/" + qf, {cache:"no-cache"}).then(r => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)))
       .then(j => { loadRace(j); $("fileMsg").textContent = "예측 사이트에서 만든 시뮬레이션 파일입니다."; })

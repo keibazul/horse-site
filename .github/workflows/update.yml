@@ -15,7 +15,7 @@ on:
         default: false
   push:
     branches: [main]
-    paths: ['pipeline/**', 'site/*.html', 'site/*.js', 'work/*.py', '.github/workflows/update.yml']
+    paths: ['pipeline/**', 'site/*.html', 'site/*.js', 'site/assets/**', 'site/manifest.webmanifest', 'work/*.py', '.github/workflows/update.yml']
 
 permissions:
   contents: write
