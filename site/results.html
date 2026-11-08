@@ -110,6 +110,16 @@ p{margin:0}
     <div class="chart" id="chart"></div>
   </section>
 
+  <section class="box" aria-labelledby="calH">
+    <h2 id="calH">모델 상태</h2>
+    <p class="sub" id="calNote">불러오는 중…</p>
+    <div class="legend"><span><i style="background:var(--s1)"></i>지난 1년 전체</span><span><i style="background:var(--s2)"></i>최근 8주</span><span><i style="background:var(--muted);height:1px"></i>점선: 예측 = 실제</span></div>
+    <div class="chart" id="calChart"></div>
+    <h3 style="font-size:15px;margin-top:6px">4주 이동 평균: 1순위 말이 이긴 비율</h3>
+    <div class="legend"><span><i style="background:var(--s1)"></i>모델 1순위</span><span><i style="background:var(--s2)"></i>인기마(배당 1순위)</span></div>
+    <div class="chart" id="wkChart"></div>
+  </section>
+
   <footer class="about">
     <h2>계산 방법</h2>
     <ul>
@@ -220,6 +230,77 @@ function drawLines(S){
   svgEl.addEventListener("pointerdown", show);
   svgEl.addEventListener("pointerleave", hide);
   if (!drawLines.bound){ drawLines.bound = true; let t; addEventListener("resize", () => { clearTimeout(t); t = setTimeout(() => drawLines(S), 150); }); }
+}
+})();
+</script>
+<script>
+/* 모델 상태: 확률 구간별 예측 vs 실제(점 그림), 4주 이동 1순위 우승 비율(선 그림) */
+(() => {
+const $ = id => document.getElementById(id);
+const P = v => (v * 100).toFixed(v < 0.1 ? 1 : 0) + "%";
+const wl = d => `${d.slice(2,4)}.${+d.slice(4,6)}.${+d.slice(6,8)}`;
+fetch("data/calib.json", {cache:"no-cache"}).then(r => r.ok ? r.json() : null).then(C => {
+  if (!C){ $("calNote").textContent = "자료가 아직 없습니다."; return; }
+  // 최근 8주에 예측과 실제가 크게 어긋난 구간 (표준오차 2배 이상, 50마리 이상)
+  const off = C.recent.m.filter(b => b.n >= 50 && Math.abs(b.act - b.pred) > 2 * Math.sqrt(b.pred * (1 - b.pred) / b.n));
+  $("calNote").innerHTML = `확률을 구간으로 나눠, 모델이 예측한 평균 확률과 실제로 이긴 비율을 비교합니다. 점이 점선 위에 있을수록 확률을 믿을 만합니다. 표본외 ${C.races.toLocaleString()}경주 기준, 최근 8주 ${C.recentRaces}경주. ` +
+    (off.length ? `<b style="color:var(--ink)">최근 8주 ${off.map(b => `${P(b.lo)}~${P(b.hi)}`).join(", ")} 구간에서 예측과 실제가 어긋났습니다(우연 범위 밖). 몇 주 더 이어지면 모델 점검이 필요합니다.</b>` : `<b style="color:var(--ink)">최근 8주도 우연 범위 안에서 예측과 실제가 맞습니다.</b>`);
+  const draw = () => { cal(C); wk(C); };
+  draw(); let t; addEventListener("resize", () => { clearTimeout(t); t = setTimeout(draw, 150); });
+});
+function tipper(box){
+  let tip = box.querySelector(".tip"); if (!tip){ tip = document.createElement("div"); tip.className = "tip"; tip.hidden = true; box.appendChild(tip); }
+  return (html, x, y) => { if (html == null){ tip.hidden = true; return; } tip.hidden = false; tip.innerHTML = html;
+    tip.style.left = Math.min(Math.max(0, x + 12), box.clientWidth - tip.offsetWidth) + "px"; tip.style.top = Math.max(0, y - 10) + "px"; };
+}
+function cal(C){
+  const box = $("calChart"), W = Math.min(box.clientWidth || 600, 520), H = W * 0.78, m = {l: 44, r: 14, t: 22, b: 34}, MAX = 0.6;
+  const x = v => m.l + v / MAX * (W - m.l - m.r), y = v => H - m.b - v / MAX * (H - m.t - m.b);
+  const ticks = [0, .1, .2, .3, .4, .5, .6];
+  let g = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="max-width:${W}px" role="img" aria-label="확률 구간별 예측과 실제 우승 비율">`;
+  g += `<text x="${m.l}" y="${m.t - 0}" style="fill:var(--muted);font-size:11px">실제 우승 비율</text>`;
+  g += `<g class="grid">${ticks.map(v => `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}"/><text x="${m.l - 6}" y="${y(v) + 4}" text-anchor="end">${v * 100}%</text><text x="${x(v)}" y="${H - m.b + 16}" text-anchor="middle">${v * 100}%</text>`).join("")}</g>`;
+  g += `<text x="${(m.l + W - m.r) / 2}" y="${H - 4}" text-anchor="middle">모델이 예측한 확률</text>`;
+  g += `<line x1="${x(0)}" y1="${y(0)}" x2="${x(MAX)}" y2="${y(MAX)}" stroke="var(--muted)" stroke-dasharray="4 4" stroke-width="1"/>`;
+  const pts = [];
+  [["all", "var(--s1)", "지난 1년"], ["recent", "var(--s2)", "최근 8주"]].forEach(([k, col, lab]) => {
+    const bs = C[k].m.filter(b => b.n >= 10);
+    g += `<path d="${bs.map((b, i) => `${i ? "L" : "M"}${x(b.pred).toFixed(1)},${y(Math.min(b.act, MAX)).toFixed(1)}`).join("")}" fill="none" stroke="${col}" stroke-width="2" opacity=".55"/>`;
+    bs.forEach(b => { pts.push({b, col, lab}); g += `<circle class="dot" cx="${x(b.pred)}" cy="${y(Math.min(b.act, MAX))}" r="5" fill="${col}"/>`; });
+  });
+  g += `</svg>`;
+  box.innerHTML = g;
+  const svg = box.querySelector("svg"), show = tipper(box);
+  svg.addEventListener("pointermove", e => {
+    const r = svg.getBoundingClientRect(), px = (e.clientX - r.left) / r.width * W, py = (e.clientY - r.top) / r.height * H;
+    let best = null, bd = 30 * 30;
+    for (const p of pts){ const dx = x(p.b.pred) - px, dy = y(Math.min(p.b.act, MAX)) - py, d = dx*dx + dy*dy; if (d < bd){ bd = d; best = p; } }
+    if (!best) return show(null);
+    show(`<b>${best.lab} · 예측 ${P(best.b.lo)}~${P(best.b.hi)} 구간</b><div><span>예측 평균</span><span>${P(best.b.pred)}</span></div><div><span>실제 우승</span><span>${(best.b.act * 100).toFixed(1)}%</span></div><div><span>말 수</span><span>${best.b.n.toLocaleString()}</span></div>`,
+      x(best.b.pred) / W * r.width, y(Math.min(best.b.act, MAX)) / H * r.height);
+  });
+  svg.addEventListener("pointerleave", () => show(null));
+}
+function wk(C){
+  const box = $("wkChart"), W = box.clientWidth || 700, narrow = W < 520, H = narrow ? 220 : 260, m = {l: 40, r: 12, t: 10, b: 26};
+  const roll = (key, k = 4) => C.weeks.map((w, i) => { const s = C.weeks.slice(Math.max(0, i - k + 1), i + 1); const n = s.reduce((a, x) => a + x.races, 0);
+    return n ? s.reduce((a, x) => a + x[key] * x.races, 0) / n : null; });
+  const ser = [["모델 1순위", "var(--s1)", roll("model")], ["인기마", "var(--s2)", roll("fav")]];
+  const n = C.weeks.length, x = i => m.l + i / Math.max(1, n - 1) * (W - m.l - m.r), y = v => m.t + (0.6 - v) / 0.6 * (H - m.t - m.b);
+  let g = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="4주 이동 평균 1순위 우승 비율">`;
+  g += `<g class="grid">${[0, .2, .4, .6].map(v => `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}"/><text x="${m.l - 6}" y="${y(v) + 4}" text-anchor="end">${v * 100}%</text>`).join("")}</g>`;
+  let pm = ""; C.weeks.forEach((w, i) => { const k = w.week.slice(0, 6); if (k !== pm){ pm = k; if ((+k.slice(4)) % (narrow ? 3 : 2) === 1) g += `<text class="grid" x="${x(i)}" y="${H - 6}" text-anchor="middle" style="fill:var(--muted);font-size:11px">${k.slice(2,4)}.${+k.slice(4)}</text>`; } });
+  for (const [, col, v] of ser) g += `<path class="s" stroke="${col}" d="${v.map((a, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(a ?? 0).toFixed(1)}`).join("")}"/>`;
+  g += `<g id="wkHov" hidden><line class="cross" y1="${m.t}" y2="${H - m.b}"/>${ser.map(([, col]) => `<circle class="dot" r="4.5" fill="${col}"/>`).join("")}</g></svg>`;
+  box.innerHTML = g;
+  const svg = box.querySelector("svg"), hov = svg.querySelector("#wkHov"), show = tipper(box);
+  const mv = e => { const r = svg.getBoundingClientRect(), px = (e.clientX - r.left) / r.width * W;
+    const i = Math.max(0, Math.min(n - 1, Math.round((px - m.l) / (W - m.l - m.r) * (n - 1))));
+    hov.hidden = false; hov.querySelector("line").setAttribute("x1", x(i)); hov.querySelector("line").setAttribute("x2", x(i));
+    [...hov.querySelectorAll("circle")].forEach((c, k) => { c.setAttribute("cx", x(i)); c.setAttribute("cy", y(ser[k][2][i] ?? 0)); });
+    show(`<b>${wl(C.weeks[i].week)} 주까지 4주</b>` + ser.map(([nm, col, v]) => `<div><span><i style="background:${col}"></i>${nm}</span><span>${((v[i] ?? 0) * 100).toFixed(1)}%</span></div>`).join(""), x(i) / W * r.width, 10); };
+  svg.addEventListener("pointermove", mv); svg.addEventListener("pointerdown", mv);
+  svg.addEventListener("pointerleave", () => { hov.hidden = true; show(null); });
 }
 })();
 </script>

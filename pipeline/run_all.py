@@ -247,6 +247,7 @@ def main() -> int:
     # 베팅 계획 실전 기록: 결과가 난 날은 모든 조합 확정 배당을 받아 두고(정산용), 출발 전 계획 고정·정산
     step("모든 조합 확정 배당", [sys.executable, str(ROOT / "pipeline" / "fetch_odds_full.py"), "--since", "20261108", "--max", "2"], ROOT)
     step("베팅 계획 기록", ["node", str(ROOT / "pipeline" / "plan_track.js")], ROOT)
+    step("모델 상태", [sys.executable, str(ROOT / "pipeline" / "calib.py")], ROOT)
     # 끝난 경주일 복기 (예측 파일이 바뀐 날만 다시)
     step("복기", [sys.executable, str(ROOT / "pipeline" / "review.py"), "--missing"], ROOT)
     write_index(today, exporter is not None, model_name)
