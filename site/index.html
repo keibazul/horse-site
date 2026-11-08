@@ -204,7 +204,7 @@ async function show(date){
   CUR = date;
   [...$("daysw").children].forEach(b => b.setAttribute("aria-pressed", b.dataset.d === date));
   const D = INDEX.days.find(d => d.date === date);
-  const [ent, pred] = await Promise.all([get(`data/${D.entries}`), D.pred ? get(`data/${D.pred}`) : null]);
+  const [ent, pred, bias] = await Promise.all([get(`data/${D.entries}`), D.pred ? get(`data/${D.pred}`) : null, get(`data/bias/${date}.json`)]);
   if (CUR !== date) return;
   const rows = ent?.rows || [];
   const races = [...new Set(rows.map(r => +r.rcNo))].sort((a, b) => a - b);
@@ -231,7 +231,8 @@ async function show(date){
   $("ctaRace").textContent = next ? `${next}경주 예측 보기` : "경주 예측 보기";
   // 경주 시간표
   const prob = r => { const p = pred?.races?.[r]?.p; if (!p) return null; const out = new Set((pred.races[r].out || []).map(String));
-    const e = Object.entries(p).filter(([k]) => !out.has(k)); const s = e.reduce((a, [, v]) => a + v, 0); return e.map(([k, v]) => [+k, v / s]).sort((a, b) => b[1] - a[1]); };
+    const bf = bias?.races?.[r]?.f || {};
+    const e = Object.entries(p).filter(([k]) => !out.has(k)).map(([k, v]) => [k, v * (bf[k] ?? 1)]); const s = e.reduce((a, [, v]) => a + v, 0); return e.map(([k, v]) => [+k, v / s]).sort((a, b) => b[1] - a[1]); };
   $("strip").innerHTML = races.map(r => {
     const P = prob(r), res = pred?.races?.[r]?.result, top = P?.[0]?.[0];
     let who;

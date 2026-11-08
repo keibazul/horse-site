@@ -51,9 +51,11 @@ for (const d of days) {
   const T = rd(f) || {date: d, bank: BANK, mode: MODE, tracks: {}};
   const raceNos = [...new Set(ent.rows.map(r => +r.rcNo))].sort((a, b) => a - b);
   const startOf = Object.fromEntries(raceNos.map(n => [n, stMin(ent.rows.find(r => +r.rcNo === n))]));
+  const bias = rd(path.join(DATA, "bias", d + ".json"));
   const inputs = raceNos.map(n => {
     const r = pred.races?.[n] || {}, live = Object.keys(r.p || {}).filter(k => !(r.out || []).map(String).includes(k));
-    return {race: n, p: r.p || {}, out: r.out, void: r.void, nDebut: live.filter(k => (r.n || {})[k] === 0).length};
+    const bf = bias?.races?.[n]?.f || {}, p = Object.fromEntries(Object.entries(r.p || {}).map(([k, v]) => [k, v * (bf[k] ?? 1)]));
+    return {race: n, p, out: r.out, void: r.void, nDebut: live.filter(k => (r.n || {})[k] === 0).length};
   });
   let changed = false;
   for (const [tk, tr] of Object.entries(TRACKS)) {

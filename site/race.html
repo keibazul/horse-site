@@ -205,7 +205,7 @@ const store = {
   set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 };
 
-let INDEX = null, DAY = null, ENT = null, PRED = null, RACE = null, POOL = "단승식", FORM = null, EXTRA = null;
+let INDEX = null, DAY = null, ENT = null, PRED = null, RACE = null, POOL = "단승식", FORM = null, EXTRA = null, BIAS = null;
 const openForms = new Set();
 const state = { odds: {}, user: {}, official: {}, out: new Set() };   // odds = 실제로 쓰는 값 (user 수정 > 확정 배당)
 
@@ -252,7 +252,8 @@ async function openDay(date, race){
   const st = $("dayStat"), h = DAY.hits;
   st.hidden = !h;
   if (h) st.innerHTML = `이날 ${h.races}경주에서 1순위가 이긴 경주: 모델 <b>${h.model}</b>, 배당과 결합 <b>${h.comb}</b>, 인기마 <b>${h.mkt ?? "-"}</b>. <a href="review.html?date=${date}">이 주말 복기 보기</a>`;
-  ENT = null; PRED = null; FORM = null; EXTRA = null; openForms.clear();
+  ENT = null; PRED = null; FORM = null; EXTRA = null; BIAS = null; openForms.clear();
+  getJSON(`data/bias/${date}.json`).then(f => { if (DAY && DAY.date === date){ BIAS = f; if (RACE) render(); } }).catch(() => {});
   getJSON(`data/extra/${date}.json`).then(f => { if (DAY && DAY.date === date){ EXTRA = f; openForms.forEach(fillForm); } }).catch(() => {});
   getJSON(`data/form/${date}.json`).then(f => { if (DAY && DAY.date === date){ FORM = f; openForms.forEach(fillForm); } }).catch(() => {});
   try { ENT = await getJSON(`data/${DAY.entries}`); } catch { $("field").innerHTML = `<p class="empty">출전표 파일을 열지 못했습니다.</p>`; return; }
@@ -314,7 +315,8 @@ function probs(){
   const pm = PRED?.races?.[RACE]?.p || null;           // {chulNo: 모델 확률}
   let model = null;
   if (pm){
-    const v = ids.map(i => Math.max(+pm[i] || 0, 1e-6)), s = v.reduce((a,b) => a+b, 0);
+    const bf = BIAS?.races?.[RACE]?.f || {};      // 당일 주로 보정 (앞선 경주에서 안쪽·바깥쪽이 유리했던 정도)
+    const v = ids.map(i => Math.max(+pm[i] || 0, 1e-6) * (bf[i] ?? 1)), s = v.reduce((a,b) => a+b, 0);
     model = Object.fromEntries(ids.map((i,k) => [i, v[k]/s]));
   }
   const oddsOK = ids.length > 1 && ids.every(i => +state.odds[i] > 1);
@@ -345,7 +347,7 @@ function render(){
   $("clearOdds").hidden = off ? !edited && [...state.out].join() === (PRED?.races?.[RACE]?.out || []).join() : false;
   const need = P.ids.length - entered;
   const wgN = Object.keys(PRED?.races?.[RACE]?.wg || {}).length;
-  const wgNote = wgN ? ", 당일 마체중 반영" : (DAY && !DAY.past ? ", 마체중은 경주 당일 발표되면 15분 안에 반영" : "");
+  const wgNote = (wgN ? ", 당일 마체중 반영" : (DAY && !DAY.past ? ", 마체중은 경주 당일 발표되면 15분 안에 반영" : "")) + biasNote();
   $("srcNote").innerHTML = `${srcText}${wgNote}.${need > 0 && entered > 0 ? ` 배당을 ${need}두 더 넣으면 ${pm ? "결합" : "시장"} 확률로 바뀝니다.` : ""}${entered === 0 ? " 경주 직전 KRA 앱의 단승 배당을 넣으면 배당과 섞어 더 정확해집니다." : ""}${off ? " 배당 칸은 고칠 수 있고, 고친 칸은 굵게 표시됩니다." : ""}`;
   const nt = $("notice");
   const inSample = PRED?.trained_through && PRED.trained_through >= DAY.date;
@@ -389,6 +391,12 @@ function render(){
   renderBets(P);
 }
 
+function biasNote(){
+  const b = BIAS?.races?.[RACE];
+  if (!b || b.ib == null) return "";
+  const lab = b.ib >= 1 ? "안쪽 게이트가 꽤 유리" : b.ib >= 0.4 ? "안쪽 게이트가 조금 유리" : b.ib <= -1 ? "바깥쪽 게이트가 꽤 유리" : b.ib <= -0.4 ? "바깥쪽 게이트가 조금 유리" : "게이트 치우침 거의 없음";
+  return `, 당일 주로 보정(앞 ${b.nprev}경주: ${lab})`;
+}
 function save(){ store.set(`odds:${DAY.date}:${RACE}`, { user: state.user, out: [...state.out] }); }
 
 $("field").addEventListener("click", e => {

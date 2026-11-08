@@ -46,10 +46,12 @@ for (const d of days) {
   let full = loadOdds(d);
   if (!full && pools.some(p => p !== "단승식" && p !== "연승식")) { noOdds++; continue; }
   full ||= {};
+  const bias = arg("bias", "no") === "yes" ? (() => { try { return JSON.parse(fs.readFileSync(path.join(ROOT, "site/data/bias", d + ".json"), "utf8")); } catch { return null; } })() : null;
   const races = Object.entries(pr.races).filter(([, r]) => r.result || r.void).map(([rno, r]) => {
     const out = (r.out || []).map(String);
     const live = Object.keys(r.p || {}).filter(k => !out.includes(k));
-    return {race: +rno, p: r.p, odds: useOdds ? r.odds : null, out: r.out, void: r.void,
+    const bf = bias?.races?.[rno]?.f || {};
+    return {race: +rno, p: Object.fromEntries(Object.entries(r.p).map(([k, v]) => [k, v * (bf[k] ?? 1)])), odds: useOdds ? r.odds : null, out: r.out, void: r.void,
       nDebut: live.filter(k => (r.n || {})[k] === 0).length, _r: r};
   });
   const pl = P.plan(races.map(({_r, ...x}) => x), {bankroll, mode, pools, margin});

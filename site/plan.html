@@ -136,7 +136,7 @@
     <h2 id="howH">이렇게 계산합니다</h2>
     <ul>
       <li><b>사는 조건</b>: 모든 마권에 '배당이 이 값 이상일 때만 사기' 조건이 붙습니다. 최소 배당 = 1.1 ÷ 모델 확률, 즉 모델이 보기에 10% 이상 남는 값입니다. 사기 직전 KRA 앱에서 그 조합의 배당을 확인하고, 조건보다 낮으면 사지 마세요.</li>
-      <li><b>확률</b>은 경주 전 정보만 쓴 모델 확률입니다. 배당과 섞은 결합 확률은 시장과 거의 같아져서 싼 마권을 찾는 데 쓰지 않습니다. 예측 화면에서 단승 배당을 넣어 두면 단승은 그 배당으로 바로 판단하고, 다른 승식도 배당에서 추정한 값이 조건에 크게 못 미치면 뺍니다.</li>
+      <li><b>확률</b>은 경주 전 정보만 쓴 모델 확률에, 경주일 오후에는 <b>당일 주로 보정</b>(앞서 끝난 경주에서 안쪽·바깥쪽 게이트가 유리했던 정도)을 곱한 값입니다. 배당과 섞은 결합 확률은 시장과 거의 같아져서 싼 마권을 찾는 데 쓰지 않습니다. 예측 화면에서 단승 배당을 넣어 두면 단승은 그 배당으로 바로 판단하고, 다른 승식도 배당에서 추정한 값이 조건에 크게 못 미치면 뺍니다.</li>
       <li><b>건너뛰기</b>: 승식마다 최소 조합 확률(단승 20%, 연승 45%, 복승 8%, 쌍승 5%, 복연승 15%, 삼복승 4%, 삼쌍승 1.2%)을 넘는 조합이 없거나, 배당이 이미 낮게 몰렸거나, 첫 출전 말이 절반 이상인 경주는 건너뜁니다.</li>
       <li><b>금액</b>: 켈리 기준(확률과 배당으로 정하는 자금 비율)의 일부를 씁니다. 조심스럽게 1/8, 보통 1/4. '자금 모두 쓰기'는 같은 비율로 늘려 하루 합계가 자금과 같아지게 합니다(한 경주 10만 원 상한 때문에 남을 수 있음). 최소 배당에서 산다고 보고 계산하므로 실제 배당이 더 높아도 금액은 그대로입니다.</li>
       <li>한 경주 합계는 모든 승식을 합쳐 <b>10만 원 이하</b>, 하루 합계는 입력한 자금 이하, 모든 금액은 100원 단위입니다.</li>
@@ -173,7 +173,7 @@ const MODE_HINT = {safe: "켈리 비율의 1/8. 대부분의 날 자금의 일�
   all: "같은 기준으로 고른 마권에 자금을 모두 나눕니다. 한 경주 10만 원을 넘으면 그 경주는 10만 원에서 멈춥니다."};
 
 let S = Object.assign({bank: 100000, mode: "normal", pools: ["단승식","연승식"]}, store.get("plan:settings") || {});
-let INDEX = null, DAY = null, ENT = null, PRED = null, DIV = null, PAST = false;
+let INDEX = null, DAY = null, ENT = null, PRED = null, DIV = null, PAST = false, BIAS = null;
 
 function saveS(){ store.set("plan:settings", S); }
 function renderSetup(){
@@ -192,7 +192,7 @@ $("daySel").onchange = e => openDay(e.target.value);
 async function openDay(d){
   DAY = INDEX.days.find(x => x.date === d);
   PAST = !!DAY.past;
-  [ENT, PRED, DIV] = await Promise.all([get(`data/${DAY.entries}`), DAY.pred ? get(`data/${DAY.pred}`) : null, PAST ? get(`data/div/${d}.json`) : null]);
+  [ENT, PRED, DIV, BIAS] = await Promise.all([get(`data/${DAY.entries}`), DAY.pred ? get(`data/${DAY.pred}`) : null, PAST ? get(`data/div/${d}.json`) : null, get(`data/bias/${d}.json`)]);
   render();
 }
 
@@ -210,7 +210,8 @@ function raceInputs(){
     const t = stTime(first), [h, m] = (t || "0:0").split(":").map(Number);
     const started = DAY.date < today || (DAY.date === today && t && h*60 + m <= nowM);
     if (PAST) Object.assign(odds, pr.odds || {});
-    return {race: n, time: t, dist: first?.rcDist, rank: first?.rank, p: pr.p || {}, odds, out, void: pr.void,
+    const bf = BIAS?.races?.[n]?.f || {}, p = Object.fromEntries(Object.entries(pr.p || {}).map(([k, v]) => [k, v * (bf[k] ?? 1)]));
+    return {race: n, time: t, dist: first?.rcDist, rank: first?.rank, p, odds, out, void: pr.void, ib: BIAS?.races?.[n]?.ib,
       done: PAST ? false : (!!pr.result?.length || started), started, result: pr.result, plc: pr.plc || {}, nDebut: live.filter(k => (pr.n || {})[k] === 0).length,
       names: Object.fromEntries(rows.filter(r => +r.rcNo === n).map(r => [+r.chulNo, r.hrName])), nOdds: Object.keys(odds).length, nLive: live.length};
   });
@@ -248,7 +249,7 @@ function render(){
       const why = p.skip === "끝난 경주" ? "" : `<p class="why">${esc(p.skip)}</p>`;
       return `<article class="rc panel skip"><div class="rc-h">${head}<span class="right">${tag}</span></div>${why}</article>`;
     }
-    const oddsTag = r.nOdds && r.nOdds >= r.nLive ? `<span class="pill good">단승 배당 반영</span>` : "";
+    const oddsTag = (r.nOdds && r.nOdds >= r.nLive ? `<span class="pill good">단승 배당 반영</span>` : "") + (r.ib != null && !PAST ? `<span class="pill">당일 주로 보정</span>` : "");
     const rows = p.bets.map(b => {
       const sep = ORDERED.has(b.pool) ? "<em>→</em>" : "<em>·</em>";
       const names = b.nums.map(n => r.names[n] || "").join(", ");
@@ -285,7 +286,7 @@ $("list").addEventListener("click", e => {
 });
 // 예측 화면에서 배당을 넣고 돌아오면 다시 계산
 addEventListener("storage", e => { if (e.key && e.key.startsWith("odds:")) render(); });
-document.addEventListener("visibilitychange", () => { if (!document.hidden) render(); });
+document.addEventListener("visibilitychange", async () => { if (!document.hidden && DAY){ BIAS = await get(`data/bias/${DAY.date}.json`); render(); } });
 
 async function showCheck(){
   const c = await get("data/plan_check.json");
