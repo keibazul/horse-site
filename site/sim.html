@@ -130,6 +130,15 @@ tr.win td{background:color-mix(in srgb,var(--accent) 8%,transparent)}
   .lower{grid-template-columns:1fr}
   .hud{max-width:calc(100% - 20px)}
 }
+/* 휴대폰: 트랙 → 재생 조작 → 순위판 (재생하려고 순위판을 지나 내려가지 않게) */
+@media (max-width:760px){
+  .page > *{order:6}
+  .page > header,.page > .modebar{order:0}
+  .stage{display:contents}
+  .vp-col{order:1}
+  .controls{order:2}
+  .board{order:3}
+}
 @media (max-width:520px){
   .rno{font-size:42px;min-width:70px}
   .rc-main h1{font-size:23px}
@@ -635,7 +644,7 @@ function updateBoard(t){
   const dist = SCN.dist, items = SCN.horses.map(h=>({h, d:h.mv.pos(t), v:h.mv.vel(t)})).sort((a,b)=> b.d-a.d || a.h.fOrd-b.h.fOrd), lead = items[0];
   items.forEach((o,k)=>{ const r = rows[o.h.no]; if (!r) return; r.li.style.transform = `translateY(${k*38}px)`; r.rk.textContent = k+1;
     if (o.d >= dist){ r.g1.textContent = `${o.h.fOrd}착`; r.g2.textContent = fmtT(o.h.tFin); }
-    else { const gap = (lead.d - o.d)/LEN; r.g1.textContent = k === 0 ? (t>0 ? "선두" : "-") : gap < 0.15 ? "코" : `+${gap.toFixed(1)}`; r.g2.textContent = `${Math.round(o.v*3.6)}km/h`; } });
+    else { const gap = (lead.d - o.d)/LEN; r.g1.textContent = t <= 0 ? "" : k === 0 ? "선두" : gap < 0.15 ? "코" : `+${gap.toFixed(1)}`; r.g2.textContent = t > 0 ? `${Math.round(o.v*3.6)}km/h` : ""; } });
   const left = Math.max(0, dist - lead.d);
   $("hudTime").textContent = fmtT(t); $("hudLeft").textContent = left > 0 ? `남은 거리 ${Math.round(left)}m` : "결승 통과";
   $("hudLead").textContent = t > 0 ? `선두 ${lead.h.no}번 ${lead.h.name} · ${Math.round(lead.v*3.6)}km/h` : "출발 대기";
@@ -769,6 +778,7 @@ $("fileIn").addEventListener("change", e=>{
 {
   const qf = new URLSearchParams(location.search).get("f"), qm = String(qf || "").match(/sim_(\d{8})_R(\d+)/);
   if (qm) $("backRace").href = `race.html?date=${qm[1]}&race=${qm[2]}`;
+  if (qf) document.querySelector(".rc-side").hidden = true;      // 보통은 예측 화면에서 경주를 골라 들어옴
   const demo = () => loadRace(JSON.parse($("raceData").textContent));
   if (qf && /^[\w.-]+\.json$/.test(qf)) {
     fetch("data/sim/" + qf, {cache:"no-cache"}).then(r => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)))

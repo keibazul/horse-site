@@ -16,7 +16,19 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <style>
 /* 베팅 계획: 설정(자금·방식·승식) → 계획 합계 한 줄 → 경주별 카드(살 마권과 조건 / 건너뛰기) → 계산 방법·과거 검증 */
-.setup{padding:18px;display:grid;gap:16px}
+.setup{padding:0;display:block}
+.setup > summary{list-style:none;cursor:pointer;padding:14px 18px;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:14.5px}
+.setup > summary::-webkit-details-marker{display:none}
+.setup > summary b{font-weight:800}
+.setup > summary .chg{margin-left:auto;color:var(--accent);font-weight:700;font-size:13.5px}
+.setup[open] > summary{border-bottom:1px solid var(--line)}
+.setup[open] > summary .chg::after{content:" 닫기"}
+.setup:not([open]) > summary .chg::after{content:" 바꾸기"}
+.setup > .grid,.setup > .fld{padding:16px 18px 0}
+.setup > .fld:last-child{padding-bottom:18px}
+.gone > summary{cursor:pointer;list-style:none;padding:10px 2px;font-size:14px;font-weight:700;color:var(--muted)}
+.gone > summary::-webkit-details-marker{display:none}
+.gone .rc{margin-top:8px}
 .setup .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px 22px}
 .fld{display:grid;gap:7px;align-content:start}
 .fld > .lab{font-size:13px;color:var(--muted);font-weight:700}
@@ -95,10 +107,11 @@
 <main id="main" class="page">
   <header class="page-head">
     <h1>베팅 계획</h1>
-    <p>오늘 쓸 자금을 넣으면 경주마다 어떤 승식의 어느 조합을 얼마나 살지 대강 나눠 드립니다. 한 경주에 거는 돈은 모든 승식을 합쳐 법정 상한 10만 원을 넘지 않고, 걸 만한 조합이 없는 경주는 건너뜁니다.</p>
+    <p>경주마다 살 마권과 금액, 사는 조건을 나눠 드립니다. 한 경주 합계는 10만 원 이하, 걸 만한 조합이 없으면 건너뜁니다.</p>
   </header>
 
-  <section class="setup panel" aria-label="계획 설정">
+  <details class="setup panel" id="setupBox" aria-label="계획 설정">
+    <summary id="setupSum"></summary>
     <div class="grid">
       <div class="fld"><label class="lab" for="daySel">경주일</label><select id="daySel"></select></div>
       <div class="fld"><label class="lab" for="bank">오늘 쓸 자금</label>
@@ -116,7 +129,7 @@
       <div class="toggles" id="pools" role="group" aria-labelledby="poolLab"></div>
       <p class="hint" id="poolHint">지난 1년 검증에서 승식별 회수율은 모두 90~99% 안팎으로 비슷했습니다. 쌍승·삼복승·삼쌍승은 적중이 드물어 하루·한 달 결과가 크게 흔들립니다. 처음에는 단승·연승 위주를 권합니다.</p>
     </div>
-  </section>
+  </details>
 
   <section class="sum" id="sum" aria-label="계획 합계"></section>
   <p class="warnline" id="warnline"></p>
@@ -177,6 +190,8 @@ let INDEX = null, DAY = null, ENT = null, PRED = null, DIV = null, PAST = false,
 
 function saveS(){ store.set("plan:settings", S); }
 function renderSetup(){
+  const MODE_NAME = {safe: "조심스럽게", normal: "보통", all: "자금 모두 쓰기"};
+  $("setupSum").innerHTML = `<span>${DAY ? short(DAY.date) : ""}</span><b>${won(S.bank)}</b><span>· ${MODE_NAME[S.mode]}</span><span>· ${S.pools.map(p => SHORT[p]).join("·") || "승식 없음"}</span><span class="chg"></span>`;
   $("bank").value = S.bank;
   [...$("mode").children].forEach(b => b.setAttribute("aria-pressed", b.dataset.m === S.mode));
   $("modeHint").textContent = MODE_HINT[S.mode];
@@ -187,7 +202,7 @@ $("quick").onclick = e => { const b = e.target.closest("[data-v]"); if (!b) retu
 $("mode").onclick = e => { const b = e.target.closest("[data-m]"); if (!b) return; S.mode = b.dataset.m; saveS(); renderSetup(); render(); };
 $("pools").onclick = e => { const b = e.target.closest("[data-p]"); if (!b) return; const p = b.dataset.p;
   S.pools = S.pools.includes(p) ? S.pools.filter(x => x !== p) : Planner.POOLS.filter(x => x === p || S.pools.includes(x)); saveS(); renderSetup(); render(); };
-$("daySel").onchange = e => openDay(e.target.value);
+$("daySel").onchange = async e => { await openDay(e.target.value); renderSetup(); };
 
 async function openDay(d){
   DAY = INDEX.days.find(x => x.date === d);
@@ -241,7 +256,7 @@ function render(){
   const withOdds = R.filter(r => !r.done && r.nOdds && r.nOdds >= r.nLive).length;
   $("warnline").innerHTML = `금액은 조건이 모두 맞아 전부 샀을 때 기준입니다. 배당이 조건보다 낮으면 그 마권은 사지 않으므로 실제로 쓰는 돈은 더 적습니다. 배당을 넣지 않은 경주는 사기 직전 조건으로 걸러지는데, 지난 1년 기준 약 절반의 경주에서는 조건에 맞는 마권이 없어 아무것도 사지 않았습니다.${withOdds ? ` 단승 배당을 넣은 경주 ${withOdds}개는 그 배당을 반영했습니다.` : " 경주 직전 예측 화면에 단승 배당을 넣으면 그 경주 계획이 더 정확해집니다."}`;
   $("listAside").textContent = `${short(DAY.date)} · ${PRED.model || "모델"}`;
-  $("list").innerHTML = pl.races.map(p => {
+  const card = p => {
     const r = R.find(x => x.race === p.race);
     const head = `<span class="rn">${p.race}R</span><span class="meta">${[r.time, r.dist && r.dist + "m", r.rank].filter(Boolean).join(" · ")}</span>`;
     if (!p.bets){
@@ -266,7 +281,10 @@ function render(){
     return `<article class="rc panel"><div class="rc-h">${head}<span class="right">${PAST ? res : oddsTag}<span class="amt">${won(p.total)}</span></span></div>
       <table class="bt${PAST ? " past" : ""}"><thead><tr><th>승식</th><th>조합</th><th class="r">금액</th><th>사는 조건 (배당)</th><th class="r${PAST ? "" : " hide-s"}">${PAST ? "결과" : "모델 확률"}</th></tr></thead><tbody>${rows}</tbody></table>
       ${foot}</article>`;
-  }).join("") || `<p class="empty">출전표가 없습니다.</p>`;
+  };
+  const ended = p => p.skip === "끝난 경주";
+  const ahead = pl.races.filter(p => !ended(p)), gone = pl.races.filter(ended);
+  $("list").innerHTML = (ahead.map(card).join("") + (gone.length ? `<details class="gone"><summary>+ 출발한 경주 ${gone.length}개</summary>${gone.map(card).join("")}</details>` : "")) || `<p class="empty">출전표가 없습니다.</p>`;
   if (PAST){
     const sp = pl.races.reduce((a, x) => a + (x.spent || 0), 0), rt = pl.races.reduce((a, x) => a + (x.ret || 0), 0);
     $("warnline").innerHTML = `<b>지난 경주일 연습 보기</b>: 확정 단승 배당을 넣었다고 보고 만든 계획을 확정 배당으로 정산했습니다. 조건에 맞아 실제로 샀을 금액 <b>${won(sp)}</b>, 환급 <b>${won(rt)}</b>, 회수율 <b>${sp ? (rt / sp * 100).toFixed(0) + "%" : "-"}</b>. 하루 결과는 운의 영향이 매우 큽니다.`;
@@ -313,6 +331,7 @@ async function showTrack(){
 }
 
 (async () => {
+  if (!store.get("plan:settings")) $("setupBox").open = true;
   renderSetup();
   showTrack();
   INDEX = await get("data/index.json");
@@ -326,6 +345,7 @@ async function showTrack(){
   const start = days.find(d => d.date === want)?.date || (up[0] || days[days.length - 1]).date;
   $("daySel").value = start;
   await openDay(start);
+  renderSetup();
   showCheck();
 })();
 })();

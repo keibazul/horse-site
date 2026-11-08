@@ -15,8 +15,8 @@
 :root[data-theme="dark"]{--bar:#3987e5; --bar-odds:#1c5cab; --even:#ff6253; --s1:#3987e5; --s2:#d95926; --s3:#199e70}
 h1,h2{margin:0;text-wrap:balance}
 p{margin:0}
-.hero h1{font-weight:800;letter-spacing:-.03em;font-size:34px;line-height:1.1;letter-spacing:-.01em}
-.hero p{margin-top:10px;font-size:16px;max-width:60ch}
+.hero h1{font-weight:800;letter-spacing:-.02em;font-size:28px;line-height:1.2}
+.hero p{margin-top:4px;font-size:15px;max-width:64ch}
 .hero .sub{font-size:13.5px;color:var(--muted);margin-top:6px}
 .box{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px;display:grid;gap:12px;min-width:0}
 .box h2{font-size:17px}
@@ -69,12 +69,14 @@ p{margin:0}
 .about ul{margin:0;padding-left:18px;display:grid;gap:4px}
 .empty{color:var(--muted);padding:12px 0}
 @media (max-width:560px){
-  .hero h1{font-size:28px}
+  .hero h1{font-size:24px}
   .br,.axis{grid-template-columns:1fr}
   .br .det{grid-column:1}
   .axis > div:first-child{display:none}
 }
 .box,.race{border-radius:var(--r);box-shadow:var(--shadow)}
+.br .det{display:flex;flex-wrap:wrap;gap:0 12px}
+.br .det span{white-space:nowrap}
 </style>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0f3a2a">
@@ -86,8 +88,8 @@ p{margin:0}
 <body data-page="results">
 <script src="assets/app.js"></script>
 <main id="main" class="page">
-  <header class="hero">
-    <h1>지난 1년, 이렇게 샀다면</h1>
+  <header class="hero page-head">
+    <h1>수익 검증: 지난 1년, 이렇게 샀다면</h1>
     <p id="takeaway">불러오는 중…</p>
     <p class="sub" id="period"></p>
   </header>
@@ -164,7 +166,7 @@ function render(S){
     html += `<div class="br" title="${esc(s.desc)}">
       <div class="nm"><span>${esc(s.name)}</span><span class="roi">${pc(s.roi)}</span><small>${esc(s.desc)}</small></div>
       <div class="track"><span class="fill ${s.usesOdds ? "odds" : ""}" style="width:${X(s.roi)}%"></span>${ci}</div>
-      <div class="det"><span>${s.bets.toLocaleString("ko-KR")}건 · 적중 ${s.hits.toLocaleString("ko-KR")}</span> · <span>손익 ${won(s.ret - s.stake)}</span>${s.ci ? ` · <span>95% ${pc(s.ci[0])}~${pc(s.ci[1])}</span>` : ""}</div>
+      <div class="det"><span>${s.bets.toLocaleString("ko-KR")}건 중 ${s.hits.toLocaleString("ko-KR")}번 적중, 손익 ${won(s.ret - s.stake)}</span>${s.ci ? `<span>운에 따른 범위(95%) ${pc(s.ci[0])}~${pc(s.ci[1])}</span>` : ""}</div>
     </div>`;
   }
   $("bars").innerHTML = html;

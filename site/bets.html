@@ -75,6 +75,9 @@ select,input[type=number],input[type=text]{border:1px solid var(--line);backgrou
 .box h2{font-size:18px;font-weight:800}
 .horses{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
 @media (max-width:900px){ .ledger-grid{grid-template-columns:1fr} .ledger-grid > .box:first-child{position:static} }
+#poolBtns{flex-wrap:nowrap;overflow-x:auto;max-width:100%;scrollbar-width:none}
+#poolBtns::-webkit-scrollbar{display:none}
+#poolBtns button{white-space:nowrap;flex:0 0 auto}
 </style>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0f3a2a">
@@ -247,6 +250,7 @@ async function renderList(){
   renderSum(rows);
 }
 function renderSum(rows){
+  $("sum").hidden = $("poolsSum").hidden = !rows.length;      // 기록이 없으면 0원짜리 합계는 숨김
   const done = rows.filter(x => x.r.ret != null), wait = rows.length - done.length;
   const stake = done.reduce((a,x)=>a+x.b.amount,0), ret = done.reduce((a,x)=>a+x.r.ret,0), all = rows.reduce((a,x)=>a+x.b.amount,0);
   const pl = ret - stake;
@@ -297,7 +301,11 @@ async function renderHorses(){
 async function openDay(d){
   F.date = d; F.sel = []; ENT = await getJSON(`data/entries/${d}.json`);
   const races = [...new Set((ENT?.rows || []).map(r => +r.rcNo))].sort((a,b)=>a-b);
-  if (!races.includes(F.race)) F.race = races[0];
+  if (!races.includes(F.race)){        // 오늘이면 아직 출발 안 한 첫 경주
+    const now = new Date(), nm = now.getHours()*60 + now.getMinutes(), tod = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,"0")}${String(now.getDate()).padStart(2,"0")}`;
+    const tm = n => { const m = String((ENT?.rows || []).find(r => +r.rcNo === n)?.stTime ?? "").match(/(\d{1,2}):?(\d{2})/); return m ? +m[1]*60 + +m[2] : null; };
+    F.race = (d === tod && races.find(n => (tm(n) ?? 0) > nm)) || races[0];
+  }
   $("raceBtns").innerHTML = races.map(n => `<button type="button" data-r="${n}" aria-pressed="${n === F.race}">${n}R</button>`).join("");
   $("raceBtns").querySelector('[aria-pressed="true"]')?.scrollIntoView({block:"nearest", inline:"center"});
   renderHorses();

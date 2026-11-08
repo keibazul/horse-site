@@ -55,6 +55,11 @@
 .lrow{display:grid;grid-template-columns:64px minmax(140px,.9fr) minmax(0,2.2fr) 150px;gap:16px;align-items:center;padding:12px 18px;border-top:1px solid var(--line);
   color:inherit;text-decoration:none}
 .lrow:first-child{border-top:0}
+.gone summary{cursor:pointer;padding:12px 18px;border-top:1px solid var(--line);font-size:14px;font-weight:700;color:var(--muted);list-style:none}
+.gone summary::-webkit-details-marker{display:none}
+.gone summary::before{content:"+ ";}
+.gone[open] summary::before{content:"− ";}
+.list > .gone:first-child summary{border-top:0}
 .lrow:hover{background:var(--soft)}
 .lrow .no b{display:block;font-size:19px;font-weight:800;letter-spacing:-.04em;line-height:1.1}
 .lrow .no span{font-size:12.5px;color:var(--muted);font-weight:600}
@@ -135,7 +140,7 @@
     </section>
 
     <section style="display:grid;gap:10px" aria-labelledby="statH">
-      <div class="sec-title"><h2 id="statH">최근 성적</h2><a href="review.html">주간 복기 보기</a></div>
+      <div class="sec-title"><h2 id="statH">최근 성적</h2><span class="aside"><a href="review.html">주간 복기</a> · <a href="results.html">수익 검증</a></span></div>
       <div class="stats" id="stats"></div>
     </section>
 
@@ -246,7 +251,9 @@ async function show(date){
   $("strip").querySelector(".next")?.scrollIntoView({block:"nearest", inline:"center"});
   // 경주별 1순위
   $("listAside").textContent = `${short(date)} · ${pred ? (pred.races && Object.values(pred.races).some(x => x.wg) ? "당일 마체중 반영" : "경주 전 예측") : "예측 준비 중"}`;
-  $("list").innerHTML = races.map(r => {
+  // 오늘: 아직 출발 안 한 경주를 위에, 끝난(출발한) 경주는 아래에 접어 둠
+  const started = r => isToday && (done(r) || (mins(times[r]) ?? 9999) < nowM);
+  const rowHtml = r => {
     const e = first(r), P = prob(r), pr = pred?.races?.[r] || {};
     const nm = k => rows.find(x => +x.rcNo === r && +x.chulNo === k)?.hrName || "";
     const cond = `<b>${e.rcDist ? e.rcDist + "m" : ""}</b> ${esc(e.rank || "")}<span class="c2">${esc([e.rcName && e.rcName !== "일반" ? e.rcName : "", `${rows.filter(x => +x.rcNo === r).length - (pr.out || []).length}두`].filter(Boolean).join(" · "))}</span>`;
@@ -262,9 +269,13 @@ async function show(date){
       res = `<span class="chips">${pr.result.slice(0, 3).map(x => chip(x)).join("")}</span>${hit ? `<span class="pill gold">1순위 적중</span>` : `<span>결과</span>`}`;
     } else if (pr.void) res = `<span class="pill bad">${esc(pr.void)}</span>`;
     else if (r === next) res = `<span class="pill gold">다음 출발 ${times[r]}</span>`;
+    else if (started(r)) res = `<span class="pill">출발함 · 결과는 저녁에</span>`;
     return `<a class="lrow" href="race.html?date=${date}&race=${r}"><span class="no"><b>${r}R</b><span>${times[r] || ""}</span></span>
       <span class="cond">${cond}</span><div class="picks">${picks}</div><div class="res">${res}</div></a>`;
-  }).join("") || `<p class="empty">출전표가 없습니다.</p>`;
+  };
+  const ahead = races.filter(r => !started(r)), gone = races.filter(started);
+  $("list").innerHTML = (ahead.map(rowHtml).join("") +
+    (gone.length ? `<details class="gone" ${ahead.length ? "" : "open"}><summary>${ahead.length ? `출발한 경주 ${gone.length}개` : "오늘 경주"} 보기</summary>${gone.map(rowHtml).join("")}</details>` : "")) || `<p class="empty">출전표가 없습니다.</p>`;
 }
 
 function stats(days){
@@ -279,7 +290,7 @@ function stats(days){
     out.push(box("지난 경주일", `${last.map(d => short(d.date)).join(", ")} · ${h.races}경주`, h, `<a class="more" href="review.html?date=${last[last.length-1].date}">이 주말 복기</a>`));
   }
   const T = past.reduce((a, d) => ({races: a.races + d.hits.races, model: a.model + d.hits.model, comb: a.comb + d.hits.comb, mkt: a.mkt + (d.hits.mkt || 0)}), {races:0, model:0, comb:0, mkt:0});
-  if (T.races) out.push(box("최근 1년", `${past.length}일 · ${T.races}경주`, T, `<a class="more" href="results.html">이렇게 샀다면 얼마가 돌아왔나</a>`));
+  if (T.races) out.push(box("최근 1년", `${past.length}일 · ${T.races}경주`, T, `<a class="more" href="results.html">수익 검증: 방법별로 샀다면 얼마가 돌아왔나, 모델 상태</a>`));
   $("stats").innerHTML = out.join("") || `<p class="empty">아직 끝난 경주일이 없습니다.</p>`;
 }
 })();

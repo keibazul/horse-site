@@ -44,7 +44,9 @@
 .rc-act{display:grid;gap:8px;justify-items:stretch}
 @media (max-width:640px){
   .racecard{grid-template-columns:auto minmax(0,1fr);padding:14px}
-  .rc-act{grid-column:1 / -1;grid-template-columns:1fr 1fr 1fr}
+  .rc-act{grid-column:1 / -1;grid-template-columns:1fr 1fr}
+  .rc-act .btn.sim{grid-column:1 / -1}
+  .rc-act .btn{white-space:nowrap}
   .rno{font-size:32px;min-width:62px}
   .rc-main h2{font-size:18px}
 }
@@ -87,7 +89,9 @@
 .row .chip{width:32px;height:30px;font-size:15px;cursor:pointer}
 .nm{min-width:0}
 .nm b{display:block;font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.nm span{display:block;font-size:12.5px;color:var(--muted);white-space:normal;line-height:1.4;margin-top:1px}
+.nm span{display:flex;flex-wrap:wrap;gap:0 8px;font-size:12.5px;color:var(--muted);line-height:1.45;margin-top:2px}
+.nm span i{font-style:normal;white-space:nowrap}
+.nm span i.wg{color:var(--ink);font-weight:600}
 .flag{font-style:normal;font-size:11px;font-weight:700;margin-left:6px;padding:1px 6px;border-radius:999px;background:color-mix(in srgb,var(--bad) 13%,transparent);color:var(--bad);vertical-align:2px}
 .toppill{font-style:normal;font-size:11px;font-weight:800;margin-left:6px;padding:1px 7px;border-radius:999px;background:var(--gold-soft);color:var(--gold);vertical-align:2px}
 .pr{display:grid;gap:4px;min-width:0}
@@ -197,7 +201,7 @@ const SADDLE = {1:["#f4f4f1","#111"],2:["#1e1e22","#fff"],3:["#d8392b","#fff"],4
 const saddle = n => SADDLE[n] || ["#888","#fff"];
 const chip = (n, cls="") => { const [bg, fg] = saddle(n); return `<span class="chip ${cls}" style="background:${bg};color:${fg}">${n}</span>`; };
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const pct = p => p >= 0.1 ? (p*100).toFixed(1) + "%" : p >= 0.001 ? (p*100).toFixed(2) + "%" : "<0.1%";
+const pct = p => p >= 0.1 ? (p*100).toFixed(0) + "%" : p >= 0.001 ? (p*100).toFixed(1) + "%" : "0.1% 미만";
 const fair = p => p > 0 ? (1/p >= 100 ? (1/p).toFixed(0) : (1/p).toFixed(1)) : "-";
 const dLabel = d => { const dt = new Date(+d.slice(0,4), +d.slice(4,6)-1, +d.slice(6,8)); return `${+d.slice(4,6)}/${+d.slice(6,8)} (${"일월화수목금토"[dt.getDay()]})`; };
 const store = {
@@ -214,7 +218,7 @@ async function getJSON(url){ const r = await fetch(url, {cache:"no-cache"}); if 
 async function boot(){
   try { INDEX = await getJSON("data/index.json"); }
   catch { $("updated").textContent = "예측 데이터를 아직 받지 못했습니다."; $("field").innerHTML = `<p class="empty">자동 업데이트가 한 번 돌고 나면 다음 경주일이 여기에 나옵니다.</p>`; return; }
-  $("updated").textContent = `렛츠런파크 서울 · 자료 ${INDEX.updated.replace("T"," ")} 기준`;
+  $("updated").textContent = `렛츠런파크 서울 · 자료가 마지막으로 바뀐 때 ${INDEX.updated.slice(5).replace("-", "/").replace("T"," ")} (경주일에는 15분마다 확인)`;
   const days = INDEX.days || [];
   if (!days.length){ $("field").innerHTML = `<p class="empty">아직 출전표가 나온 경주일이 없습니다. 출전표는 보통 경주 이틀 전(목요일)에 공개됩니다.</p>`; return; }
   const q = new URLSearchParams(location.search);
@@ -365,7 +369,8 @@ function render(){
     const wg = PRED?.races?.[RACE]?.wg?.[i];
     const wgRate = wg && wg[0] - wg[1] > 0 ? wg[1] / (wg[0] - wg[1]) * 100 : null;
     const wgTxt = wg ? `마체중 ${wg[0]}(${wg[1] > 0 ? "+" : ""}${wg[1] || 0})` : "";
-    const meta = esc([`${r.sex ?? ""}${r.age ?? ""}`, r.jkName, r.wgBudam && `부담 ${r.wgBudam}kg`, wgTxt, r.rating && r.rating !== "-" && +r.rating > 0 && `R${r.rating}`, nPrior === 0 && "첫 출전"].filter(Boolean).join(" · "));
+    const meta = [`${r.sex ?? ""}${r.age ?? ""}`, r.jkName, r.wgBudam && `부담 ${r.wgBudam}kg`, r.rating && r.rating !== "-" && +r.rating > 0 && `R${r.rating}`, nPrior === 0 && "첫 출전"]
+      .filter(Boolean).map(x => `<i>${esc(x)}</i>`).join("") + (wgTxt ? `<i class="wg">${esc(wgTxt)}</i>` : "");
     const flag = wgRate != null && +r.age >= 4 && wgRate >= 2 ? `<em class="flag" title="4세 이상이 직전보다 2% 넘게 늘면 배당 예상보다 덜 이기는 경향 (2010~2026년 16% 덜)">체중 +${wgRate.toFixed(1)}%</em>` : "";
     let prc;
     if (out) prc = `<span class="na">출전 제외</span>`;

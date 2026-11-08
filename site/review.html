@@ -165,7 +165,10 @@ async function showWeek(k){
   const done = (INDEX.days || []).filter(x => x.past && x.pred).map(x => x.date);
   for (const d of done) (WEEKS[weekKey(d)] = WEEKS[weekKey(d)] || []).push(d);
   const keys = Object.keys(WEEKS).sort().reverse();
-  $("weekSel").innerHTML = keys.map(k => `<option value="${k}">${WEEKS[k].map(d => `${+d.slice(4,6)}.${+d.slice(6,8)}`).join(" · ")} (${k.slice(0,4)})</option>`).join("");
+  const wkName = k => { const ds = WEEKS[k].slice().sort(), a = ds[0], z = ds[ds.length - 1];
+    const md = d => `${+d.slice(4,6)}월 ${+d.slice(6,8)}일`;
+    return `${a.slice(0,4)}년 ${md(a)}${z !== a ? (z.slice(4,6) === a.slice(4,6) ? `~${+z.slice(6,8)}일` : `~${md(z)}`) : ""} 경주`; };
+  $("weekSel").innerHTML = keys.map(k => `<option value="${k}">${wkName(k)}</option>`).join("");
   const want = new URLSearchParams(location.search).get("date");
   const start = want ? weekKey(want) : keys[0];
   if (keys.includes(start)) $("weekSel").value = start;
