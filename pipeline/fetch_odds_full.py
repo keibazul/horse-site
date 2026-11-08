@@ -29,7 +29,8 @@ def main() -> int:
     for f in sorted((ROOT / "site" / "data" / "pred").glob("*.json")):
         if f.stem < a.since or (OUT / f"{f.stem}.csv.gz").exists():
             continue
-        if any(r.get("result") for r in json.loads(f.read_text(encoding="utf-8")).get("races", {}).values()):
+        races = json.loads(f.read_text(encoding="utf-8")).get("races", {})
+        if races and all(r.get("result") or r.get("void") for r in races.values()):   # 하루가 다 끝난 날만
             days.append(f.stem)
     for d in days[: a.max]:
         try:

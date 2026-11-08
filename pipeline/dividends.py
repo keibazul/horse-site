@@ -113,7 +113,8 @@ def main() -> int:
             if f.stem in have:
                 continue
             races = json.loads(f.read_text(encoding="utf-8")).get("races", {})
-            if any(r.get("result") for r in races.values()):
+            # 모든 경주 결과가 나온 날만 (당일 중간에 받으면 끝나지 않은 경주가 빠진 채 남음)
+            if races and all(r.get("result") or r.get("void") for r in races.values()):
                 cand.append(f.stem)
         dates += cand[: a.max]
     for d in dict.fromkeys(dates):

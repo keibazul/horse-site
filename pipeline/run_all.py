@@ -244,6 +244,8 @@ def main() -> int:
              sum([["--date", d] for d in upcoming if d >= today.strftime("%Y%m%d")], []), ROOT)
     # 끝난 경주일 확정 배당 (마권 기록장 정산용): 최근 날부터 한 번에 4일
     step("확정 배당", [sys.executable, str(ROOT / "pipeline" / "dividends.py"), "--missing", "--max", "4"], ROOT)
+    # 오늘 끝난 경주 결과를 예측 파일에 바로 (저녁 기록 갱신 전까지)
+    step("당일 결과", [sys.executable, str(ROOT / "pipeline" / "live_results.py")], ROOT)
     # 당일 주로 경향 (앞서 끝난 경주의 안쪽·바깥쪽 유리 정도 → 뒤 경주 확률 보정), 지난 날은 없을 때만
     step("당일 주로 경향", [sys.executable, str(ROOT / "pipeline" / "live_bias.py"), "--past"], ROOT)
     # 베팅 계획 실전 기록: 결과가 난 날은 모든 조합 확정 배당을 받아 두고(정산용), 출발 전 계획 고정·정산
