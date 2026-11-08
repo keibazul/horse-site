@@ -193,6 +193,7 @@ td.p{font-weight:800}
 <script>
 (() => {
 "use strict";
+const centerIn = (box, el) => { if (box && el) box.scrollLeft = el.offsetLeft - box.offsetLeft - (box.clientWidth - el.offsetWidth) / 2; };  // 그 줄만 가로로 맞춤 (scrollIntoView 는 바깥 상자까지 밀어 화면 왼쪽이 잘렸음)
 const $ = id => document.getElementById(id);
 const GAMMA = 0.8, DELTA = 0.7;
 const SADDLE = {1:["#f4f4f1","#111"],2:["#1e1e22","#fff"],3:["#d8392b","#fff"],4:["#2c66d6","#fff"],5:["#f3c533","#111"],6:["#2c9b55","#fff"],
@@ -278,7 +279,7 @@ function openRace(n){
   RACE = n;
   $("pasteMsg").textContent = "";
   [...$("races").children].forEach(b => b.setAttribute("aria-pressed", +b.dataset.r === n));
-  $("races").querySelector(`[data-r="${n}"]`)?.scrollIntoView({block:"nearest", inline:"center"});
+  centerIn($("races"), $("races").querySelector(`[data-r="${n}"]`));
   const key = `odds:${DAY.date}:${n}`, saved = store.get(key) || {};
   const prr = PRED?.races?.[n] || {};
   state.official = prr.odds || {};

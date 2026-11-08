@@ -154,6 +154,7 @@
 <script>
 (() => {
 "use strict";
+const centerIn = (box, el) => { if (box && el) box.scrollLeft = el.offsetLeft - box.offsetLeft - (box.clientWidth - el.offsetWidth) / 2; };  // 그 줄만 가로로 맞춤 (scrollIntoView 는 바깥 상자까지 밀어 화면 왼쪽이 잘렸음)
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const SADDLE = {1:["#f4f4f1","#111"],2:["#1e1e22","#fff"],3:["#d8392b","#fff"],4:["#2c66d6","#fff"],5:["#f3c533","#111"],6:["#2c9b55","#fff"],
@@ -248,7 +249,7 @@ async function show(date){
     return `<a class="tile ${r === next ? "next" : ""} ${res?.length ? "done" : ""}" href="race.html?date=${date}&race=${r}" aria-label="${r}경주 ${times[r]}">
       <span class="tm">${times[r] || ""}</span>${r === next ? '<span class="nx">다음</span>' : ""}<b>${r}R</b><span class="who">${who}</span></a>`;
   }).join("");
-  $("strip").querySelector(".next")?.scrollIntoView({block:"nearest", inline:"center"});
+  centerIn($("strip"), $("strip").querySelector(".next"));
   // 경주별 1순위
   $("listAside").textContent = `${short(date)} · ${pred ? (pred.races && Object.values(pred.races).some(x => x.wg) ? "당일 마체중 반영" : "경주 전 예측") : "예측 준비 중"}`;
   // 오늘: 아직 출발 안 한 경주를 위에, 끝난(출발한) 경주는 아래에 접어 둠

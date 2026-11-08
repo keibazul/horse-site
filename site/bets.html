@@ -144,6 +144,7 @@ select,input[type=number],input[type=text]{border:1px solid var(--line);backgrou
 <script>
 (() => {
 "use strict";
+const centerIn = (box, el) => { if (box && el) box.scrollLeft = el.offsetLeft - box.offsetLeft - (box.clientWidth - el.offsetWidth) / 2; };  // 그 줄만 가로로 맞춤 (scrollIntoView 는 바깥 상자까지 밀어 화면 왼쪽이 잘렸음)
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const won = v => Math.round(v).toLocaleString("ko-KR") + "원";
@@ -307,7 +308,7 @@ async function openDay(d){
     F.race = (d === tod && races.find(n => (tm(n) ?? 0) > nm)) || races[0];
   }
   $("raceBtns").innerHTML = races.map(n => `<button type="button" data-r="${n}" aria-pressed="${n === F.race}">${n}R</button>`).join("");
-  $("raceBtns").querySelector('[aria-pressed="true"]')?.scrollIntoView({block:"nearest", inline:"center"});
+  centerIn($("raceBtns"), $("raceBtns").querySelector('[aria-pressed="true"]'));
   renderHorses();
 }
 $("daySel").onchange = e => openDay(e.target.value);
