@@ -126,6 +126,12 @@
     <div id="list" style="display:grid;gap:10px"><p class="empty">불러오는 중…</p></div>
   </section>
 
+  <section class="about" aria-labelledby="trkH">
+    <h2 id="trkH">실전 기록</h2>
+    <p class="muted" style="font-size:14px;line-height:1.65">사이트가 경주마다 출발 직전의 계획(자금 10만 원, 보통, 배당 안 넣음)을 고정해 두고, 결과가 나오면 확정 배당으로 정산합니다. 과거에 다시 적용해 본 검증과 달리 앞으로 실제로 맞는지 보는 기록입니다. 몇 주는 쌓여야 의미가 있습니다.</p>
+    <div id="track"><p class="muted" style="font-size:14px">불러오는 중…</p></div>
+  </section>
+
   <section class="about" aria-labelledby="howH">
     <h2 id="howH">이렇게 계산합니다</h2>
     <ul>
@@ -293,8 +299,21 @@ async function showCheck(){
     <div style="overflow-x:auto"><table class="chk">${head.replace("설정", "승식")}<tbody>${c.pools.map(x => row(SHORT[x.pool], x, x.hits < 10 ? "적중이 적어 믿기 어려움" : "")).join("")}</tbody></table></div>`;
 }
 
+async function showTrack(){
+  const t = await get("data/plan_track/summary.json");
+  if (!t){ $("track").innerHTML = `<p class="muted" style="font-size:14px">아직 기록이 없습니다.</p>`; return; }
+  const sd = d => `${+d.slice(4,6)}/${+d.slice(6,8)}`;
+  const rows = Object.values(t.tracks).map(x => `<tr><td>${esc(x.label)}</td><td>${x.races}경주 · ${x.bets}장</td><td>${x.hits}</td><td>${won(x.spent)}</td><td>${won(x.ret)}</td><td><b>${x.spent ? (x.ret / x.spent * 100).toFixed(1) + "%" : "-"}</b></td><td>${x.pending ? `${x.pending}경주` : "-"}</td></tr>`).join("");
+  const days = [...new Set(Object.values(t.tracks).flatMap(x => x.days.map(d => d.date)))].sort().reverse();
+  const drows = days.map(d => `<tr><td>${sd(d)}</td>${Object.values(t.tracks).map(x => { const y = x.days.find(z => z.date === d); return y ? `<td>${won(y.spent)} → ${won(y.ret)}</td>` : "<td>-</td>"; }).join("")}</tr>`).join("");
+  $("track").innerHTML = `<div style="overflow-x:auto"><table class="chk" style="max-width:none"><thead><tr><th>설정</th><th>산 경주·마권</th><th>적중</th><th>산 금액</th><th>환급</th><th>회수율</th><th>정산 대기</th></tr></thead><tbody>${rows}</tbody></table></div>
+    ${drows ? `<div style="overflow-x:auto;margin-top:10px"><table class="chk"><thead><tr><th>경주일</th>${Object.values(t.tracks).map(x => `<th>${esc(x.label)}</th>`).join("")}</tr></thead><tbody>${drows}</tbody></table></div>` : ""}
+    <p class="muted" style="font-size:13px;margin-top:6px">${sd(t.start)}부터 기록. 결과와 모든 조합 확정 배당은 경주일 저녁에 들어옵니다.</p>`;
+}
+
 (async () => {
   renderSetup();
+  showTrack();
   INDEX = await get("data/index.json");
   const days = INDEX?.days || [];
   if (!days.length){ $("list").innerHTML = `<p class="empty">아직 출전표가 나온 경주일이 없습니다.</p>`; return; }
