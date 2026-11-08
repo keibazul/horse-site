@@ -256,7 +256,7 @@ async function getJSON(url){ const r = await fetch(url, {cache:"no-cache"}); if 
 async function boot(){
   try { INDEX = await getJSON("data/index.json"); }
   catch { $("updated").textContent = "예측 데이터를 아직 받지 못했습니다."; $("field").innerHTML = `<p class="empty">자동 업데이트가 한 번 돌고 나면 다음 경주일이 여기에 나옵니다.</p>`; return; }
-  $("updated").textContent = `업데이트 ${INDEX.updated.replace("T"," ")} · ${INDEX.model?.connected ? "모델 " + esc(INDEX.model.name) : "모델 연결 전"}`;
+  $("updated").textContent = `최근 변경 ${INDEX.updated.replace("T"," ")} · ${INDEX.model?.connected ? "모델 " + esc(INDEX.model.name) : "모델 연결 전"}`;
   const days = INDEX.days || [];
   if (!days.length){ $("field").innerHTML = `<p class="empty">아직 출전표가 나온 경주일이 없습니다. 출전표는 보통 경주 이틀 전(목요일)에 공개됩니다.</p>`; return; }
   const q = new URLSearchParams(location.search);
@@ -382,7 +382,7 @@ function render(){
   $("clearOdds").hidden = off ? !edited && [...state.out].join() === (PRED?.races?.[RACE]?.out || []).join() : false;
   const need = P.ids.length - entered;
   const wgN = Object.keys(PRED?.races?.[RACE]?.wg || {}).length;
-  const wgNote = wgN ? " · 당일 마체중 반영" : (DAY && !DAY.past ? " · 마체중은 경주 당일 입력되면 30분 안에 반영" : "");
+  const wgNote = wgN ? " · 당일 마체중 반영" : (DAY && !DAY.past ? " · 마체중은 경주 당일 입력되면 15분 안에 반영" : "");
   $("srcNote").innerHTML = `${srcText}${wgNote}${need > 0 && entered > 0 ? ` · 배당 ${need}두 더 넣으면 ${pm ? "결합" : "시장"} 확률로 바뀝니다` : ""}${entered === 0 ? " · 경주 직전 KRA 앱의 단승 배당을 넣으면 더 정확해집니다" : ""}${off ? " · 배당 칸은 고칠 수 있고, 고친 칸은 굵게 표시됩니다" : ""}`;
   const nt = $("notice");
   const inSample = PRED?.trained_through && PRED.trained_through >= DAY.date;

@@ -111,14 +111,22 @@ def signature(rows: list[dict]) -> str:
     return h.hexdigest()[:16]
 
 
+def day_finished(d: str, today: dt.date) -> bool:
+    """지난 날이거나, 오늘인데 경주결과·경주성적정보가 모두 들어온 날"""
+    t = today.strftime("%Y%m%d")
+    if d < t:
+        return True
+    return d == t and (WORK / "results" / f"rr_{d}.csv").exists() and (WORK / "race_details" / f"rd_{d}.csv").exists()
+
+
 def write_index(today: dt.date, connected: bool, model_name: str | None = None) -> None:
     """사이트 목차: 예측이 있는 지난 경주일 전부 + 앞으로 열릴 경주일"""
     t = today.strftime("%Y%m%d")
     ent = sorted(f.stem for f in (DATA / "entries").glob("*.json"))
     days = []
     for d in ent:
-        past = d < t
         pf = DATA / "pred" / f"{d}.json"
+        past = d < t or (d == t and pf.exists() and bool(json.loads(pf.read_text(encoding="utf-8")).get("backtestDone")))
         if past and not pf.exists():
             continue
         item = {"date": d, "entries": f"entries/{d}.json", "past": past}
@@ -135,7 +143,14 @@ def write_index(today: dt.date, connected: bool, model_name: str | None = None) 
         "model": {"connected": connected, "name": model_name or ("v5" if connected else None)},
         "days": days,
     }
-    (DATA / "index.json").write_text(json.dumps(idx, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    fi = DATA / "index.json"
+    try:   # 시각 말고 바뀐 것이 없으면 그대로 둠 → 바뀐 데이터가 없으면 커밋·배포도 안 함
+        old = json.loads(fi.read_text(encoding="utf-8"))
+        if {**old, "updated": None} == {**idx, "updated": None}:
+            idx["updated"] = old["updated"]
+    except (OSError, ValueError, KeyError):
+        pass
+    fi.write_text(json.dumps(idx, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     try:
         sys.path.insert(0, str(ROOT / "pipeline"))
         import strategy
@@ -188,7 +203,15 @@ def main() -> int:
             rows = add_weights(d, json.loads((DATA / "entries" / f"{d}.json").read_text(encoding="utf-8"))["rows"])
             sig = signature(rows)
             pf = DATA / "pred" / f"{d}.json"
-            if pf.exists() and d >= today.strftime("%Y%m%d"):
+            if day_finished(d, today):
+                # 결과가 들어온 날(경주일 저녁의 오늘 포함): 결과·실제 경주 시뮬레이션으로 한 번만 다시 만든다
+                if pf.exists() and not needs_result(d):
+                    log(f"결과 반영 끝: {d}")
+                    continue
+                if pf.exists() and not (WORK / "results" / f"rr_{d}.csv").exists():
+                    log(f"결과 기다림: {d} (경주 기록 갱신 때 들어옴)")
+                    continue
+            elif pf.exists():
                 old = json.loads(pf.read_text(encoding="utf-8"))
                 if old.get("sig") == sig:
                     log(f"예측 그대로: {d} (출전표·마체중·기록·모델 변화 없음)")

@@ -56,8 +56,14 @@ def main() -> int:
         rows.sort(key=lambda r: (int(r.get("rcNo") or 0), int(r.get("chulNo") or 0)))
         races = sorted({int(r["rcNo"]) for r in rows})
         print(f"{d}: {len(races)}개 경주, {len(rows)}두 (항목 {len(rows[0])}개)")
-        (OUT / f"{d}.json").write_text(json.dumps({"date": d, "fetched": dt.datetime.now(KST).isoformat(timespec="minutes"), "rows": rows}, ensure_ascii=False), encoding="utf-8")
         found.append(d)
+        f = OUT / f"{d}.json"
+        try:
+            if f.exists() and json.loads(f.read_text(encoding="utf-8")).get("rows") == rows:
+                continue          # 내용이 같으면 파일을 그대로 둠 (시각만 바뀐 커밋·배포를 만들지 않음)
+        except ValueError:
+            pass
+        f.write_text(json.dumps({"date": d, "fetched": dt.datetime.now(KST).isoformat(timespec="minutes"), "rows": rows}, ensure_ascii=False), encoding="utf-8")
     print("출전표 저장:", ", ".join(found) if found else "없음")
     return 0
 

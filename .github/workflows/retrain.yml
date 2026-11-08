@@ -28,9 +28,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with: { ref: main }
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with: { python-version: '3.13' }
       - run: pip install -r requirements.txt
       - name: 지난 경주일 마무리 (지금 모델)
@@ -75,15 +75,16 @@ jobs:
             git commit -q -m "월간 재학습 $(TZ=Asia/Seoul date '+%Y-%m-%d')"
             git pull --rebase -X theirs -q origin main && git push -q origin HEAD:main
           fi
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with: { path: site }
 
   deploy:
     needs: retrain
     runs-on: ubuntu-latest
+    concurrency: { group: pages-deploy, cancel-in-progress: false }
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

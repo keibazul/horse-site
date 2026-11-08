@@ -23,8 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 180
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with: { python-version: '3.13' }
       - run: pip install -r requirements.txt
       - name: 이미 있으면 건너뛰기
@@ -42,7 +42,7 @@ jobs:
           else
             python train_sectional_model.py --until $BT_UNTIL --out winner_history_bt/sect_model_v1.joblib
           fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: model-${{ matrix.model }}
           path: work/winner_history_bt/
@@ -57,11 +57,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 180
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with: { python-version: '3.13' }
       - run: pip install -r requirements.txt
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           pattern: model-*
           path: work/winner_history_bt/
@@ -76,7 +76,7 @@ jobs:
           mkdir -p out
           git ls-files -m -o --exclude-standard site/data | while read f; do mkdir -p "out/$(dirname "$f")"; cp "$f" "out/$f"; done
           echo "모은 파일 $(find out -type f | wc -l)개"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: data-${{ matrix.part }}
           path: out/site/data/
@@ -96,16 +96,16 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with: { ref: main }
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with: { python-version: '3.13' }
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           pattern: data-*
           path: site/data/
           merge-multiple: true
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           pattern: model-*
           path: work/winner_history_bt/
@@ -121,7 +121,7 @@ jobs:
             git commit -q -m "지난 1년 경주일 채우기 ($BF_START~$BF_END, 검증용 모델 $BT_UNTIL 이전 학습)"
             git pull --rebase -X theirs -q origin main && git push -q origin HEAD:main
           fi
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with: { path: site }
       - id: deploy
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

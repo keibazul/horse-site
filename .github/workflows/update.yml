@@ -5,6 +5,7 @@ on:
     - cron: '7 9 * * 4,5'    # 목·금 18:07 (출전표 공개 후)
     - cron: '17 22 * * 5,6'  # 토·일 07:17 (경주 당일 아침)
     # 토·일 경주 중에는 raceday.yml 이 15분마다 이 작업을 실행시킨다 (예약 지연에 덜 민감하게)
+    - cron: '7 12 * * 6,0'   # 토·일 21:07 (그날 결과 받기 예비; 보통은 raceday.yml 이 18:50·19:50 에 받음)
     - cron: '27 0 * * 1'     # 월 09:27 (주말 결과로 기록 갱신)
   workflow_dispatch:
     inputs:
@@ -29,10 +30,12 @@ jobs:
   update:
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    outputs:
+      changed: ${{ steps.commit.outputs.changed }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with: { ref: main }   # 앞선 실행이 올린 데이터 커밋까지 받아 시작
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with: { python-version: '3.13' }
       - name: 라이브러리 설치 (예측 코드가 있을 때)
         if: hashFiles('work/site_export.py') != ''
@@ -44,24 +47,34 @@ jobs:
           PYTHONUTF8: '1'
         run: python pipeline/run_all.py
       - name: 바뀐 데이터 커밋
+        id: commit
         run: |
           git config user.name "horse-site bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A site/data work 2>/dev/null || git add -A site/data
+          # 데이터가 그대로면 배포도 건너뜀 (사이트 파일을 고친 push 는 배포)
+          if [ "$GITHUB_EVENT_NAME" = push ]; then echo "changed=true" >> "$GITHUB_OUTPUT"; fi
           if git diff --cached --quiet; then echo "바뀐 것 없음"; else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
             git commit -m "데이터 업데이트 $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')"
             # 겹쳐 돈 실행과 같은 데이터 파일을 고쳤으면 이번 실행 결과를 우선 (rebase 에서 theirs = 이번 커밋)
             git pull --rebase -X theirs -q origin main && git push -q origin HEAD:main
           fi
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with: { path: site }
 
   deploy:
     needs: update
+    if: needs.update.outputs.changed == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 25
+    concurrency:        # 배포는 한 번에 하나씩 (겹치면 GitHub 쪽에서 오래 걸리다 취소됨)
+      group: pages-deploy
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
+        with: { timeout: 1200000 }
