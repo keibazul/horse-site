@@ -8,17 +8,19 @@
     review: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/><path d="m9 15 2 2 4-4"/>',
     bets: '<path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2.2a2.8 2.8 0 0 0 0 5.6V17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2.2a2.8 2.8 0 0 0 0-5.6z"/><path d="M14 5.5v13" stroke-dasharray="2 2"/>',
     results: '<path d="M4 20h16"/><path d="M6.5 16v-4M11 16V8M15.5 16v-6M20 16V5" />',
+    plan: '<rect x="3.5" y="6" width="17" height="13" rx="2.5"/><path d="M3.5 10h17"/><circle cx="16" cy="14.5" r="1.2"/><path d="M7 3.5h10"/>',
     guide: '<circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .8-1 1.5v.6"/><circle cx="12" cy="16.9" r=".7"/>'
   };
   const svg = k => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[k]}</svg>`;
-  const items = [["home", "./", "홈"], ["race", "race.html", "경주 예측"], ["review", "review.html", "주간 복기"], ["bets", "bets.html", "내 마권"], ["results", "results.html", "수익 검증"]];
+  const items = [["home", "./", "홈"], ["race", "race.html", "경주 예측"], ["plan", "plan.html", "베팅 계획"], ["bets", "bets.html", "내 마권"], ["review", "review.html", "주간 복기"]];
+  const more = [["results", "results.html", "수익 검증"], ["guide", "guide.html", "사용법"]];
   const cur = k => (k === page || (page === "sim" && k === "race")) ? ' aria-current="page"' : "";
   const logo = `<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M7 5.5h18a1.5 1.5 0 0 1 1.5 1.5v13.2c0 3.4-2.2 5.3-5.4 6L16 27.4l-5.1-1.2c-3.2-.7-5.4-2.6-5.4-6V7A1.5 1.5 0 0 1 7 5.5z" fill="#f5f8f6"/><text x="16" y="21.3" text-anchor="middle" font-size="15" font-weight="800" fill="#0f3a2a" font-family="Pretendard Variable,Pretendard,Noto Sans KR,sans-serif">1</text></svg>`;
   document.body.insertAdjacentHTML("afterbegin",
     `<a class="sr" href="#main">본문으로 건너뛰기</a>
      <header class="appbar"><div class="wrap">
        <a class="logo" href="./">${logo}<span>서울 경주 예측</span></a>
-       <nav class="nav" aria-label="주요 메뉴">${items.map(([k, h, t]) => `<a href="${h}"${cur(k)}>${t}</a>`).join("")}<a href="guide.html"${cur("guide")}>사용법</a></nav>
+       <nav class="nav" aria-label="주요 메뉴">${[...items, ...more].map(([k, h, t]) => `<a href="${h}"${cur(k)}>${t}</a>`).join("")}</nav>
        <a class="helpbtn" href="guide.html" aria-label="사용법"${cur("guide")}>${svg("guide")}</a>
      </div></header>`);
   document.body.insertAdjacentHTML("beforeend",

@@ -121,6 +121,7 @@
       <nav class="strip" id="strip" aria-label="경주 시간표"></nav>
       <div class="cta">
         <a class="btn primary" id="ctaRace" href="race.html">경주 예측 보기</a>
+        <a class="btn ghost" href="plan.html">오늘 베팅 계획</a>
         <a class="btn ghost" href="guide.html">처음이라면: 사용법</a>
       </div>
     </div>
@@ -169,17 +170,17 @@ const ICON = {
   review: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/><path d="m9 15 2 2 4-4"/>',
   bets: '<path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2.2a2.8 2.8 0 0 0 0 5.6V17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2.2a2.8 2.8 0 0 0 0-5.6z"/>',
   results: '<path d="M4 20h16"/><path d="M6.5 16v-4M11 16V8M15.5 16v-6M20 16V5"/>',
-  app: '<rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M11 18h2"/>'
+  plan: '<rect x="3.5" y="6" width="17" height="13" rx="2.5"/><path d="M3.5 10h17"/><circle cx="16" cy="14.5" r="1.2"/><path d="M7 3.5h10"/>'
 };
 const ic = k => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
 
 $("feats").innerHTML = [
   ["race", "race.html", "경주 예측", "출전마마다 우승 확률. 경주 직전 단승 배당을 넣으면 배당과 섞은 확률과 7가지 승식의 유력 조합을 보여 줍니다."],
+  ["plan", "plan.html", "베팅 계획", "오늘 쓸 자금을 넣으면 경주마다 승식·조합·금액과 '배당이 얼마 이상일 때만 사기' 조건을 나눠 줍니다. 한 경주 10만 원 상한을 지키고, 걸 만한 조합이 없으면 건너뜁니다."],
   ["sim", "race.html", "전개 시뮬레이션", "구간 기록 모델과 물리 엔진으로 경주를 수천 번 돌려 초반 자리다툼과 막판 추입을 그림으로 봅니다. 예측 화면의 경주 카드에서 엽니다."],
   ["review", "review.html", "주간 복기", "주말이 끝나면 경주마다 예측과 실제 착순을 나란히 놓고, 크게 빗나간 경주에서 무엇이 달랐는지 정리합니다."],
   ["bets", "bets.html", "내 마권 기록장", "실제로 산 마권을 적어 두면 결과가 나온 뒤 적중, 환급, 회수율을 자동으로 계산합니다. 기록은 이 기기에만 저장됩니다."],
   ["results", "results.html", "수익 검증", "지난 1년 경주에 같은 방법으로 샀다면 얼마가 돌아왔는지, 방법별 회수율과 누적 손익입니다."],
-  ["app", "guide.html#app", "휴대폰 앱처럼 쓰기", "홈 화면에 추가하면 앱처럼 열립니다. 경주일에는 15분마다 마체중과 출전 취소가 반영됩니다."]
 ].map(([k, h, t, d]) => `<a class="feat" href="${h}"><span class="ic">${ic(k)}</span><b>${t}</b><span>${d}</span></a>`).join("");
 
 let INDEX, CUR;

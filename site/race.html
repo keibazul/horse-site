@@ -44,7 +44,7 @@
 .rc-act{display:grid;gap:8px;justify-items:stretch}
 @media (max-width:640px){
   .racecard{grid-template-columns:auto minmax(0,1fr);padding:14px}
-  .rc-act{grid-column:1 / -1;grid-template-columns:1fr 1fr}
+  .rc-act{grid-column:1 / -1;grid-template-columns:1fr 1fr 1fr}
   .rno{font-size:32px;min-width:62px}
   .rc-main h2{font-size:18px}
 }
@@ -151,6 +151,7 @@ td.p{font-weight:800}
     </div>
     <div class="rc-act">
       <a class="btn sim" id="simLink" href="#" hidden><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 3l12 7-12 7z"/></svg>전개 시뮬레이션</a>
+      <a class="btn" id="planLink" href="plan.html">베팅 계획</a>
       <a class="btn" id="betLink" href="bets.html">산 마권 기록</a>
     </div>
   </section>
@@ -293,6 +294,7 @@ function openRace(n){
   if (pr?.void) $("conds").insertAdjacentHTML("beforeend", `<li class="res">${esc(pr.void)} · 마권 환불</li>`);
   if (pr?.sim){ $("simLink").hidden = false; $("simLink").href = `sim.html?f=${encodeURIComponent(pr.sim)}`; } else $("simLink").hidden = true;
   $("betLink").href = `bets.html?date=${DAY.date}&race=${n}`;
+  $("planLink").href = `plan.html?date=${DAY.date}`;
   history.replaceState(null, "", `?date=${DAY.date}&race=${n}`);
   render();
 }
