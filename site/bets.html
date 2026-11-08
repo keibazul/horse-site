@@ -96,6 +96,13 @@ select,input[type=number],input[type=text]{border:1px solid var(--line);backgrou
 @media (max-width:520px){ .top h1{font-size:26px} .ledger-sum b{font-size:17px}
   .bet{grid-template-columns:minmax(0,1fr)} .bet .st{text-align:left;white-space:normal} }
 </style>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1b6a45">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="경주 예측">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script>if("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));</script>
 </head>
 <body>
 <div class="page">

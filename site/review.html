@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>주간 복기</title>
+<meta name="description" content="주말 경주마다 모델이 본 확률과 실제 결과를 나란히 놓고 크게 빗나간 경주를 정리합니다">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%231b6a45'/%3E%3Ctext x='16' y='23' font-size='18' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='700'%3E1%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --bg:#eef2ed; --panel:#fbfcfa; --ink:#15211b; --muted:#5b6b62; --line:#d3ddd5; --soft:#e3eae4;
+  --accent:#1b6a45; --accent-ink:#fff; --good:#1b7a3e; --bad:#a3392d; --warn:#8a6d1a;
+  --f-display:"Black Han Sans","IBM Plex Sans KR",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-data:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1512; --panel:#151f1a; --ink:#e4ece6; --muted:#97a79e; --line:#28362e; --soft:#1c2822;
+  --accent:#52c08a; --accent-ink:#0b1510; --good:#5fd08f; --bad:#ff8a7a; --warn:#e2c46a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1512; --panel:#151f1a; --ink:#e4ece6; --muted:#97a79e; --line:#28362e; --soft:#1c2822;
+  --accent:#52c08a; --accent-ink:#0b1510; --good:#5fd08f; --bad:#ff8a7a; --warn:#e2c46a; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55;
+  padding:16px max(16px,env(safe-area-inset-right)) 48px max(16px,env(safe-area-inset-left))}
+.page{max-width:820px;margin:0 auto;display:grid;gap:16px}
+h1,h2,h3{margin:0;text-wrap:balance} p{margin:0}
+a{color:var(--accent)}
+select{font:inherit;color:inherit;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:7px 9px;max-width:100%}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-family:var(--f-data);font-variant-numeric:tabular-nums}
+.back{font-size:13.5px}
+.top{display:grid;gap:8px}
+.top h1{font-family:var(--f-display);font-weight:400;font-size:30px;line-height:1.05}
+.top p{font-size:13.5px;color:var(--muted);max-width:64ch}
+
+/* 이번 주 성적: 굵은 밑줄 한 줄 */
+.score{display:flex;flex-wrap:wrap;gap:6px 22px;align-items:baseline;border-bottom:2px solid var(--ink);padding-bottom:10px}
+.score div{display:grid}
+.score span{font-size:12px;color:var(--muted)}
+.score b{font-family:var(--f-data);font-size:19px;font-weight:600}
+.score small{font-family:var(--f-data);font-size:12px;color:var(--muted);font-weight:500}
+.context{font-size:13px;color:var(--muted);max-width:70ch}
+
+.sec{display:grid;gap:8px}
+.sec > h2{font-size:17px}
+.sec > p.lead{font-size:13px;color:var(--muted)}
+.race{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:11px 12px;display:grid;gap:6px;min-width:0}
+.race.miss{border-left:4px solid var(--bad)}
+.race.upset{border-left:4px solid var(--warn)}
+.rh{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+.rh .rn{font-family:var(--f-display);font-weight:400;font-size:19px;line-height:1}
+.rh .meta{font-size:12.5px;color:var(--muted)}
+.tag{font-size:12px;font-weight:700;padding:1px 7px;border-radius:4px;border:1px solid currentColor}
+.tag.hit{color:var(--good)} .tag.chit{color:var(--accent)} .tag.fav{color:var(--muted)} .tag.upset{color:var(--warn)} .tag.miss{color:var(--bad)}
+.line{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:14px}
+.line .lab{font-size:12.5px;color:var(--muted);min-width:5.6em}
+.line .v{font-family:var(--f-data);font-size:13px}
+.line .fin{font-weight:600}
+.chip{display:inline-grid;place-items:center;width:24px;height:22px;border-radius:4px;font-family:var(--f-data);font-weight:600;font-size:12.5px;box-shadow:inset 0 0 0 1px rgb(0 0 0 / .25);flex:0 0 auto}
+.notes{margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:2px}
+.foot{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px}
+details summary{cursor:pointer;font-size:12.5px;color:var(--muted)}
+details[open] summary{margin-bottom:4px}
+.day{display:grid;gap:6px}
+.day h3{font-size:15px;margin-top:4px}
+.empty{color:var(--muted);font-size:14px}
+.about{font-size:13px;color:var(--muted);display:grid;gap:6px;max-width:70ch}
+.about h2{font-size:14.5px;color:var(--ink)}
+.about ul{margin:0;padding-left:18px;display:grid;gap:3px}
+@media (max-width:520px){ .top h1{font-size:26px} .score b{font-size:17px} .line .lab{min-width:0} }
+</style>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1b6a45">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="경주 예측">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script>if("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));</script>
+</head>
+<body>
+<div class="page">
+  <a class="back" href="./">← 예측으로 돌아가기</a>
+  <header class="top">
+    <h1>주간 복기</h1>
+    <p>주말 경주마다 모델이 본 확률과 실제 결과를 나란히 놓았습니다. 메모는 데이터에서 보이는 사실(초반 위치, 마체중, 출전 경험 등)이고, 그것이 원인이라고 단정하지는 않습니다.</p>
+    <select id="weekSel" aria-label="주말 선택"></select>
+  </header>
+
+  <section class="score" id="score" aria-label="이 주말 성적"></section>
+  <p class="context" id="context"></p>
+
+  <section class="sec" id="notable" aria-labelledby="notH">
+    <h2 id="notH">크게 빗나간 경주</h2>
+    <p class="lead">모델이 30% 넘게 본 1순위가 3착 밖으로 밀렸거나, 단승 10배 이상 말이 이긴 경주입니다.</p>
+    <div id="notList" class="sec"></div>
+  </section>
+
+  <section class="sec" aria-labelledby="allH">
+    <h2 id="allH">모든 경주</h2>
+    <div id="all" class="sec"></div>
+  </section>
+
+  <footer class="about">
+    <h2>읽는 법</h2>
+    <ul>
+      <li>모델 확률은 배당을 섞지 않은 사이트 모델 값, 결합은 확정 단승 배당과 섞은 값입니다. 확정 배당은 마감 후 값이라 실제로 살 때의 배당과 조금 다릅니다.</li>
+      <li>초반 위치는 출발 후 200m 통과 순위입니다. '예상'은 구간 기록 모델이 본 순서입니다.</li>
+      <li>'우승마에 준 확률 평균'이 높을수록 예측이 잘 맞은 주말입니다. 무작위로 고르면 1/두수(약 9%) 정도입니다.</li>
+    </ul>
+  </footer>
+</div>
+
+<script>
+(() => {
+"use strict";
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const SADDLE = {1:["#f4f4f1","#111"],2:["#1e1e22","#fff"],3:["#d8392b","#fff"],4:["#2c66d6","#fff"],5:["#f3c533","#111"],6:["#2c9b55","#fff"],
+  7:["#f08a24","#111"],8:["#e46aa3","#111"],9:["#7a4fd6","#fff"],10:["#47b9cb","#111"],11:["#8a5a3a","#fff"],12:["#b7c43a","#111"],
+  13:["#3a4a8c","#fff"],14:["#c9c9c9","#111"],15:["#9b2f5e","#fff"],16:["#2f6f6f","#fff"]};
+const chip = n => { const [bg, fg] = SADDLE[n] || ["#888","#fff"]; return `<span class="chip" style="background:${bg};color:${fg}" aria-label="${n}번">${n}</span>`; };
+const pct = x => x == null ? "-" : (x < 0.1 ? (x*100).toFixed(1) : (x*100).toFixed(0)) + "%";
+const dLabel = d => { const dt = new Date(+d.slice(0,4), +d.slice(4,6)-1, +d.slice(6,8)); return `${+d.slice(4,6)}월 ${+d.slice(6,8)}일 (${"일월화수목금토"[dt.getDay()]})`; };
+const weekKey = d => { const dt = new Date(+d.slice(0,4), +d.slice(4,6)-1, +d.slice(6,8)); dt.setDate(dt.getDate() - ((dt.getDay() + 6) % 7));
+  return `${dt.getFullYear()}${String(dt.getMonth()+1).padStart(2,"0")}${String(dt.getDate()).padStart(2,"0")}`; };
+const get = u => fetch(u, {cache:"no-cache"}).then(r => r.ok ? r.json() : null).catch(() => null);
+
+function verdict(r){
+  if (r.void) return ["fav", r.void];
+  if (r.win.no === r.top.no) return ["hit", "모델 적중"];
+  if (r.ctop === r.win.no) return ["chit", "결합 적중"];
+  if ((r.win.odds || 0) >= 10) return ["upset", "이변"];
+  if (r.fav && r.fav.no === r.win.no) return ["fav", "인기마 우승"];
+  return ["miss", "빗나감"];
+}
+const notable = r => !r.void && ((r.top.pm >= 0.3 && (r.top.fin || 99) > 3) || (r.win.odds || 0) >= 10);
+
+function raceCard(d, r, open, showDay){
+  if (r.void) return `<article class="race"><div class="rh"><span class="rn">${r.race}R</span><span class="tag fav">${esc(r.void)}</span></div></article>`;
+  const [cls, label] = verdict(r), w = r.win, t = r.top, hit = w.no === t.no;
+  const meta = [showDay ? dLabel(d) : "", r.dist ? `${r.dist}m` : "", esc(r.cls), r.track ? `주로 ${esc(r.track)}` : "", `${r.n}두`].filter(Boolean).join(" · ");
+  const wLine = `<div class="line"><span class="lab">우승</span>${chip(w.no)}<b>${esc(w.name)}</b><span class="v">모델 ${pct(w.pm)} (${w.rm}순위)${w.odds ? ` · 단승 ${w.odds}배 (인기 ${w.rk}위)` : ""}</span></div>`;
+  const tLine = hit ? "" : `<div class="line"><span class="lab">모델 1순위</span>${chip(t.no)}<b>${esc(t.name)}</b><span class="v">모델 ${pct(t.pm)}${t.odds ? ` · ${t.odds}배` : ""}</span><span class="v fin">→ ${t.fin ? t.fin + "착" : "?"}</span></div>`;
+  const res = `<div class="line"><span class="lab">결과</span>${r.result.map(chip).join("")}</div>`;
+  const notes = r.notes.length ? `<ul class="notes">${r.notes.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : "";
+  const body = open ? notes : (notes ? `<details><summary>메모 ${r.notes.length}개</summary>${notes}</details>` : "");
+  const sc = notable(r) ? (cls === "upset" ? " upset" : " miss") : "";
+  return `<article class="race${sc}"><div class="rh"><span class="rn">${r.race}R</span><span class="tag ${cls}">${label}</span><span class="meta">${meta}</span></div>
+    ${wLine}${tLine}${res}${body}
+    <div class="foot"><a href="./?date=${d}&race=${r.race}">예측 화면</a></div></article>`;
+}
+
+let INDEX, WEEKS = {};
+async function showWeek(k){
+  const days = WEEKS[k] || [];
+  const revs = (await Promise.all(days.map(d => get(`data/review/${d}.json`)))).filter(Boolean);
+  const rs = revs.flatMap(v => v.races.filter(r => !r.void).map(r => ({d: v.date, r})));
+  if (!rs.length){ $("score").innerHTML = ""; $("notList").innerHTML = `<p class="empty">이 주말 복기 자료가 아직 없습니다. 결과는 경주일 저녁에 들어옵니다.</p>`; $("all").innerHTML = ""; $("context").textContent = ""; return; }
+  const n = rs.length, cnt = f => rs.filter(({r}) => f(r)).length;
+  const hm = cnt(r => r.win.no === r.top.no), hc = cnt(r => r.ctop === r.win.no), hk = cnt(r => r.fav && r.fav.no === r.win.no);
+  const t3 = cnt(r => (r.top.fin || 99) <= 3);
+  const wo = rs.filter(({r}) => r.win.q != null);
+  const avg = f => wo.length ? wo.reduce((a, {r}) => a + f(r), 0) / wo.length : null;
+  const roiN = rs.filter(({r}) => r.top.odds), roi = roiN.length ? roiN.reduce((a, {r}) => a + (r.win.no === r.top.no ? r.top.odds : 0), 0) / roiN.length : null;
+  const sc = (lab, v, sub) => `<div><span>${lab}</span><b>${v}</b>${sub ? `<small>${sub}</small>` : ""}</div>`;
+  $("score").innerHTML = sc("경주", n) + sc("모델 1순위 우승", `${hm}`, `${(hm/n*100).toFixed(0)}% · 3착 안 ${t3}`) +
+    sc("결합 1순위 우승", hc, `${(hc/n*100).toFixed(0)}%`) + sc("인기마 우승", hk, `${(hk/n*100).toFixed(0)}%`) +
+    sc("우승마에 준 확률 평균", pct(avg(r => r.win.pm)), `결합 ${pct(avg(r => r.win.pc))} · 배당 ${pct(avg(r => r.win.q))}`) +
+    (roi != null ? sc("모델 1순위 단승 회수율", `${(roi*100).toFixed(0)}%`, "확정 배당 기준") : "");
+  // 지난 1년 평균 (목차의 날짜별 적중 수)
+  const past = (INDEX.days || []).filter(x => x.hits);
+  const T = past.reduce((a, x) => (a.r += x.hits.races, a.m += x.hits.model, a.c += x.hits.comb, a.k += x.hits.mkt, a), {r:0, m:0, c:0, k:0});
+  $("context").textContent = T.r ? `사이트에 있는 지난 ${past.length}일(${T.r}경주) 평균: 모델 1순위 우승 ${(T.m/T.r*100).toFixed(1)}%, 결합 1순위 ${(T.c/T.r*100).toFixed(1)}%, 인기마 ${(T.k/T.r*100).toFixed(1)}%.` : "";
+  const nb = rs.filter(({r}) => notable(r)).sort((a, b) => (b.r.loss.c ?? b.r.loss.m) - (a.r.loss.c ?? a.r.loss.m)).slice(0, 4);
+  $("notList").innerHTML = nb.length ? nb.map(({d, r}) => raceCard(d, r, true, true)).join("")
+    : `<p class="empty">이 주말에는 크게 빗나간 경주가 없었습니다.</p>`;
+  $("all").innerHTML = revs.map(v => `<div class="day"><h3>${dLabel(v.date)}</h3>${v.races.map(r => raceCard(v.date, r, false)).join("")}</div>`).join("");
+}
+
+(async () => {
+  INDEX = await get("data/index.json") || {days: []};
+  const done = (INDEX.days || []).filter(x => x.past && x.pred).map(x => x.date);
+  for (const d of done) (WEEKS[weekKey(d)] = WEEKS[weekKey(d)] || []).push(d);
+  const keys = Object.keys(WEEKS).sort().reverse();
+  $("weekSel").innerHTML = keys.map(k => `<option value="${k}">${WEEKS[k].map(d => `${+d.slice(4,6)}.${+d.slice(6,8)}`).join(" · ")} (${k.slice(0,4)})</option>`).join("");
+  const want = new URLSearchParams(location.search).get("date");
+  const start = want ? weekKey(want) : keys[0];
+  if (keys.includes(start)) $("weekSel").value = start;
+  $("weekSel").onchange = e => { history.replaceState(null, "", `?date=${WEEKS[e.target.value][0]}`); showWeek(e.target.value); };
+  if (keys.length) showWeek($("weekSel").value);
+  else $("notList").innerHTML = `<p class="empty">아직 끝난 경주일이 없습니다.</p>`;
+})();
+})();
+</script>
+</body>
+</html>

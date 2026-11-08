@@ -1,0 +1,21 @@
+{
+  "name": "서울 경주 예측",
+  "short_name": "경주 예측",
+  "description": "렛츠런파크 서울 경주의 말별 우승 확률, 승식별 조합 확률, 전개 시뮬레이션",
+  "lang": "ko",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#eef2ed",
+  "theme_color": "#1b6a45",
+  "icons": [
+    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ],
+  "shortcuts": [
+    {"name": "내 마권 기록장", "url": "bets.html", "icons": [{"src": "icons/icon-192.png", "sizes": "192x192"}]},
+    {"name": "주간 복기", "url": "review.html", "icons": [{"src": "icons/icon-192.png", "sizes": "192x192"}]},
+    {"name": "이렇게 샀다면", "url": "results.html", "icons": [{"src": "icons/icon-192.png", "sizes": "192x192"}]}
+  ]
+}

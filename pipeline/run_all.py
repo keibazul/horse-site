@@ -244,6 +244,8 @@ def main() -> int:
              sum([["--date", d] for d in upcoming if d >= today.strftime("%Y%m%d")], []), ROOT)
     # 끝난 경주일 확정 배당 (마권 기록장 정산용): 최근 날부터 한 번에 4일
     step("확정 배당", [sys.executable, str(ROOT / "pipeline" / "dividends.py"), "--missing", "--max", "4"], ROOT)
+    # 끝난 경주일 복기 (예측 파일이 바뀐 날만 다시)
+    step("복기", [sys.executable, str(ROOT / "pipeline" / "review.py"), "--missing"], ROOT)
     write_index(today, exporter is not None, model_name)
     return 0
 
