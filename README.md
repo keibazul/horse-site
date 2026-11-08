@@ -10,6 +10,7 @@ GitHub Actions 가 출전표 수집부터 예측, 사이트 배포까지 자동�
 | 목·금 18:07 | 출전표 수집 → 예측 → 사이트 갱신 |
 | 토·일 07:17 | 당일 출전표(취소 반영)로 다시 예측 |
 | 토·일 08:37~18:30 (15분마다) | `raceday.yml` 이 update-site 를 실행: 당일 마체중·출전 취소·참고 정보 반영 (`pipeline/fetch_weights.py`) |
+| 토·일 18:50·19:50 (예비 21:07) | 그날 결과·확정 배당·복기 반영 |
 | 월 09:27 | 주말 결과로 경주 기록 갱신 |
 | 매달 3일 13:47 | 최신 기록으로 모델 다시 학습 (`retrain`), 지난 경주 예측은 옛 모델로 남김 |
 
@@ -19,7 +20,8 @@ Actions 탭의 **update-site → Run workflow** 로 언제든 직접 돌릴 수 
 
 ```
 pipeline/   kra_api.py(API 호출), fetch_entries.py(출전표), run_all.py(전체 순서)
-site/       index.html(예측 화면), sim.html(전개 시뮬레이터), data/(자동 생성)
+site/       index.html(예측 화면), sim.html(전개 시뮬레이터), results.html(이렇게 샀다면), review.html(주간 복기),
+            bets.html(내 마권 기록장), manifest.webmanifest·sw.js(홈 화면 앱), data/(자동 생성)
 work/       PC 경마분석기 폴더의 예측 코드·모델 (work/README.md)
 ```
 
