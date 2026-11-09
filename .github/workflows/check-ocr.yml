@@ -1,0 +1,15 @@
+name: check-ocr
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['pipeline/checks/ocr_e2e.py', 'pipeline/checks/ocr/**', '.github/workflows/check-ocr.yml']
+jobs:
+  ocr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with: { python-version: '3.13' }
+      - run: pip install playwright && python -m playwright install --with-deps chromium
+      - run: python pipeline/checks/ocr_e2e.py
