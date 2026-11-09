@@ -405,7 +405,8 @@ function render(){
 function biasNote(){
   const b = BIAS?.races?.[RACE];
   if (!b || b.ib == null) return "";
-  const lab = b.ib >= 1 ? "안쪽 게이트가 꽤 유리" : b.ib >= 0.4 ? "안쪽 게이트가 조금 유리" : b.ib <= -1 ? "바깥쪽 게이트가 꽤 유리" : b.ib <= -0.4 ? "바깥쪽 게이트가 조금 유리" : "게이트 치우침 거의 없음";
+  const e = b.eff ?? b.ib * 0.157;      // 보정 세기 (계수 × 지수)
+  const lab = e >= 0.2 ? "안쪽 게이트가 꽤 유리" : e >= 0.08 ? "안쪽 게이트가 조금 유리" : e <= -0.2 ? "바깥쪽 게이트가 꽤 유리" : e <= -0.08 ? "바깥쪽 게이트가 조금 유리" : "게이트 치우침 거의 없음";
   return `, 당일 주로 보정(앞 ${b.nprev}경주: ${lab})`;
 }
 function save(){ store.set(`odds:${DAY.date}:${RACE}`, { user: state.user, out: [...state.out] }); }

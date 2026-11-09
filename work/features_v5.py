@@ -33,7 +33,9 @@ V2_NUM = ["n_finishers", "n_prior_races", "n_prior_wins", "n_prior_top3", "win_r
 #   예측 때는 경주일 실시간 결과로 계산해 출전표 행의 dayIB·gatePos 로 넘겨받음 (pipeline/live_bias.py)
 DAY_FEATURES = ["day_ib", "gate_pos", "day_ib_gate"]
 DAY_MU, DAY_SD = 0.483, 0.0963
-NUM = V2_NUM + v4.NEW_FEATURES + v5.NEW_FEATURES + DAY_FEATURES       # 숫자 특징
+# 검증(2025~2026 1,903경주): 모델 입력으로 넣어도 확률에 곱하는 보정(pipeline/live_bias.py)보다 나아지지 않음
+#   (모델만 −0.0034 [−0.0104, +0.0044], 결합 +0.0001) → 모델 입력에는 넣지 않고 계산만 남겨 둠(연구·계수 추정용)
+NUM = V2_NUM + v4.NEW_FEATURES + v5.NEW_FEATURES                       # 숫자 특징
 KEYS = ["date", "race_no", "hrNo"]
 
 

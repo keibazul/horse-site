@@ -26,7 +26,13 @@ import kra_api  # noqa: E402
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "site" / "data"
 OUT = DATA / "bias"
-K, MU, SD, MIN_PREV = 0.157, 0.483, 0.0963, 2
+K, MU, SD, MIN_PREV = 0.157, 0.483, 0.0963, 2          # 처음 연구값 (아래 파일이 없을 때)
+_CF = ROOT / "work" / "winner_history" / "day_bias.json"  # 매달 재학습 때 work/fit_day_bias.py 가 다시 맞춘 계수
+if _CF.exists():
+    try:
+        _c = json.loads(_CF.read_text(encoding="utf-8")); K, MU, SD = float(_c["K"]), float(_c["MU"]), float(_c["SD"])
+    except (ValueError, KeyError):
+        pass
 KST = dt.timezone(dt.timedelta(hours=9))
 
 
@@ -95,7 +101,7 @@ def build(d: str, results: dict[int, list]) -> dict | None:
             o["races"][str(n)] = {"nprev": len(prev), "gp": {str(c): round(g, 4) for c, g in gp.items()}}
             continue
         ib = (MU - sum(prev) / len(prev)) / SD
-        o["races"][str(n)] = {"nprev": len(prev), "ib": round(ib, 3), "gp": {str(c): round(g, 4) for c, g in gp.items()},
+        o["races"][str(n)] = {"nprev": len(prev), "ib": round(ib, 3), "eff": round(K * ib, 4), "gp": {str(c): round(g, 4) for c, g in gp.items()},
                               "f": {str(c): round(math.exp(K * ib * (0.5 - g)), 4) for c, g in gp.items()}}
     return o
 

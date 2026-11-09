@@ -43,6 +43,7 @@ jobs:
           mkdir -p new
           python train_win_model_v5.py --out new/win_model_v5.joblib
           python train_sectional_model.py --out new/sect_model_v1.joblib
+          python fit_day_bias.py          # 당일 게이트 경향 보정 계수 (winner_history/day_bias.json)
       - name: 새 모델 확인 후 교체
         working-directory: work
         run: |
