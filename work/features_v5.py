@@ -28,7 +28,12 @@ V2_NUM = ["n_finishers", "n_prior_races", "n_prior_wins", "n_prior_top3", "win_r
           "win_rate_rel", "top3_rate_rel", "avg_ord_pct_rel", "last3_avg_ord_pct_rel", "last3_avg_gap_rel", "jk_n_prior",
           "jk_win_rate", "jk_top3_rate", "jk_win_rate_recent", "jk_win_rate_rel", "same_jockey_as_prev", "tr_n_prior",
           "tr_win_rate", "tr_top3_rate", "tr_win_rate_recent", "tr_win_rate_rel", "wg_kg", "wg_chg", "wg_dev", "track_moisture"]
-NUM = V2_NUM + v4.NEW_FEATURES + v5.NEW_FEATURES                       # 숫자 특징
+# 당일 게이트 경향: 그날 앞서 끝난 경주(2개 이상)의 3착 안 말 게이트 위치 평균으로 잰 '안쪽 유리 정도'와 이 말의 게이트 위치
+#   day_ib = (0.483 − 평균) / 0.0963 (앞 경주 2개 미만이면 비움), gate_pos = 출전번호 순서 (안쪽 0 ~ 바깥 1)
+#   예측 때는 경주일 실시간 결과로 계산해 출전표 행의 dayIB·gatePos 로 넘겨받음 (pipeline/live_bias.py)
+DAY_FEATURES = ["day_ib", "gate_pos", "day_ib_gate"]
+DAY_MU, DAY_SD = 0.483, 0.0963
+NUM = V2_NUM + v4.NEW_FEATURES + v5.NEW_FEATURES + DAY_FEATURES       # 숫자 특징
 KEYS = ["date", "race_no", "hrNo"]
 
 
@@ -62,13 +67,34 @@ def load_details(gz="race_details_all.csv.gz", folder="race_details"):
 # =====================================================
 # 특징 계산
 # =====================================================
+def day_bias_features(history):
+    """기록의 각 출전마: 그날 그 경주보다 앞서 끝난 경주들로 잰 게이트 경향과 자기 게이트 위치"""
+    h = history[KEYS + ["chulNo", "ord"]].copy()
+    h["o"] = pd.to_numeric(h["ord"], errors="coerce")
+    h["c"] = pd.to_numeric(h["chulNo"], errors="coerce")
+    fin = h[h["o"].between(1, 16)].copy()
+    g = fin.groupby(["date", "race_no"])["c"]
+    fin["gate_pos"] = (g.rank(method="first") - 1) / (g.transform("size") - 1).clip(lower=1)
+    top = (fin[fin["o"] <= 3].groupby(["date", "race_no"])["gate_pos"].mean().rename("top_gp").reset_index()
+           .sort_values(["date", "race_no"]))
+    gd = top.groupby("date")["top_gp"]
+    top["nprev"] = gd.cumcount()
+    top["prev_gp"] = gd.transform(lambda s: s.shift(1).expanding().mean())
+    top["day_ib"] = np.where(top["nprev"] >= 2, (DAY_MU - top["prev_gp"]) / DAY_SD, np.nan)
+    out = fin[KEYS + ["gate_pos"]].merge(top[["date", "race_no", "day_ib"]], on=["date", "race_no"], how="left")
+    out["day_ib_gate"] = out["day_ib"] * (0.5 - out["gate_pos"])
+    out["hrNo"] = out["hrNo"].astype(str)
+    return out.drop_duplicates(KEYS)
+
+
 def all_features(history, rd_raw, v2_raw=None):
     """history(merged.csv 형태) 전체 행의 특징. v2_raw 를 주면 v2 계산에는 그 표를 씀 (예측 때 같은 날 경주 순서 처리용)"""
     f2 = lib.compute_features(v2_raw if v2_raw is not None else history)
     f2["hrNo"] = f2["hrNo"].astype(str)
     f4 = v4.compute_v4(history)
     f5 = v5.compute_v5(history, rd_raw)
-    df = f2.merge(f4, on=KEYS, how="left").merge(f5, on=KEYS, how="left")
+    fd = day_bias_features(history)
+    df = f2.merge(f4, on=KEYS, how="left").merge(f5, on=KEYS, how="left").merge(fd, on=KEYS, how="left")
     for c in CAT:
         df[c] = df[c].astype(object).where(df[c].notna(), None)
     return df
@@ -130,6 +156,16 @@ def entrant_features(history, rd_raw, entries, date):
 
     feat = all_features(h_all, rd_all, v2_raw)
     feat = feat[feat["date"] == date].copy()
+    # 당일 게이트 경향: 오늘 경주의 가짜 결과로 계산된 값은 버리고, 출전표 행으로 넘겨받은 실시간 값을 씀
+    day = pd.DataFrame({"race_no": e["race_no"].astype(feat["race_no"].dtype), "hrNo": hr.astype(str),
+                        "day_ib": pd.to_numeric(e["dayIB"], errors="coerce") if "dayIB" in e.columns else np.nan,
+                        "gate_pos": pd.to_numeric(e["gatePos"], errors="coerce") if "gatePos" in e.columns else np.nan})
+    if day["gate_pos"].isna().all():                   # 넘겨받지 못했으면 출전표 번호 순서로
+        c = pd.to_numeric(e["chulNo"], errors="coerce")
+        g = c.groupby(e["race_no"])
+        day["gate_pos"] = ((g.rank(method="first") - 1) / (g.transform("size") - 1).clip(lower=1)).to_numpy()
+    feat = feat.drop(columns=DAY_FEATURES, errors="ignore").merge(day, on=["race_no", "hrNo"], how="left")
+    feat["day_ib_gate"] = feat["day_ib"] * (0.5 - feat["gate_pos"])
     info = {"birthday_guessed": int(bday_guessed.sum()), "tools_guessed": int(tools_known.isna().sum()),
             "rd_last": rdh["rcDate"].max(), "hist_last": hist["date"].max()}
     return feat, info

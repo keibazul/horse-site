@@ -1,0 +1,21 @@
+name: exp-daybias
+# 실험: 당일 게이트 경향을 모델 입력으로 (이 파일이나 실험 코드를 고치면 실행, 결과는 로그에만)
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/exp-daybias.yml', 'work/exp_daybias.py']
+jobs:
+  exp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env: { PYTHONUTF8: '1' }
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with: { python-version: '3.13' }
+      - run: pip install -r requirements.txt
+      - working-directory: work
+        run: |
+          python update_history.py --no-fetch
+          python exp_daybias.py
