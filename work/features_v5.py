@@ -83,7 +83,7 @@ def day_bias_features(history):
     top["day_ib"] = np.where(top["nprev"] >= 2, (DAY_MU - top["prev_gp"]) / DAY_SD, np.nan)
     out = fin[KEYS + ["gate_pos"]].merge(top[["date", "race_no", "day_ib"]], on=["date", "race_no"], how="left")
     out["day_ib_gate"] = out["day_ib"] * (0.5 - out["gate_pos"])
-    out["hrNo"] = out["hrNo"].astype(str)
+    out["hrNo"] = lib.normalize_id(out["hrNo"].astype(str)).astype(str)   # 다른 특징과 같은 말 번호 형식 (앞의 0 제거)
     return out.drop_duplicates(KEYS)
 
 
