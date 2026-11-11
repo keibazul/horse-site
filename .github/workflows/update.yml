@@ -55,7 +55,8 @@ jobs:
           # 데이터가 그대로면 배포도 건너뜀 (사이트 파일을 고친 push 는 배포)
           if [ "$GITHUB_EVENT_NAME" = push ]; then echo "changed=true" >> "$GITHUB_OUTPUT"; fi
           if git diff --cached --quiet; then echo "바뀐 것 없음"; else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
+            # 사이트 데이터가 바뀌었을 때만 배포 (work/ 만 바뀐 실행은 커밋만)
+            if ! git diff --cached --quiet -- site; then echo "changed=true" >> "$GITHUB_OUTPUT"; fi
             git commit -m "데이터 업데이트 $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')"
             # 겹쳐 돈 실행과 같은 데이터 파일을 고쳤으면 이번 실행 결과를 우선 (rebase 에서 theirs = 이번 커밋)
             git pull --rebase -X theirs -q origin main && git push -q origin HEAD:main
