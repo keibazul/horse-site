@@ -1,45 +1,25 @@
-"""임시 확인: 조교·기수변경 API 주소와 현재 키로 열리는지 (끝나면 지움)"""
-import json, os, re, sys, urllib.request, urllib.parse, urllib.error
+"""임시 확인 (끝나면 지움)"""
+import html, json, os, re, sys, urllib.request
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import kra_api
-
 UA = {"User-Agent": "Mozilla/5.0"}
-def page(i):
-    for u in (f"https://www.data.go.kr/data/{i}/openapi.do", f"https://www.data.go.kr/en/data/{i}/openapi.do"):
-        try:
-            s = urllib.request.urlopen(urllib.request.Request(u, headers=UA), timeout=40).read().decode("utf-8", "replace")
-        except Exception as e:
-            print(i, u, "실패", type(e).__name__, e); continue
-        hits = sorted(set(re.findall(r"B551015/(API\d+[\w]*/[A-Za-z_0-9]+)", s)))
-        print(i, u, len(s), "paths:", hits)
-        for m in re.finditer(r'"parameters"\s*:\s*(\[.*?\])\s*,\s*"responses"', s, re.S):
-            try:
-                ps = json.loads(m.group(1)); print("   params:", [(p.get("name"), p.get("required"), p.get("description"), p.get("x-example") or p.get("example")) for p in ps])
-            except Exception:
-                print("   params raw:", m.group(1)[:600])
-        for m in re.finditer(r"(?:paths|operationId)[^\n]{0,300}", s):
-            pass
-        if hits: return hits
-    return []
-
-paths = {}
-for i in ("15144727", "15133770", "15140265", "15160316"):
-    paths[i] = page(i)
-
-def call(path, params):
+for i in ("15144727", "15133770", "15140265"):
+    s = urllib.request.urlopen(urllib.request.Request(f"https://www.data.go.kr/en/data/{i}/openapi.do", headers=UA), timeout=40).read().decode("utf-8", "replace")
+    k = s.find("B551015/API")
+    txt = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", s[max(0, k - 3000):k + 6000])))
+    print(i, txt[:3500]); print("-----")
+for d, rn, ch in (("DATE1", 0, 0),):
+    pass
+for d, pairs in (("20261031", [(5, 5), (8, 4)]), ("20261025", [(7, 1)])):
     try:
-        d = kra_api.get(path, {**params, "pageNo": 1, "numOfRows": 5})
-        it = kra_api.items(d)
-        print("  OK", path, params, "total", kra_api.total_count(d), "first:", json.dumps(it[:2], ensure_ascii=False)[:900])
-        return d
-    except Exception as e:
-        print("  ERR", path, params, type(e).__name__, str(e)[:200]); return None
-
-for p in paths.get("15144727", []):
-    call(p, {})
-    for prm in ({"exer_dt": "20261104"}, {"exer_st_dt": "20261101", "exer_ed_dt": "20261107"}, {"st_dt": "20261101", "ed_dt": "20261107"}, {"exer_dt": "20190104"}):
-        call(p, prm)
-for p in paths.get("15133770", []):
-    call(p, {}); call(p, {"race_dt": "20261107"}); call(p, {"race_dt": "20261107", "gb": "1"}); call(p, {"race_dt": "20261107", "gb": "2"}); call(p, {"race_dt": "20190105"})
-for p in paths.get("15140265", []):
-    call(p, {}); call(p, {"trng_dt": "20261030"}); call(p, {"trng_dt": "20190104"})
+        e = kra_api.get_all("API26_2/entrySheet_2", {"meet": 1, "rc_date": d})
+        print(d, "API26_2 rows", len(e), [(r.get("rcNo"), r.get("chulNo"), r.get("hrName"), r.get("jkName")) for r in e if (int(r.get("rcNo") or 0), int(r.get("chulNo") or 0)) in pairs])
+        print("   per race counts", {n: sum(1 for r in e if int(r.get("rcNo") or 0) == n) for n, _ in pairs})
+    except Exception as ex:
+        print(d, "API26_2 ERR", ex)
+    try:
+        x = kra_api.get_all("API214_1/RaceDetailResult_1", {"meet": 1, "rc_date": d}, rows=1000)
+        print(d, "API214 rows", len(x), [(r.get("rcNo"), r.get("chulNo"), r.get("hrName"), r.get("ord"), r.get("ordBigo")) for r in x if (int(r.get("rcNo") or 0), int(r.get("chulNo") or 0)) in pairs])
+        print("   per race counts", {n: sum(1 for r in x if int(r.get("rcNo") or 0) == n) for n, _ in pairs})
+    except Exception as ex:
+        print(d, "API214 ERR", ex)
