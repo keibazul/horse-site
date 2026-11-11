@@ -64,7 +64,11 @@
 .paste-row p{font-size:13px}
 .paste-row p.err{color:var(--bad)}
 .ocrhint{font-size:12.5px;color:var(--muted);line-height:1.5}
+.ocrhint b{color:var(--ink)}
 #ocrBtn{cursor:pointer}
+.ocrstage{display:grid;gap:8px;border-top:1px dashed var(--line);padding-top:10px}
+.ocrwrap{display:grid;justify-items:center;background:var(--soft);border-radius:8px;padding:6px;overflow:hidden}
+#ocrCanvas{display:block;max-width:100%;touch-action:none;cursor:crosshair;border-radius:4px}
 .nmbtn{all:unset;cursor:pointer;display:block;max-width:100%}
 .nmbtn b{text-decoration:underline;text-decoration-color:var(--line-strong);text-underline-offset:4px}
 .nmbtn:hover b{text-decoration-color:var(--ink)}
@@ -138,6 +142,7 @@ td.p{font-weight:800}
 </head>
 <body data-page="race">
 <script src="assets/app.js"></script>
+<script src="assets/oddsocr.js"></script>
 <main id="main" class="page">
   <header class="page-head">
     <div class="row-end">
@@ -177,9 +182,14 @@ td.p{font-weight:800}
       <label for="pasteIn">KRA 앱이나 화면에서 복사한 단승 배당을 붙여넣으세요. 번호 순서대로 배당만 있거나("3.2 12.5 4.1 …"), 번호와 배당이 짝지어 있어도("1 3.2 / 2 12.5 …") 됩니다.</label>
       <textarea id="pasteIn" rows="3" inputmode="decimal" placeholder="예: 3.2 12.5 4.1 8.8 27.0 6.4 15.3 9.9 41.2 5.6"></textarea>
       <div class="paste-row"><button class="btn primary" type="button" id="pasteApply">넣기</button>
-        <label class="btn" id="ocrBtn">배당 화면 사진에서 읽기<input id="ocrIn" type="file" accept="image/*" hidden></label>
+        <label class="btn" id="ocrBtn">배당판 사진에서 읽기<input id="ocrIn" type="file" accept="image/*" hidden></label>
         <p id="pasteMsg" aria-live="polite"></p></div>
-      <p class="ocrhint">KRA 앱 배당 화면을 캡처해서 고르면, 이 휴대폰 안에서 번호와 단승 배당을 읽어 위 칸에 채웁니다(사진은 어디로도 보내지 않음). 처음 한 번은 글자 인식 자료(약 5MB)를 받습니다. 읽은 값이 맞는지 확인하고 '넣기'를 누르세요.</p>
+      <div class="ocrstage" id="ocrStage" hidden>
+        <p class="ocrhint"><b>단승 판만</b> 들어가게 사진 위를 끌어서 고르세요(다른 승식 판이 같이 들어가면 틀리게 읽힙니다). 고르지 않으면 사진 전체를 읽습니다.</p>
+        <div class="ocrwrap"><canvas id="ocrCanvas" aria-label="고른 사진. 끌어서 읽을 부분을 고릅니다"></canvas></div>
+        <div class="paste-row"><button class="btn primary" type="button" id="ocrRun">사진 전체 읽기</button><button class="btn" type="button" id="ocrReset" hidden>선택 지우기</button><button class="btn" type="button" id="ocrCancel">닫기</button></div>
+      </div>
+      <p class="ocrhint">현장 배당판의 <b>단승</b> 판(왼쪽이 배당, 오른쪽이 마번)을 찍은 사진을 고르면, 이 휴대폰 안에서 읽어 위 칸에 채웁니다. 사진은 어디로도 보내지 않습니다. 처음 한 번은 글자 인식 자료(약 5MB)를 받습니다. 판이 화면에 크게, 되도록 정면으로 나오게 찍을수록 잘 읽힙니다.</p>
     </div>
     <div class="field panel" id="field" aria-label="출전마"></div>
   </section>
@@ -492,60 +502,80 @@ $("pasteApply").onclick = () => {
   msg.className = ""; msg.textContent = `${Object.keys(r.map).length}두 배당을 넣었습니다: ` + Object.entries(r.map).map(([i, v]) => `${i}번 ${v}`).join(", ");
   $("pasteIn").value = "";
 };
-/* 배당 화면 사진 → 글자 인식(tesseract.js, 브라우저 안) → 번호·단승 배당 → 붙여넣기 칸 */
-let OCR = null;
+/* 배당판 사진 → (단승 판 부분 고르기) → 글자 인식(tesseract.js, 브라우저 안) → assets/oddsocr.js 로 마번·단승 배당 → 붙여넣기 칸 */
+let OCR = null, OCRIMG = null, SEL = null;
 function loadOcr(){
   if (OCR) return OCR;
   OCR = new Promise((ok, no) => { const s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
     s.onload = () => ok(window.Tesseract); s.onerror = () => { OCR = null; no(new Error("글자 인식 프로그램을 받지 못했습니다. 연결을 확인해 주세요.")); }; document.head.appendChild(s); });
   return OCR;
 }
-function imageToCanvas(file){
-  return new Promise((ok, no) => { const img = new Image(), url = URL.createObjectURL(file);
-    img.onload = () => { const sc = img.width < 1000 ? 1000 / img.width : img.width > 2200 ? 2200 / img.width : 1;
-      const c = document.createElement("canvas"); c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
-      const g = c.getContext("2d"); g.drawImage(img, 0, 0, c.width, c.height);
-      const d = g.getImageData(0, 0, c.width, c.height), px = d.data; let sum = 0;
-      for (let i = 0; i < px.length; i += 4){ const y = 0.299*px[i] + 0.587*px[i+1] + 0.114*px[i+2]; px[i] = px[i+1] = px[i+2] = y; sum += y; }
-      if (sum / (px.length / 4) < 110) for (let i = 0; i < px.length; i += 4) px[i] = px[i+1] = px[i+2] = 255 - px[i];   // 어두운 화면은 뒤집기
-      g.putImageData(d, 0, 0); URL.revokeObjectURL(url); ok(c); };
-    img.onerror = () => no(new Error("사진을 열지 못했습니다.")); img.src = url; });
-}
-function parseOcr(text, allN){
-  const pairs = {};
-  // 1) 줄마다: 맨 앞 정수 = 번호, 그 뒤 첫 소수 = 단승 (표 모양)
-  for (const ln of text.split(/\n+/)){
-    const toks = ln.replace(/,/g, ".").match(/\d+(?:\.\d+)?/g) || [];
-    if (toks.length < 2 || toks[0].includes(".")) continue;
-    const no = +toks[0], od = toks.slice(1).find(x => x.includes(".") && +x >= 1);
-    if (allN.includes(no) && od && !(no in pairs)) pairs[no] = +od;
+function drawStage(){
+  const c = $("ocrCanvas"), img = OCRIMG; if (!img) return;
+  const maxW = c.parentElement.clientWidth - 12, maxH = Math.min(innerHeight * 0.6, 560);
+  const sc = Math.min(maxW / img.width, maxH / img.height), dpr = Math.min(devicePixelRatio || 1, 2);
+  c.style.width = Math.round(img.width * sc) + "px"; c.style.height = Math.round(img.height * sc) + "px";
+  c.width = Math.round(img.width * sc * dpr); c.height = Math.round(img.height * sc * dpr);
+  const g = c.getContext("2d"), k = c.width / img.width;
+  g.drawImage(img, 0, 0, c.width, c.height);
+  if (SEL){
+    const x = SEL.x * k, y = SEL.y * k, w = SEL.w * k, h = SEL.h * k;
+    g.fillStyle = "rgba(0,0,0,.6)";
+    g.fillRect(0, 0, c.width, y); g.fillRect(0, y + h, c.width, c.height - y - h); g.fillRect(0, y, x, h); g.fillRect(x + w, y, c.width - x - w, h);
+    g.strokeStyle = "#f3d48c"; g.lineWidth = 2 * dpr; g.strokeRect(x, y, w, h);
   }
-  if (Object.keys(pairs).length >= Math.ceil(allN.length * 0.6)) return {map: pairs};
-  // 2) 번호를 못 읽은 화면: 소수만 읽은 순서대로 번호 순서에 맞춤 (확인 필요)
-  const decs = (text.replace(/,/g, ".").match(/\d+\.\d+/g) || []).map(Number).filter(v => v >= 1);
-  const out = {}; allN.slice(0, decs.length).forEach((n, k) => out[n] = decs[k]);
-  return {map: out, ordered: true};
+  $("ocrRun").textContent = SEL ? "고른 부분 읽기" : "사진 전체 읽기"; $("ocrReset").hidden = !SEL;
 }
-$("ocrIn").onchange = async e => {
+(() => {   // 끌어서 읽을 부분 고르기
+  const c = $("ocrCanvas"); let st = null;
+  const pos = e => { const r = c.getBoundingClientRect(); return {x: Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * OCRIMG.width, y: Math.max(0, Math.min(1, (e.clientY - r.top) / r.height)) * OCRIMG.height}; };
+  c.addEventListener("pointerdown", e => { if (!OCRIMG) return; st = pos(e); SEL = null; try { c.setPointerCapture(e.pointerId); } catch {} e.preventDefault(); });
+  c.addEventListener("pointermove", e => { if (!st) return; const p = pos(e);
+    SEL = {x: Math.min(st.x, p.x), y: Math.min(st.y, p.y), w: Math.abs(p.x - st.x), h: Math.abs(p.y - st.y)}; drawStage(); });
+  const end = () => { if (!st) return; st = null; const r = c.getBoundingClientRect();
+    if (SEL && (SEL.w / OCRIMG.width * r.width < 16 || SEL.h / OCRIMG.height * r.height < 16)) SEL = null; drawStage(); };
+  c.addEventListener("pointerup", end); c.addEventListener("pointercancel", end);
+})();
+$("ocrIn").onchange = e => {
   const file = e.target.files?.[0]; e.target.value = ""; if (!file) return;
-  const msg = $("pasteMsg"); msg.className = ""; msg.textContent = "사진 준비 중…";
+  const msg = $("pasteMsg"), img = new Image(), url = URL.createObjectURL(file);
+  img.onload = () => { OCRIMG = img; SEL = null; $("ocrStage").hidden = false; drawStage(); msg.className = ""; msg.textContent = ""; loadOcr().catch(() => {}); };
+  img.onerror = () => { URL.revokeObjectURL(url); msg.className = "err"; msg.textContent = "사진을 열지 못했습니다."; };
+  img.src = url;
+};
+$("ocrReset").onclick = () => { SEL = null; drawStage(); };
+$("ocrCancel").onclick = () => { $("ocrStage").hidden = true; OCRIMG = null; SEL = null; };
+addEventListener("resize", () => { if (OCRIMG && !$("ocrStage").hidden) drawStage(); });
+$("ocrRun").onclick = async () => {
+  if (!OCRIMG) return;
+  const msg = $("pasteMsg"), btn = $("ocrRun"); msg.className = ""; msg.textContent = "글자 인식 준비 중… (처음 한 번은 몇 초 걸립니다)"; btn.disabled = true;
+  let w = null;
   try {
-    const [T, canvas] = await Promise.all([loadOcr(), imageToCanvas(file)]);
-    msg.textContent = "글자 인식 준비 중… (처음 한 번은 몇 초 걸립니다)";
-    const w = await T.createWorker("eng", 1, {logger: m => { if (m.status === "recognizing text") msg.textContent = `읽는 중 ${Math.round(m.progress * 100)}%`; }});
-    await w.setParameters({tessedit_pageseg_mode: "6"});
-    const {data} = await w.recognize(canvas);
-    await w.terminate();
+    const T = await loadOcr();
     const all = horses().map(r => +r.chulNo), live = all.filter(i => !state.out.has(i));
-    const {map, ordered} = parseOcr(data.text || "", all);
-    const got = Object.keys(map).map(Number), miss = live.filter(i => !(i in map));
-    if (!got.length){ msg.className = "err"; msg.textContent = "사진에서 배당을 찾지 못했습니다. 번호와 단승 배당이 보이게 캡처해 주세요."; return; }
-    $("pasteIn").value = got.sort((a, b) => a - b).map(i => `${i} ${map[i]}`).join("\n");
-    $("pasteIn").rows = Math.min(12, got.length + 1);
-    msg.className = miss.length || ordered ? "err" : "";
-    msg.textContent = ordered ? `사진에서 말 번호를 읽지 못해 배당 ${got.length}개를 순서대로 1번부터 채웠습니다. 빠진 값이 있으면 번호가 밀리니 사진과 꼭 대조하고 고친 뒤 '넣기'를 누르세요.`
-      : `${got.length}두를 읽었습니다${miss.length ? ` (못 읽은 번호: ${miss.join(", ")} — 칸에 직접 추가)` : ""}. 사진과 맞는지 확인하고 '넣기'를 누르세요.`;
+    w = await T.createWorker("eng", 1, {logger: m => { if (m.status === "recognizing text") msg.textContent = `읽는 중 ${Math.round(m.progress * 100)}%`; }});
+    await w.setParameters({tessedit_pageseg_mode: "6"});
+    let best = null;
+    for (const bin of [true, false]){          // 흑백으로 나눈 것 먼저, 검산이 안 맞으면 회색조로 한 번 더
+      const {data} = await w.recognize(OddsOcr.prepare(OCRIMG, SEL, all.length, bin));
+      const r = OddsOcr.parse(data.text || "", all), n = Object.keys(r.map).length;
+      const score = n + (r.check?.ok ? 100 : 0) - r.unsure.length * 0.01;
+      if (!best || score > best.score) best = {...r, n, score};
+      if (n >= live.length && r.check?.ok) break;
+    }
+    const map = best.map, got = Object.keys(map).map(Number).sort((a, b) => a - b), miss = live.filter(i => !(i in map));
+    if (!got.length){ msg.className = "err"; msg.textContent = "사진에서 배당을 찾지 못했습니다. 단승 판이 크게, 되도록 정면으로 나오게 찍고 그 부분만 골라 다시 읽어 보세요."; return; }
+    $("pasteIn").value = got.map(i => `${i} ${map[i].toFixed(1)}`).join("\n");
+    $("pasteIn").rows = Math.min(14, got.length + 1);
+    const bad = miss.length || (best.check && !best.check.ok);
+    msg.className = bad ? "err" : "";
+    msg.textContent = `${got.length}두를 읽었습니다.` +
+      (miss.length ? ` 못 읽은 번호: ${miss.join(", ")} (칸에 직접 추가).` : "") +
+      (best.unsure.length ? ` 배당과 마번이 붙어 읽혀 다시 나눈 번호: ${best.unsure.join(", ")}.` : "") +
+      (best.check ? (best.check.ok ? " 배당 합 검산은 맞습니다." : " 다만 배당들의 합이 환급률과 맞지 않아 틀린 값이 섞였을 수 있습니다.") : "") +
+      (!SEL && miss.length > live.length / 2 ? " 단승 판 부분만 끌어서 고른 뒤 다시 읽어 보세요." : " 사진과 대조한 뒤 '넣기'를 누르세요.");
   } catch (err){ msg.className = "err"; msg.textContent = err.message || "글자 인식에 실패했습니다."; }
+  finally { btn.disabled = false; if (w) w.terminate().catch(() => {}); }
 };
 $("clearOdds").onclick = () => { state.user = {}; if (!hasOfficial()) state.out = new Set(); else state.out = new Set(PRED?.races?.[RACE]?.out || []); mergeOdds(); save(); render(); };
 

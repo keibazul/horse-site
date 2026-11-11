@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['pipeline/checks/ocr_e2e.py', 'pipeline/checks/ocr/**', '.github/workflows/check-ocr.yml']
+    paths: ['pipeline/checks/ocr_e2e.py', 'pipeline/checks/ocr/**', '.github/workflows/check-ocr.yml', 'site/assets/oddsocr.js', 'site/race.html']
 jobs:
   ocr:
     runs-on: ubuntu-latest
@@ -11,5 +11,5 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with: { python-version: '3.13' }
-      - run: pip install playwright && python -m playwright install --with-deps chromium
+      - run: pip install playwright pillow && python -m playwright install --with-deps chromium
       - run: python pipeline/checks/ocr_e2e.py
