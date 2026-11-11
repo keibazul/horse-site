@@ -98,6 +98,7 @@
 .nm span{display:flex;flex-wrap:wrap;gap:0 8px;font-size:12.5px;color:var(--muted);line-height:1.45;margin-top:2px}
 .nm span i{font-style:normal;white-space:nowrap}
 .nm span i.wg{color:var(--ink);font-weight:600}
+.flag.chgf{background:var(--gold-soft);color:var(--gold);margin-left:0}
 .flag{font-style:normal;font-size:11px;font-weight:700;margin-left:6px;padding:1px 6px;border-radius:999px;background:color-mix(in srgb,var(--bad) 13%,transparent);color:var(--bad);vertical-align:2px}
 .toppill{font-style:normal;font-size:11px;font-weight:800;margin-left:6px;padding:1px 7px;border-radius:999px;background:var(--gold-soft);color:var(--gold);vertical-align:2px}
 .pr{display:grid;gap:4px;min-width:0}
@@ -179,7 +180,7 @@ td.p{font-weight:800}
     </div>
     <p class="srcnote" id="srcNote"></p>
     <div class="paste panel" id="pastePanel" hidden>
-      <label for="pasteIn">KRA 앱이나 화면에서 복사한 단승 배당을 붙여넣으세요. 번호 순서대로 배당만 있거나("3.2 12.5 4.1 …"), 번호와 배당이 짝지어 있어도("1 3.2 / 2 12.5 …") 됩니다.</label>
+      <label for="pasteIn">배당판에서 본 단승 배당을 적거나, 다른 화면에서 복사해 붙여넣으세요. 번호 순서대로 배당만 있거나("3.2 12.5 4.1 …"), 번호와 배당이 짝지어 있어도("1 3.2 / 2 12.5 …") 됩니다.</label>
       <textarea id="pasteIn" rows="3" inputmode="decimal" placeholder="예: 3.2 12.5 4.1 8.8 27.0 6.4 15.3 9.9 41.2 5.6"></textarea>
       <div class="paste-row"><button class="btn primary" type="button" id="pasteApply">넣기</button>
         <label class="btn" id="ocrBtn">배당판 사진에서 읽기<input id="ocrIn" type="file" accept="image/*" hidden></label>
@@ -299,7 +300,8 @@ function openRace(n){
   const prr = PRED?.races?.[n] || {};
   state.official = prr.odds || {};
   state.user = saved.user || saved.odds || {};
-  state.out = new Set(saved.out || prr.out || []);
+  state.fixed = new Set((prr.out || []).map(Number));                 // 공식 출전 취소 (경주 전 공지·결과) — 사용자가 되돌릴 수 없음
+  state.out = new Set([...(saved.out || []).map(Number), ...state.fixed]);
   mergeOdds();
   const rows = horses();
   const r0 = rows[0] || {};
@@ -308,10 +310,13 @@ function openRace(n){
   $("rnoNum").textContent = n;
   const named = r0.rcName && r0.rcName !== "일반";
   $("rcTitle").textContent = named ? r0.rcName : [r0.rcDist && `${r0.rcDist}m`, r0.rank].filter(Boolean).join(" ") || `${n}경주`;
-  $("conds").innerHTML = [dLabel(DAY.date), stTime(r0) && `출발 ${stTime(r0)}`, named && r0.rcDist && `${r0.rcDist}m`, named && r0.rank, r0.budam, r0.ageCond, r0.sexCond, `${rows.length}두`]
+  $("conds").innerHTML = [dLabel(DAY.date), stTime(r0) && `출발 ${stTime(r0)}`, named && r0.rcDist && `${r0.rcDist}m`, named && r0.rank, r0.budam, r0.ageCond, r0.sexCond, `${rows.length - (prr.out || []).length}두`]
     .filter(Boolean).map(t => `<li>${esc(t)}</li>`).join("");
   const pr = PRED?.races?.[n];
   if (pr?.result?.length) $("conds").insertAdjacentHTML("beforeend", `<li class="res">실제 결과 ${pr.result.map(x => chip(x, "sm")).join("")}</li>`);
+  if (pr?.out?.length && !pr.void) $("conds").insertAdjacentHTML("beforeend", `<li class="res">출전 취소 ${pr.out.map(x => chip(x, "sm")).join("")}</li>`);
+  const cgN = Object.keys(ENT.chg || {}).filter(k => k.startsWith(`${n}-`)).length;
+  if (cgN) $("conds").insertAdjacentHTML("beforeend", `<li>기수 변경 ${cgN}두</li>`);
   if (pr?.void) $("conds").insertAdjacentHTML("beforeend", `<li class="res">${esc(pr.void)} · 마권 환불</li>`);
   if (pr?.sim){ $("simLink").hidden = false; $("simLink").href = `sim.html?f=${encodeURIComponent(pr.sim)}`; } else $("simLink").hidden = true;
   $("betLink").href = `bets.html?date=${DAY.date}&race=${n}`;
@@ -364,11 +369,11 @@ function render(){
   $("srcPill").textContent = {comb:"결합", model:"모델", market:"배당만", none:"-"}[P.src];
   $("srcPill").className = "pill " + (P.src === "comb" ? "good" : "");
   $("clearOdds").textContent = off ? "확정 배당으로 되돌리기" : "배당 지우기";
-  $("clearOdds").hidden = off ? !edited && [...state.out].join() === (PRED?.races?.[RACE]?.out || []).join() : false;
+  $("clearOdds").hidden = off ? !edited && state.out.size === state.fixed.size : false;
   const need = P.ids.length - entered;
   const wgN = Object.keys(PRED?.races?.[RACE]?.wg || {}).length;
   const wgNote = (wgN ? ", 당일 마체중 반영" : (DAY && !DAY.past ? ", 마체중은 경주 당일 발표되면 15분 안에 반영" : "")) + biasNote();
-  $("srcNote").innerHTML = `${srcText}${wgNote}.${need > 0 && entered > 0 ? ` 배당을 ${need}두 더 넣으면 ${pm ? "결합" : "시장"} 확률로 바뀝니다.` : ""}${entered === 0 ? " 경주 직전 KRA 앱의 단승 배당을 넣으면 배당과 섞어 더 정확해집니다." : ""}${off ? " 배당 칸은 고칠 수 있고, 고친 칸은 굵게 표시됩니다." : ""}`;
+  $("srcNote").innerHTML = `${srcText}${wgNote}.${need > 0 && entered > 0 ? ` 배당을 ${need}두 더 넣으면 ${pm ? "결합" : "시장"} 확률로 바뀝니다.` : ""}${entered === 0 ? " 경주 직전 배당판의 단승 배당을 넣으면 배당과 섞어 더 정확해집니다." : ""}${off ? " 배당 칸은 고칠 수 있고, 고친 칸은 굵게 표시됩니다." : ""}`;
   const nt = $("notice");
   const inSample = PRED?.trained_through && PRED.trained_through >= DAY.date;
   if (pm && inSample){ nt.hidden = false; nt.textContent = `이 경주일은 모델 학습(~${PRED.trained_through.slice(0,4)}.${PRED.trained_through.slice(4,6)}.${PRED.trained_through.slice(6)})에 들어간 경주라 확률이 실제보다 잘 맞아 보입니다. 예측 성능은 그 뒤 경주로 보세요.`; }
@@ -385,11 +390,14 @@ function render(){
     const wg = PRED?.races?.[RACE]?.wg?.[i];
     const wgRate = wg && wg[0] - wg[1] > 0 ? wg[1] / (wg[0] - wg[1]) * 100 : null;
     const wgTxt = wg ? `마체중 ${wg[0]}(${wg[1] > 0 ? "+" : ""}${wg[1] || 0})` : "";
+    const cg = ENT.chg?.[`${RACE}-${i}`];
+    const cgFlag = cg ? `<em class="flag chgf" title="처음 출전표 ${esc(cg.jk[0])} ${cg.wg?.[0] ?? ""}kg → ${esc(cg.jk[1])} ${cg.wg?.[1] ?? ""}kg${cg.at ? ` (${esc(cg.at)} 확인)` : ""}. 확률은 바뀐 기수로 다시 계산했습니다.">기수 변경 · 전 ${esc(String(cg.jk[0]).replace(/^\(.*?\)/, ""))}</em>` : "";
     const meta = [`${r.sex ?? ""}${r.age ?? ""}`, r.jkName, r.wgBudam && `부담 ${r.wgBudam}kg`, r.rating && r.rating !== "-" && +r.rating > 0 && `R${r.rating}`, nPrior === 0 && "첫 출전"]
-      .filter(Boolean).map(x => `<i>${esc(x)}</i>`).join("") + (wgTxt ? `<i class="wg">${esc(wgTxt)}</i>` : "");
+      .filter(Boolean).map(x => `<i>${esc(x)}</i>`).join("") + (wgTxt ? `<i class="wg">${esc(wgTxt)}</i>` : "") + cgFlag;
     const flag = wgRate != null && +r.age >= 4 && wgRate >= 2 ? `<em class="flag" title="4세 이상이 직전보다 2% 넘게 늘면 배당 예상보다 덜 이기는 경향 (2010~2026년 16% 덜)">체중 +${wgRate.toFixed(1)}%</em>` : "";
     let prc;
-    if (out) prc = `<span class="na">출전 제외</span>`;
+    const fixed = state.fixed.has(i);
+    if (out) prc = `<span class="na">${fixed ? "출전 취소" : "출전 제외"}</span>`;
     else if (p != null){
       const sub = P.src === "comb" ? `<small>모델 ${pct(P.model[i])}</small>` : "";
       prc = `<span class="v">${pct(p)}${sub}</span><span class="track"><i class="${P.src === "market" ? "mkt" : ""}" style="width:${(p/top*100).toFixed(1)}%"></i></span>`;
@@ -401,7 +409,7 @@ function render(){
       else ev = `<span class="ev">적정 ${fair(p)}</span>`;
     }
     return `<div class="row ${out ? "out" : ""} ${i === topId ? "top" : ""}">
-      <button type="button" class="chip" style="background:${bg};color:${fg}" data-out="${i}" aria-pressed="${out}" title="${out ? "다시 넣기" : "출전 제외로 표시"}" aria-label="${i}번 ${out ? "다시 넣기" : "출전 제외"}">${i}</button>
+      <button type="button" class="chip" style="background:${bg};color:${fg}" data-out="${i}" aria-pressed="${out}" ${fixed ? 'disabled title="출전 취소" aria-label="' + i + '번 출전 취소"' : `title="${out ? "다시 넣기" : "출전 제외로 표시"}" aria-label="${i}번 ${out ? "다시 넣기" : "출전 제외"}"`}>${i}</button>
       <div class="nm"><button type="button" class="nmbtn" data-form="${i}" aria-expanded="${openForms.has(i)}" aria-controls="form-${i}"><b>${esc(r.hrName)}${i === topId ? '<em class="toppill">1순위</em>' : ""}${flag}</b></button><span>${meta}</span></div>
       <div class="pr">${prc}</div>
       <div class="od"><input inputmode="decimal" aria-label="${i}번 단승 배당" placeholder="배당" data-odds="${i}" value="${state.odds[i] ?? ""}" class="${(i in state.official) && !(i in state.user) ? "auto" : (i in state.user ? "edited" : "")}" ${out ? "disabled" : ""}>${ev}</div>
@@ -419,14 +427,15 @@ function biasNote(){
   const lab = e >= 0.2 ? "안쪽 게이트가 꽤 유리" : e >= 0.08 ? "안쪽 게이트가 조금 유리" : e <= -0.2 ? "바깥쪽 게이트가 꽤 유리" : e <= -0.08 ? "바깥쪽 게이트가 조금 유리" : "게이트 치우침 거의 없음";
   return `, 당일 주로 보정(앞 ${b.nprev}경주: ${lab})`;
 }
-function save(){ store.set(`odds:${DAY.date}:${RACE}`, { user: state.user, out: [...state.out] }); }
+function save(){ store.set(`odds:${DAY.date}:${RACE}`, { user: state.user, out: [...state.out].filter(i => !state.fixed.has(i)) }); }
 
 $("field").addEventListener("click", e => {
   const fb = e.target.closest("[data-form]");
   if (fb){ const i = +fb.dataset.form; openForms.has(i) ? openForms.delete(i) : openForms.add(i);
     fb.setAttribute("aria-expanded", openForms.has(i)); $(`form-${i}`).hidden = !openForms.has(i); fillForm(i); return; }
   const b = e.target.closest("[data-out]"); if (!b) return;
-  const i = +b.dataset.out; state.out.has(i) ? state.out.delete(i) : state.out.add(i); save(); render();
+  const i = +b.dataset.out; if (state.fixed.has(i)) return;
+  state.out.has(i) ? state.out.delete(i) : state.out.add(i); save(); render();
 });
 let tmr = null;
 $("field").addEventListener("input", e => {
@@ -577,7 +586,7 @@ $("ocrRun").onclick = async () => {
   } catch (err){ msg.className = "err"; msg.textContent = err.message || "글자 인식에 실패했습니다."; }
   finally { btn.disabled = false; if (w) w.terminate().catch(() => {}); }
 };
-$("clearOdds").onclick = () => { state.user = {}; if (!hasOfficial()) state.out = new Set(); else state.out = new Set(PRED?.races?.[RACE]?.out || []); mergeOdds(); save(); render(); };
+$("clearOdds").onclick = () => { state.user = {}; state.out = new Set(state.fixed); mergeOdds(); save(); render(); };
 
 /* 승식: 하빌 방식 (2착 γ, 3착 δ 보정) */
 const POOLS = [

@@ -99,10 +99,50 @@ def add_weights(d: str, rows: list[dict]) -> list[dict]:
     return out
 
 
-def signature(rows: list[dict]) -> str:
-    """예측을 다시 만들어야 하는지 판단: 출전표+마체중, 경주 기록 크기, 모델 파일"""
+def pre_race_changes(d: str) -> tuple[dict[int, set[int]], set[int]]:
+    """출전표정보(API78)의 특이사항 → (경주별 '말취소' 번호, '경주취소'된 경주).
+    site/data/extra/날짜.json 에서 읽음 (경주일에는 실행마다 새로 받으므로 취소가 뜨면 다음 실행에 반영)."""
+    f = DATA / "extra" / f"{d}.json"
+    gone: dict[int, set[int]] = {}
+    void: set[int] = set()
+    if not f.exists():
+        return gone, void
+    try:
+        races = json.loads(f.read_text(encoding="utf-8")).get("races", {})
+    except ValueError:
+        return gone, void
+    for rn, hs in races.items():
+        spn = {int(c): (h or {}).get("spn") or "" for c, h in hs.items()}
+        g = {c for c, v in spn.items() if "말취소" in v}
+        if g:
+            gone[int(rn)] = g
+        if spn and all("경주취소" in v for v in spn.values()):
+            void.add(int(rn))
+    return gone, void
+
+
+def apply_changes(res: dict, gone: dict[int, set[int]], void: set[int]) -> None:
+    """예측 결과에 경주 전 취소를 표시: 취소마는 p 0 + out(사이트가 빼고 다시 나눔) + scr(경주 전에 알려진 취소), 취소된 경주는 void"""
+    for rn, chs in gone.items():
+        r = res.get("races", {}).get(str(rn))
+        if r is None:
+            continue
+        for c in chs:
+            r.setdefault("p", {}).setdefault(str(c), 0.0)
+        r["out"] = sorted(set(map(int, r.get("out", []))) | chs)
+        r["scr"] = sorted(chs)
+    for rn in void:
+        r = res.get("races", {}).get(str(rn))
+        if r is not None and not r.get("void"):
+            r["void"] = "경주 취소"
+
+
+def signature(rows: list[dict], void: set[int] = frozenset()) -> str:
+    """예측을 다시 만들어야 하는지 판단: 출전표(취소마 뺀 것)+마체중, 취소된 경주, 경주 기록 크기, 모델 파일"""
     import hashlib
     h = hashlib.sha1(json.dumps(rows, ensure_ascii=False, sort_keys=True).encode())
+    if void:
+        h.update(("void:" + ",".join(map(str, sorted(void)))).encode())
     for f in [WORK / "merged.csv", *sorted((WORK / "winner_history").glob("*.joblib"))]:
         if f.exists():
             h.update(f"{f.name}:{f.stat().st_size}".encode())
@@ -191,6 +231,14 @@ def main() -> int:
         if d <= today.strftime("%Y%m%d") and d >= (today - dt.timedelta(days=1)).strftime("%Y%m%d"):
             step("당일 마체중", [sys.executable, str(ROOT / "pipeline" / "fetch_weights.py"), "--date", d], ROOT)
 
+    # 참고 정보(진료·조교 등)와 특이사항(말취소·경주취소·기수변경): 앞으로 열릴 날은 매번, 지난 날은 파일이 없을 때만 (한 번에 4일까지)
+    # 예측보다 먼저 받음 → 경주 전 출전 취소마를 빼고 예측
+    t8 = today.strftime("%Y%m%d")
+    have_x = {f.stem for f in (DATA / "extra").glob("*.json")} if (DATA / "extra").exists() else set()
+    xd = [f.stem for f in ent_files if f.stem >= t8] + [f.stem for f in ent_files if f.stem < t8 and f.stem not in have_x][-4:]
+    if xd:
+        step("참고 정보", [sys.executable, str(ROOT / "pipeline" / "extra_site.py"), "--dates", ",".join(xd)], ROOT)
+
     exporter = load_exporter()
     model_name = None
     if exporter:
@@ -201,7 +249,11 @@ def main() -> int:
         (DATA / "sim").mkdir(parents=True, exist_ok=True)
         for d in upcoming:
             rows = add_weights(d, json.loads((DATA / "entries" / f"{d}.json").read_text(encoding="utf-8"))["rows"])
-            sig = signature(rows)
+            gone, void = pre_race_changes(d)
+            if gone:      # 경주 전 출전 취소마는 빼고 예측 (같은 경주 다른 말과 비교하는 값·시뮬레이션이 맞게)
+                rows = [r for r in rows if int(r.get("chulNo") or 0) not in gone.get(int(r.get("rcNo") or 0), ())]
+                log(f"출전 취소 {d}: " + ", ".join(f"{rn}경주 {sorted(c)}번" for rn, c in sorted(gone.items())))
+            sig = signature(rows, void)
             pf = DATA / "pred" / f"{d}.json"
             if day_finished(d, today):
                 # 결과가 들어온 날(경주일 저녁의 오늘 포함): 결과·실제 경주 시뮬레이션으로 한 번만 다시 만든다
@@ -219,6 +271,7 @@ def main() -> int:
                     continue
             try:
                 res = exporter.export(d, rows, DATA)
+                apply_changes(res, gone, void)
                 res["sig"] = sig
                 res["date"] = d
                 res["made"] = dt.datetime.now(KST).isoformat(timespec="minutes")
@@ -232,12 +285,6 @@ def main() -> int:
     elif not exporter:
         log("work/site_export.py 가 없어 예측은 건너뜁니다 (출전표만 사이트에 표시).")
 
-    # 참고 정보(진료·조교 등, 예측에는 안 씀): 앞으로 열릴 날은 매번, 지난 날은 파일이 없을 때만 (한 번에 4일까지)
-    t8 = today.strftime("%Y%m%d")
-    have_x = {f.stem for f in (DATA / "extra").glob("*.json")} if (DATA / "extra").exists() else set()
-    xd = [f.stem for f in ent_files if f.stem >= t8] + [f.stem for f in ent_files if f.stem < t8 and f.stem not in have_x][-4:]
-    if xd:
-        step("참고 정보", [sys.executable, str(ROOT / "pipeline" / "extra_site.py"), "--dates", ",".join(xd)], ROOT)
     if exporter and (WORK / "merged.csv").exists():
         # 출전마 지난 성적 (앞으로 열릴 날은 매번 새로, 지난 날은 없을 때만)
         step("지난 성적", [sys.executable, str(ROOT / "pipeline" / "form.py"), "--missing"] +

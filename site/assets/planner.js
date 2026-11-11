@@ -6,7 +6,9 @@
    2) 승식별 후보: 모델 확률 높은 조합 몇 개 (하빌 방식, 2착 0.8·3착 0.7 보정)
    3) 걸 만한지: 조합 확률이 승식별 최소 확률 이상이고, 배당이 '최소 배당'((1+여유)/모델 확률) 이상이어야 함
         - 단승 배당을 넣은 경주: 단승은 넣은 배당으로 바로 판단, 다른 승식은 단승 배당으로 추정한 배당이 최소 배당에 크게 못 미치면 뺌
-        - 모든 마권은 '앱에서 그 조합 배당이 최소 배당 이상일 때만 사기' 조건부
+        - 모든 마권은 '배당판에서 그 조합 배당이 최소 배당 이상일 때만 사기' 조건부
+        - 배당판에서 본 그 조합의 배당(race.board)을 넣으면: 최소 배당 이상이면 '사기'(금액 그대로), 미만이면 '넘기기'(passed).
+          넘긴 마권의 돈은 다른 마권으로 옮기지 않음 (배당을 넣을 때마다 이미 산 마권의 금액이 바뀌지 않게)
    4) 금액: 켈리 기준(확률·배당으로 정한 자금 비율)의 일부. 최소 배당에서 산다고 보고 계산(보수적)
    5) 한 경주 합계는 법정 상한 10만 원 이하, 하루 합계는 입력한 자금 이하, 100원 단위
    걸 만한 조합이 없으면 그 경주는 건너뜀(이유 표시).  */
@@ -66,7 +68,7 @@
   const keyNums = k => k.split(/[>-]/).map(Number);
 
   /** 한 경주의 후보 마권 (금액 전)
-      race = {race, p:{번호:모델확률}, odds?:{번호:단승배당}, out?:[번호], nDebut?:수, nRunners?:수, done?:bool, void?:str}
+      race = {race, p:{번호:모델확률}, odds?:{번호:단승배당}, board?:{"승식:조합키":배당판 배당}, out?:[번호], nDebut?:수, nRunners?:수, done?:bool, void?:str}
       opt  = {pools:[승식], margin:0.1} */
   function candidates(race, opt) {
     const out = new Set((race.out || []).map(String));
@@ -84,7 +86,7 @@
     if (race.nDebut != null && race.nDebut * 2 >= ids.length) return {skip: `첫 출전 말이 ${race.nDebut}두라 예측을 믿기 어려움`, src, top};
     const m = opt.margin ?? 0.1;
     const C = combos(F), CM = M ? combos(M) : null;
-    const bets = [], why = [];
+    const bets = [], why = [], board = race.board || {};
     for (const pool of opt.pools || ["단승식", "연승식", "복승식", "삼복승식"]) {
       const R = RULES[pool];
       const list = [...C[pool].entries()].sort((a, b) => b[1] - a[1]).slice(0, R.k);
@@ -92,11 +94,15 @@
         if (pr < R.minP) { why.push("prob"); continue; }
         const minOdds = Math.max(1.1, ceil1((1 + m) / pr));
         let cur = null, est = null;
-        if (pool === "단승식" && haveOdds) cur = +odds[key];
+        const bo = +board[`${pool}:${key}`], seen = bo >= 1;          // 배당판에서 본 이 조합의 배당
+        if (seen) cur = bo;
+        else if (pool === "단승식" && haveOdds) cur = +odds[key];
         else if (CM) { const qm = CM[pool].get(key); if (qm) est = PAYOUT[pool] / qm; }
+        const bet = {pool, key, nums: keyNums(key), p: pr, minOdds, cur, est, seen, pc: CB && pool === "단승식" ? CB[key] : null};
+        if (seen) { bet.pass = cur < minOdds; bets.push(bet); continue; }      // 배당판 값을 넣은 줄은 넘기더라도 남겨 둠 (금액 배분은 그대로, 표시는 '넘기기')
         if (cur != null && cur < minOdds) { why.push("value"); continue; }
         if (est != null && est < minOdds * 0.9) { why.push("value"); continue; }
-        bets.push({pool, key, nums: keyNums(key), p: pr, minOdds, cur, est, pc: CB && pool === "단승식" ? CB[key] : null});
+        bets.push(bet);
       }
     }
     if (!bets.length) {
@@ -118,7 +124,7 @@
     // 1) 켈리 일부로 금액
     for (const r of res) {
       if (!r.bets) continue;
-      for (const b of r.bets) { b.k = kelly(b.p, b.cur ?? b.minOdds); b.raw = frac * b.k * B; }
+      for (const b of r.bets) { b.k = kelly(b.p, b.seen ? b.minOdds : (b.cur ?? b.minOdds)); b.raw = frac * b.k * B; }
     }
     // 2) '예산 모두 쓰기'면 같은 비율로 늘려 하루 합계 = 자금 (경주 상한에 걸리면 남는 돈은 다른 경주로)
     const raceCap = Math.min(RACE_CAP, B);
@@ -148,9 +154,12 @@
       let sum = r.bets.reduce((a, b) => a + b.amt, 0);
       if (sum > raceCap) r.bets.forEach(b => b.amt *= raceCap / sum);
       r.bets.forEach(b => b.stake = Math.floor(b.amt / UNIT) * UNIT);
-      r.bets = r.bets.filter(b => b.stake >= UNIT).sort((a, b) => POOLS.indexOf(a.pool) - POOLS.indexOf(b.pool) || b.p - a.p);
+      // 배당판 값을 넣은 줄 가운데 넘기는 것(조건 미달)·100원 미만은 passed 로 옮김: 합계에는 안 들어가고 화면에는 남음(고칠 수 있게)
+      r.passed = r.bets.filter(b => b.seen && (b.pass || b.stake < UNIT)).map(b => (b.small = !b.pass, b));
+      if (!r.passed.length) delete r.passed;
+      r.bets = r.bets.filter(b => !b.pass && b.stake >= UNIT).sort((a, b) => POOLS.indexOf(a.pool) - POOLS.indexOf(b.pool) || b.p - a.p);
       r.total = r.bets.reduce((a, b) => a + b.stake, 0);
-      if (!r.bets.length) { delete r.bets; r.skip = "추천 금액이 100원 미만 (자금을 늘리거나 운용 방식을 바꾸면 들어감)"; }
+      if (!r.bets.length) { delete r.bets; r.skip = (r.passed || []).some(b => b.pass) ? "배당판 배당이 조건보다 낮음" : "추천 금액이 100원 미만 (자금을 늘리거나 운용 방식을 바꾸면 들어감)"; }
     }
     const total = res.reduce((a, r) => a + (r.total || 0), 0);
     return {races: res, total, bankroll: B, raceCap};

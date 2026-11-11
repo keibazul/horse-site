@@ -29,6 +29,27 @@ def fetch_day(d: str) -> list[dict]:
     return rows
 
 
+def jockey_changes(old: dict, rows: list[dict], at: str) -> dict:
+    """출전표가 처음 나온 뒤 기수가 바뀐 말: {"경주-번호": {"jk": [처음 기수, 지금 기수], "wg": [처음 부담중량, 지금], "at": 알게 된 시각}}
+    출전표 API 는 기수가 바뀌면 새 기수·부담중량으로 고쳐 주므로(예측은 새 기수로 다시 계산됨) 처음 값을 여기 남겨 사이트에 표시"""
+    chg = dict(old.get("chg") or {})
+    prev = {(str(r.get("rcNo")), str(r.get("chulNo"))): r for r in old.get("rows") or []}
+    for r in rows:
+        k = (str(r.get("rcNo")), str(r.get("chulNo")))
+        o, key = prev.get(k), f"{k[0]}-{k[1]}"
+        if not o or str(o.get("hrNo")) != str(r.get("hrNo")):
+            chg.pop(key, None)                    # 말이 바뀐 자리(출전표 재편성)는 기록하지 않음
+            continue
+        if str(o.get("jkNo")) == str(r.get("jkNo")):
+            continue
+        first = chg.get(key, {"jk": [o.get("jkName")], "wg": [o.get("wgBudam")], "no": str(o.get("jkNo"))})
+        if first.get("no") == str(r.get("jkNo")):
+            chg.pop(key, None)                    # 처음 기수로 되돌아옴
+        else:
+            chg[key] = {"jk": [first["jk"][0], r.get("jkName")], "wg": [first["wg"][0], r.get("wgBudam")], "no": first.get("no"), "at": at}
+    return chg
+
+
 def clean(v):
     if isinstance(v, str):
         v = v.strip()
@@ -58,12 +79,19 @@ def main() -> int:
         print(f"{d}: {len(races)}개 경주, {len(rows)}두 (항목 {len(rows[0])}개)")
         found.append(d)
         f = OUT / f"{d}.json"
+        old = {}
         try:
-            if f.exists() and json.loads(f.read_text(encoding="utf-8")).get("rows") == rows:
+            old = json.loads(f.read_text(encoding="utf-8")) if f.exists() else {}
+            if old.get("rows") == rows:
                 continue          # 내용이 같으면 파일을 그대로 둠 (시각만 바뀐 커밋·배포를 만들지 않음)
         except ValueError:
             pass
-        f.write_text(json.dumps({"date": d, "fetched": dt.datetime.now(KST).isoformat(timespec="minutes"), "rows": rows}, ensure_ascii=False), encoding="utf-8")
+        now = dt.datetime.now(KST)
+        obj = {"date": d, "fetched": now.isoformat(timespec="minutes"), "rows": rows}
+        chg = jockey_changes(old, rows, now.strftime("%m-%d %H:%M"))
+        if chg:
+            obj["chg"] = chg
+        f.write_text(json.dumps(obj, ensure_ascii=False), encoding="utf-8")
     print("출전표 저장:", ", ".join(found) if found else "없음")
     return 0
 

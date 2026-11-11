@@ -69,6 +69,13 @@
 .bt .cond{font-weight:700}
 .bt .now{font-size:12px;font-weight:700;margin-left:6px}
 .bt .now.ok{color:var(--good)} .bt .now.no{color:var(--bad)}
+.bt .bo{width:68px;margin-left:8px;padding:4px 7px;font-size:14px;font-weight:700;text-align:right;border:1px solid var(--line-strong);border-radius:8px;background:var(--panel);color:var(--ink)}
+.bt .bo::placeholder{font-weight:600;color:var(--muted);font-size:12.5px}
+.bt .verd{display:inline-block;margin-left:6px;padding:2px 9px;border-radius:999px;font-size:12.5px;font-weight:800}
+.bt .verd.ok{background:color-mix(in srgb,var(--good) 16%,transparent);color:var(--good)}
+.bt .verd.no{background:color-mix(in srgb,var(--bad) 13%,transparent);color:var(--bad)}
+.bt tr.pass .combo,.bt tr.pass td:first-child{opacity:.5}
+.bt tr.pass .stake{color:var(--muted);font-weight:700;font-size:13px}
 .rc-f{display:flex;flex-wrap:wrap;gap:6px;padding:10px 16px 13px;border-top:1px solid var(--line)}
 .rc-f .btn{padding:6px 11px;font-size:13px}
 .rc-f .msg{font-size:12.5px;color:var(--good);font-weight:700;align-self:center}
@@ -148,10 +155,10 @@
   <section class="about" aria-labelledby="howH">
     <h2 id="howH">이렇게 계산합니다</h2>
     <ul>
-      <li><b>사는 조건</b>: 모든 마권에 '배당이 이 값 이상일 때만 사기' 조건이 붙습니다. 최소 배당 = 1.1 ÷ 모델 확률, 즉 모델이 보기에 10% 이상 남는 값입니다. 사기 직전 KRA 앱에서 그 조합의 배당을 확인하고, 조건보다 낮으면 사지 마세요.</li>
+      <li><b>사는 조건</b>: 모든 마권에 '배당이 이 값 이상일 때만 사기' 조건이 붙습니다. 최소 배당 = 1.1 ÷ 모델 확률, 즉 모델이 보기에 10% 이상 남는 값입니다. 사기 직전 현장 배당판에서 그 조합의 배당을 보고 '배당판' 칸에 넣으면, 조건 이상일 때 '사기', 낮으면 '넘기기'로 알려 줍니다. 배당은 마감까지 계속 바뀌므로 될수록 늦게 확인하세요.</li>
       <li><b>확률</b>은 경주 전 정보만 쓴 모델 확률에, 경주일 오후에는 <b>당일 주로 보정</b>(앞서 끝난 경주에서 안쪽·바깥쪽 게이트가 유리했던 정도)을 곱한 값입니다. 배당과 섞은 결합 확률은 시장과 거의 같아져서 싼 마권을 찾는 데 쓰지 않습니다. 예측 화면에서 단승 배당을 넣어 두면 단승은 그 배당으로 바로 판단하고, 다른 승식도 배당에서 추정한 값이 조건에 크게 못 미치면 뺍니다.</li>
       <li><b>건너뛰기</b>: 승식마다 최소 조합 확률(단승 20%, 연승 45%, 복승 8%, 쌍승 5%, 복연승 15%, 삼복승 4%, 삼쌍승 1.2%)을 넘는 조합이 없거나, 배당이 이미 낮게 몰렸거나, 첫 출전 말이 절반 이상인 경주는 건너뜁니다.</li>
-      <li><b>금액</b>: 켈리 기준(확률과 배당으로 정하는 자금 비율)의 일부를 씁니다. 조심스럽게 1/8, 보통 1/4. '자금 모두 쓰기'는 같은 비율로 늘려 하루 합계가 자금과 같아지게 합니다(한 경주 10만 원 상한 때문에 남을 수 있음). 최소 배당에서 산다고 보고 계산하므로 실제 배당이 더 높아도 금액은 그대로입니다.</li>
+      <li><b>금액</b>: 켈리 기준(확률과 배당으로 정하는 자금 비율)의 일부를 씁니다. 조심스럽게 1/8, 보통 1/4. '자금 모두 쓰기'는 같은 비율로 늘려 하루 합계가 자금과 같아지게 합니다(한 경주 10만 원 상한 때문에 남을 수 있음). 최소 배당에서 산다고 보고 계산하므로(보수적) 배당판 배당이 더 높아도 금액은 그대로이고, 넘긴 마권의 돈을 다른 마권에 더 얹지도 않습니다.</li>
       <li>한 경주 합계는 모든 승식을 합쳐 <b>10만 원 이하</b>, 하루 합계는 입력한 자금 이하, 모든 금액은 100원 단위입니다.</li>
     </ul>
     <h2 id="chkH" style="margin-top:6px">지난 1년에 이대로 샀다면</h2>
@@ -187,6 +194,8 @@ const MODE_HINT = {safe: "켈리 비율의 1/8. 대부분의 날 자금의 일�
 
 let S = Object.assign({bank: 100000, mode: "normal", pools: ["단승식","연승식"]}, store.get("plan:settings") || {});
 let INDEX = null, DAY = null, ENT = null, PRED = null, DIV = null, PAST = false, BIAS = null;
+let BOARD = {};      // 배당판에서 본 배당: {경주: {"승식:조합": "5.4"}} — 경주일마다 따로 저장
+const boardKey = () => `plan:board:${DAY.date}`;
 
 function saveS(){ store.set("plan:settings", S); }
 function renderSetup(){
@@ -207,6 +216,7 @@ $("daySel").onchange = async e => { await openDay(e.target.value); renderSetup()
 async function openDay(d){
   DAY = INDEX.days.find(x => x.date === d);
   PAST = !!DAY.past;
+  BOARD = store.get(boardKey()) || {};
   [ENT, PRED, DIV, BIAS] = await Promise.all([get(`data/${DAY.entries}`), DAY.pred ? get(`data/${DAY.pred}`) : null, PAST ? get(`data/div/${d}.json`) : null, get(`data/bias/${d}.json`)]);
   render();
 }
@@ -218,6 +228,7 @@ function raceInputs(){
   return races.map(n => {
     const pr = PRED?.races?.[n] || {}, first = rows.find(r => +r.rcNo === n);
     const saved = store.get(`odds:${DAY.date}:${n}`) || {};
+    const board = PAST ? {} : (BOARD[n] || {});
     const out = [...new Set([...(pr.out || []), ...(saved.out || [])].map(Number))];
     const user = saved.user || saved.odds || {};
     const odds = {}; for (const [k, v] of Object.entries(user)) if (+v > 1) odds[k] = +v;
@@ -226,7 +237,7 @@ function raceInputs(){
     const started = DAY.date < today || (DAY.date === today && t && h*60 + m <= nowM);
     if (PAST) Object.assign(odds, pr.odds || {});
     const bf = BIAS?.races?.[n]?.f || {}, p = Object.fromEntries(Object.entries(pr.p || {}).map(([k, v]) => [k, v * (bf[k] ?? 1)]));
-    return {race: n, time: t, dist: first?.rcDist, rank: first?.rank, p, odds, out, void: pr.void, ib: BIAS?.races?.[n]?.ib,
+    return {race: n, time: t, dist: first?.rcDist, rank: first?.rank, p, odds, board, out, void: pr.void, ib: BIAS?.races?.[n]?.ib,
       done: PAST ? false : (!!pr.result?.length || started), started, result: pr.result, plc: pr.plc || {}, nDebut: live.filter(k => (pr.n || {})[k] === 0).length,
       names: Object.fromEntries(rows.filter(r => +r.rcNo === n).map(r => [+r.chulNo, r.hrName])), nOdds: Object.keys(odds).length, nLive: live.length};
   });
@@ -244,42 +255,54 @@ function settle(r, b){
 }
 function render(){
   if (!DAY) return;
+  const a = document.activeElement, fk = a?.dataset?.bo, fpos = fk ? a.selectionStart : null;   // 배당 칸에 쓰는 중이면 다시 그린 뒤 그 칸으로 돌아감
+  renderInner();
+  if (fk){ const n = [...document.querySelectorAll("[data-bo]")].find(x => x.dataset.bo === fk); if (n && n !== document.activeElement){ n.focus({preventScroll: true}); try { n.setSelectionRange(fpos, fpos); } catch {} } }
+}
+function renderInner(){
   const R = raceInputs();
   if (!PRED){ $("list").innerHTML = `<p class="empty">이 경주일은 아직 예측이 없어 계획을 만들 수 없습니다.</p>`; $("sum").innerHTML = ""; return; }
-  const pl = Planner.plan(R.map(r => ({race: r.race, p: r.p, odds: r.odds, out: r.out, void: r.void, done: r.done, nDebut: r.nDebut})),
+  const pl = Planner.plan(R.map(r => ({race: r.race, p: r.p, odds: r.odds, board: r.board, out: r.out, void: r.void, done: r.done, nDebut: r.nDebut})),
     {bankroll: S.bank, mode: S.mode, pools: S.pools, margin: 0.1});
   LAST = pl;
   const bet = pl.races.filter(r => r.bets), skip = pl.races.filter(r => !r.bets && r.skip !== "끝난 경주"), done = pl.races.filter(r => r.skip === "끝난 경주");
+  const nSeen = pl.races.reduce((a, r) => a + [...(r.bets || []), ...(r.passed || [])].filter(b => b.seen).length, 0);
   const maxR = Math.max(0, ...bet.map(r => r.total));
   $("sum").innerHTML = [["계획 합계", won(pl.total), S.bank ? `자금의 ${(pl.total / S.bank * 100).toFixed(0)}%` : ""], ["걸 경주", `${bet.length}경주`, ""], ["건너뛸 경주", `${skip.length}경주`, done.length ? `지난 경주 ${done.length}` : ""],
     ["한 경주 최대", won(maxR), "상한 100,000원"]].map(([a, b, c]) => `<div><span>${a}</span><b>${b}</b>${c ? `<small>${c}</small>` : ""}</div>`).join("");
   const withOdds = R.filter(r => !r.done && r.nOdds && r.nOdds >= r.nLive).length;
-  $("warnline").innerHTML = `금액은 조건이 모두 맞아 전부 샀을 때 기준입니다. 배당이 조건보다 낮으면 그 마권은 사지 않으므로 실제로 쓰는 돈은 더 적습니다. 배당을 넣지 않은 경주는 사기 직전 조건으로 걸러지는데, 지난 1년 기준 약 절반의 경주에서는 조건에 맞는 마권이 없어 아무것도 사지 않았습니다.${withOdds ? ` 단승 배당을 넣은 경주 ${withOdds}개는 그 배당을 반영했습니다.` : " 경주 직전 예측 화면에 단승 배당을 넣으면 그 경주 계획이 더 정확해집니다."}`;
+  $("warnline").innerHTML = `<b>사기 직전 배당판에서 그 조합의 배당을 보고 '배당판' 칸에 넣으세요.</b> 조건 이상이면 '사기', 낮으면 '넘기기'가 바로 나옵니다. 넘긴 마권의 돈은 다른 마권으로 옮기지 않습니다. 합계는 넘긴 것을 빼고, 아직 넣지 않은 마권은 산다고 보고 센 금액입니다. 지난 1년 기준 약 절반의 경주에서는 조건에 맞는 마권이 없어 아무것도 사지 않았습니다.${nSeen ? ` 지금 배당판 배당을 넣은 마권 ${nSeen}장.` : ""}${withOdds ? ` 단승 배당을 모두 넣은 경주 ${withOdds}개는 그 배당도 반영했습니다.` : ""}`;
   $("listAside").textContent = `${short(DAY.date)} · ${PRED.model || "모델"}`;
   const card = p => {
     const r = R.find(x => x.race === p.race);
     const head = `<span class="rn">${p.race}R</span><span class="meta">${[r.time, r.dist && r.dist + "m", r.rank].filter(Boolean).join(" · ")}</span>`;
-    if (!p.bets){
+    const all = [...(p.bets || []), ...(p.passed || [])].sort((a, b) => Planner.POOLS.indexOf(a.pool) - Planner.POOLS.indexOf(b.pool) || b.p - a.p);
+    if (!all.length){
       const tag = p.skip === "끝난 경주" ? `<span class="pill">${r.started && !PRED.races?.[p.race]?.result ? "출발함" : "끝남"}</span>` : `<span class="pill">건너뛰기</span>`;
       const why = p.skip === "끝난 경주" ? "" : `<p class="why">${esc(p.skip)}</p>`;
       return `<article class="rc panel skip"><div class="rc-h">${head}<span class="right">${tag}</span></div>${why}</article>`;
     }
     const oddsTag = (r.nOdds && r.nOdds >= r.nLive ? `<span class="pill good">단승 배당 반영</span>` : "") + (r.ib != null && !PAST ? `<span class="pill">당일 주로 보정</span>` : "");
-    const rows = p.bets.map(b => {
+    const live = !PAST && !r.done;
+    const rows = all.map(b => {
+      const pass = !(p.bets || []).includes(b);
+      const bk = `${p.race}|${b.pool}:${b.key}`, bv = r.board[`${b.pool}:${b.key}`] ?? "";
+      const inp = live ? `<input class="bo" type="text" inputmode="decimal" autocomplete="off" placeholder="배당판" data-bo="${bk}" value="${esc(bv)}" aria-label="${p.race}경주 ${SHORT[b.pool]} ${b.nums.join("-")} 배당판 배당">` : "";
+      const verd = b.seen ? `<span class="verd ${pass && !b.small ? "no" : "ok"}">${pass && !b.small ? "넘기기" : "사기"}</span>` : "";
       const sep = ORDERED.has(b.pool) ? "<em>→</em>" : "<em>·</em>";
       const names = b.nums.map(n => r.names[n] || "").join(", ");
-      const now = b.cur != null ? `<span class="now ${b.cur >= b.minOdds ? "ok" : "no"}">지금 ${b.cur}</span>` : (b.est ? `<span class="now">예상 ${b.est >= 100 ? Math.round(b.est) : b.est.toFixed(1)}</span>` : "");
+      const now = b.seen ? "" : b.cur != null ? `<span class="now ${b.cur >= b.minOdds ? "ok" : "no"}">지금 ${b.cur}</span>` : (b.est ? `<span class="now">예상 ${b.est >= 100 ? Math.round(b.est) : b.est.toFixed(1)}</span>` : "");
       const st = PAST ? settle(r, b) : null;
       if (st){ p.spent = (p.spent || 0) + (st.bought ? b.stake : 0); p.ret = (p.ret || 0) + st.ret; }
       const last = st ? `<td class="r"><span class="now ${st.st === "win" ? "ok" : ""}" style="margin:0">${st.text}</span></td>` : `<td class="r hide-s">${pct(b.p)}</td>`;
-      return `<tr><td>${SHORT[b.pool]}</td><td><span class="combo">${b.nums.map(chip).join(sep)}</span> <span class="muted hide-s" style="font-size:12.5px">${esc(names)}</span></td>
-        <td class="r stake">${won(b.stake)}</td><td class="cond">${b.minOdds} 이상${PAST ? "" : now}</td>${last}</tr>`;
+      return `<tr class="${pass ? "pass" : ""}"><td>${SHORT[b.pool]}</td><td><span class="combo">${b.nums.map(chip).join(sep)}</span> <span class="muted hide-s" style="font-size:12.5px">${esc(names)}</span></td>
+        <td class="r stake">${pass ? (b.small ? "100원 미만" : "사지 않음") : won(b.stake)}</td><td class="cond">${b.minOdds} 이상${PAST ? "" : now}${inp}${verd}</td>${last}</tr>`;
     }).join("");
     const res = PAST && r.result ? `<span class="pill">결과 ${r.result.slice(0, 3).join("→")}</span>` : "";
     const foot = PAST ? `<div class="rc-f"><span class="msg" style="color:var(--muted)">조건에 맞아 산 금액 ${won(p.spent || 0)} · 환급 ${won(p.ret || 0)}</span></div>`
-      : `<div class="rc-f"><a class="btn" href="race.html?date=${DAY.date}&race=${p.race}">예측 화면에서 배당 넣기</a><button class="btn" type="button" data-rec="${p.race}">산 대로 기록장에 담기</button><span class="msg" id="msg-${p.race}"></span></div>`;
-    return `<article class="rc panel"><div class="rc-h">${head}<span class="right">${PAST ? res : oddsTag}<span class="amt">${won(p.total)}</span></span></div>
-      <table class="bt${PAST ? " past" : ""}"><thead><tr><th>승식</th><th>조합</th><th class="r">금액</th><th>사는 조건 (배당)</th><th class="r${PAST ? "" : " hide-s"}">${PAST ? "결과" : "모델 확률"}</th></tr></thead><tbody>${rows}</tbody></table>
+      : `<div class="rc-f"><a class="btn" href="race.html?date=${DAY.date}&race=${p.race}">예측 화면에서 배당 넣기</a>${p.bets ? `<button class="btn" type="button" data-rec="${p.race}">산 대로 기록장에 담기</button>` : ""}<span class="msg" id="msg-${p.race}"></span></div>`;
+    return `<article class="rc panel"><div class="rc-h">${head}<span class="right">${PAST ? res : oddsTag}<span class="amt">${won(p.total || 0)}</span></span></div>
+      <table class="bt${PAST ? " past" : ""}"><thead><tr><th>승식</th><th>조합</th><th class="r">금액</th><th>사는 조건 (배당) · 배당판에서 본 값</th><th class="r${PAST ? "" : " hide-s"}">${PAST ? "결과" : "모델 확률"}</th></tr></thead><tbody>${rows}</tbody></table>
       ${foot}</article>`;
   };
   const ended = p => p.skip === "끝난 경주";
@@ -291,6 +314,18 @@ function render(){
   }
 }
 
+// 배당판에서 본 배당 넣기 → 저장하고 잠깐 뒤 다시 계산 (쓰는 동안 칸이 사라지지 않게)
+let boTmr = null;
+$("list").addEventListener("input", e => {
+  const t = e.target.closest("[data-bo]"); if (!t) return;
+  const [n, key] = t.dataset.bo.split("|"), v = t.value.replace(",", ".").replace(/[^0-9.]/g, "");
+  if (v !== t.value) t.value = v;
+  const o = BOARD[n] = BOARD[n] || {};
+  if (v === "") delete o[key]; else o[key] = v;
+  if (!Object.keys(o).length) delete BOARD[n];
+  store.set(boardKey(), BOARD);
+  clearTimeout(boTmr); boTmr = setTimeout(render, 600);
+});
 // 산 마권을 기록장(bets.html)에 담기: 조건이 맞아 실제로 산 것만 담도록 안내
 $("list").addEventListener("click", e => {
   const b = e.target.closest("[data-rec]"); if (!b || !LAST) return;
