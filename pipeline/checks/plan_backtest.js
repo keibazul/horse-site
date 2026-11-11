@@ -37,6 +37,8 @@ function wins(pool, k, res, n) {
   }
 }
 
+const tcoef = +arg("trng", "0") || 0;
+const extraOf = d => { try { return JSON.parse(fs.readFileSync(path.join(ROOT, "site/data/extra", d + ".json"), "utf8")); } catch { return null; } };
 const days = fs.readdirSync(path.join(ROOT, "site/data/pred")).filter(f => f.endsWith(".json")).map(f => f.slice(0, 8)).sort();
 const byPool = {}, byDay = [];
 let stake = 0, ret = 0, nBet = 0, nHit = 0, racesBet = 0, racesAll = 0, skipped = {}, noOdds = 0;
@@ -51,7 +53,9 @@ for (const d of days) {
     const out = (r.out || []).map(String);
     const live = Object.keys(r.p || {}).filter(k => !out.includes(k));
     const bf = bias?.races?.[rno]?.f || {};
-    return {race: +rno, p: Object.fromEntries(Object.entries(r.p).map(([k, v]) => [k, v * (bf[k] ?? 1)])), odds: useOdds ? r.odds : null, out: r.out, void: r.void,
+    const tx = tcoef ? (extraOf(d)?.races?.[rno] || {}) : {};                 // --trng 계수: 조교 횟수(경주 평균 대비) 보정
+    const tf = k => tcoef && tx[k]?.trngRel != null ? Math.exp(tcoef * Math.max(-6, Math.min(6, tx[k].trngRel))) : 1;
+    return {race: +rno, p: Object.fromEntries(Object.entries(tcoef ? (r.p0 || r.p) : r.p).map(([k, v]) => [k, v * (bf[k] ?? 1) * tf(k)])), odds: useOdds ? r.odds : null, out: r.out, void: r.void,
       nDebut: live.filter(k => (r.n || {})[k] === 0).length, _r: r};
   });
   const pl = P.plan(races.map(({_r, ...x}) => x), {bankroll, mode, pools, margin});

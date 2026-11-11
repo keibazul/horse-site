@@ -247,6 +247,7 @@ tr.win td{background:color-mix(in srgb,var(--accent) 8%,transparent)}
 const $ = id => document.getElementById(id);
 const LEN = 2.4, SEC_PER_LEN = 0.176, KS = ["s1f","g3f","g1f","fin"], SHIFT_W = [0, 0.3, 0.7, 1.0], NSIM = 4000;
 const PHYS = window.RacePhysics, PH_DT = 0.2, PH_CAL = 350, PH_IT = 4, PH_STATS = 600;   // 물리엔진: 보정 350번×4회, 요약 600번
+const paceShift = s1 => PHYS && PHYS.paceShift ? PHYS.paceShift(s1) : s1.map(() => [0, 0, 0]);
 const SADDLE = {1:["#f4f4f1","#111"],2:["#1e1e22","#fff"],3:["#d8392b","#fff"],4:["#2c66d6","#fff"],5:["#f3c533","#111"],6:["#2c9b55","#fff"],
   7:["#f08a24","#111"],8:["#e46aa3","#111"],9:["#7a4fd6","#fff"],10:["#47b9cb","#111"],11:["#8a5a3a","#fff"],12:["#b7c43a","#111"],
   13:["#3a4a8c","#fff"],14:["#c9c9c9","#111"],15:["#9b2f5e","#fff"],16:["#2f6f6f","#fff"]};
@@ -357,10 +358,12 @@ function prepareSim(){
   const pools = hs.map(h => RACE.pools[h.debut ? "1" : "0"]);
   const rnd = mulberry32(12345), N = 6000;                       // 같은 난수로 반복 보정 (공통 난수)
   const idx = Array.from({length:N}, () => hs.map((h,i) => Math.floor(rnd()*pools[i].length)));
+  // 전개 효과(선두권 두수에 따른 결승 시간 이동)는 뽑은 잔차로 정해지므로 미리 계산 (200m 지점은 보정값의 영향을 안 받음)
+  const pfx = idx.map(row => paceShift(hs.map((h,i) => RACE.par.s1f + h.pred.s1f + pools[i][row[i]][0])).map(v => v[2]));
   let delta = new Array(n).fill(0), bestDelta = delta.slice(), bestWorst = Infinity;
   for (let it=0; it<60; it++){
     const wins = new Array(n).fill(0);
-    for (let s=0;s<N;s++){ let best=-1, bt=1e9; for (let i=0;i<n;i++){ const f = hs[i].pred.fin + delta[i] + pools[i][idx[s][i]][3]; if (f < bt){ bt=f; best=i; } } wins[best]++; }
+    for (let s=0;s<N;s++){ let best=-1, bt=1e9; for (let i=0;i<n;i++){ const f = hs[i].pred.fin + delta[i] + pools[i][idx[s][i]][3] + pfx[s][i]; if (f < bt){ bt=f; best=i; } } wins[best]++; }
     let worst = 0; const lr = wins.map((w,i) => Math.log((w/N+0.002)/(target[i]+0.002)));
     lr.forEach(v => worst = Math.max(worst, Math.abs(v)));
     if (worst < bestWorst){ bestWorst = worst; bestDelta = delta.slice(); }
@@ -431,10 +434,14 @@ async function physCalibrate(){
 function drawTimes(rnd, typical){
   // 경주 전체 빠르기: 대표 전개는 기준 시간 그대로, 무작위 전개는 과거 변동의 절반만 (기준 시간이 이미 주로 상태를 반영)
   const hs = RACE.horses, pr = RACE.pace[Math.floor(rnd()*RACE.pace.length)] || [1,1,1,1], pace = typical ? [1,1,1,1] : pr.map(v => 1 + 0.5*(v-1));
-  return hs.map((h,i) => { const pool = SIM.pools[i], res = pool[Math.floor(rnd()*pool.length)], o = {};
+  const T = hs.map((h,i) => { const pool = SIM.pools[i], res = pool[Math.floor(rnd()*pool.length)], o = {};
     KS.forEach((k,j) => { o[k] = RACE.par[k]*pace[j] + h.pred[k] + SHIFT_W[j]*SIM.delta[i] + res[j]; });
-    o.s1f = Math.max(o.s1f, 11); o.g3f = Math.max(o.g3f, o.s1f+3); o.g1f = Math.max(o.g1f, o.g3f+3); o.fin = Math.max(o.fin, o.g1f+8);
     return o; });
+  // 전개 효과: 200m 지점 선두권 두수에 따라 선두권·뒤따르는 말의 뒤 지점 시간을 옮김 (physics.js 의 paceShift)
+  const sh = paceShift(T.map(o => o.s1f));
+  T.forEach((o,i) => { o.g3f += sh[i][0]; o.g1f += sh[i][1]; o.fin += sh[i][2];
+    o.s1f = Math.max(o.s1f, 11); o.g3f = Math.max(o.g3f, o.s1f+3); o.g1f = Math.max(o.g1f, o.g3f+3); o.fin = Math.max(o.fin, o.g1f+8); });
+  return T;
 }
 
 // ---------------------------------------------------------------- 한 경주 만들기 (예측 또는 실제)

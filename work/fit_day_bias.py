@@ -70,3 +70,10 @@ out = {"K": round(float(w[-1]), 4), "MU": round(MU, 4), "SD": round(SD, 4), "rac
        "K_recent2y": round(float(w2[-1]), 4), "races_recent2y": int(R2), "coef": dict(zip(X_COLS, np.round(w, 4).tolist()))}
 json.dump(out, open("winner_history/day_bias.json", "w"), ensure_ascii=False, indent=1)
 print(f"당일 게이트 보정: K {out['K']} (최근 2년 {out['K_recent2y']}), MU {out['MU']}, SD {out['SD']}, {R:,}경주 ~{last} ({time.time() - t0:.0f}s)")
+
+# 조교 횟수 보정 계수도 같이 (winner_history/trng.json). 실패해도 위 결과는 그대로 둠
+try:
+    import fit_trng
+    fit_trng.main()
+except Exception as e:  # noqa: BLE001
+    print(f"조교 횟수 보정 계수 맞춤 실패: {type(e).__name__}: {e}")

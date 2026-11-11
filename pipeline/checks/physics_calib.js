@@ -32,8 +32,9 @@ for (let fi = 0; fi < files.length; fi += step){
     const pr = J.pace[Math.floor(r()*J.pace.length)] || [1,1,1,1], pace = pr.map(v => 1 + 0.5*(v-1));
     const plans = H.map(h => { const pool = J.pools[h.debut ? "1" : "0"], res = pool[Math.floor(r()*pool.length)];
       const T = KS.map((k,j) => J.par[k]*pace[j] + h.pred[k] + res[j]);
-      T[0]=Math.max(T[0],11); T[1]=Math.max(T[1],T[0]+3); T[2]=Math.max(T[2],T[1]+3); T[3]=Math.max(T[3],T[2]+8);
-      return {T:[0,...T]}; });
+      return T; });
+    if (args.pace !== false){ const sh = PH.paceShift(plans.map(T => T[0])); plans.forEach((T,i) => { T[1] += sh[i][0]; T[2] += sh[i][1]; T[3] += sh[i][2]; }); }   // 전개 효과 ({"pace":false} 로 끔)
+    plans.forEach((T,i) => { T[0]=Math.max(T[0],11); T[1]=Math.max(T[1],T[0]+3); T[2]=Math.max(T[2],T[1]+3); T[3]=Math.max(T[3],T[2]+8); plans[i] = {T:[0,...T]}; });
     let s1, g3, fin;
     if (physics){ const o = PH.run(race, plans, {dt: args.dt || 0.2, lanes0, params}); s1 = o.cp.s1f; g3 = o.cp.g3f; fin = o.fin;
       plans.forEach((p,i)=>{ tPlan += p.T[4]; tPhys += fin[i]; nH++; blockedS += o.blocked[i]; }); }

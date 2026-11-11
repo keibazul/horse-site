@@ -137,6 +137,59 @@ def apply_changes(res: dict, gone: dict[int, set[int]], void: set[int]) -> None:
             r["void"] = "경주 취소"
 
 
+def apply_training(d: str) -> bool:
+    """조교 횟수 보정: 모델 확률 × exp(T·rel), rel = 조교 횟수 − 그 경주 출전표 평균 (참고 정보 파일의 trngRel, ±clip).
+    계수 T 는 work/winner_history/trng.json (work/fit_trng.py 가 매달 다시 맞춤). 원래 모델 확률은 p0 에 남기고,
+    여러 번 실행해도 결과가 같다(p0 에서 다시 계산). 시뮬레이션 파일의 모델 확률(pModel)도 같은 값으로 맞춤."""
+    import math
+    cf, pf, xf = WORK / "winner_history" / "trng.json", DATA / "pred" / f"{d}.json", DATA / "extra" / f"{d}.json"
+    if not (cf.exists() and pf.exists() and xf.exists()):
+        return False
+    try:
+        c = json.loads(cf.read_text(encoding="utf-8")); T, clip = float(c["T"]), float(c.get("clip", 6))
+        pred = json.loads(pf.read_text(encoding="utf-8")); extra = json.loads(xf.read_text(encoding="utf-8")).get("races", {})
+    except (ValueError, KeyError):
+        return False
+    changed = []
+    for rn, r in pred.get("races", {}).items():
+        base = r.get("p0") or r.get("p") or {}
+        xs = extra.get(rn) or {}
+        rel = {k: float(xs[k]["trngRel"]) for k in base if k in xs and (xs[k] or {}).get("trngRel") is not None}
+        out = {str(x) for x in r.get("out", [])}
+        live = [k for k in base if k not in out]
+        if not rel or not live:
+            continue
+        v = {k: base[k] * math.exp(T * max(-clip, min(clip, rel.get(k, 0.0)))) for k in live}
+        s0, s1 = sum(base[k] for k in live), sum(v.values())
+        if s1 <= 0:
+            continue
+        newp = {k: (round(v[k] * s0 / s1, 5) if k in v else base[k]) for k in base}
+        if newp != r.get("p") or "p0" not in r:
+            r["p0"], r["p"] = dict(base), newp
+            changed.append(rn)
+    if not changed and (pred.get("adj") or {}).get("trng") == T:
+        return False
+    pred["adj"] = {**(pred.get("adj") or {}), "trng": T}
+    pf.write_text(json.dumps(pred, ensure_ascii=False), encoding="utf-8")
+    for rn in changed:                                    # 다가오는 경주의 시뮬레이션: 우승 비율 목표를 보정한 확률로
+        r = pred["races"][rn]
+        sf = DATA / "sim" / str(r.get("sim") or "")
+        if r.get("result") or not r.get("sim") or not sf.exists():
+            continue
+        try:
+            sim = json.loads(sf.read_text(encoding="utf-8"))
+            if sim.get("target") != "model":
+                continue
+            for h in sim.get("horses", []):
+                if str(h.get("no")) in r["p"]:
+                    h["pModel"] = round(r["p"][str(h["no"])], 4)
+            sf.write_text(json.dumps(sim, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        except (ValueError, OSError):
+            pass
+    log(f"조교 횟수 보정 {d}: {len(changed)}개 경주 (계수 {T})")
+    return True
+
+
 def signature(rows: list[dict], void: set[int] = frozenset()) -> str:
     """예측을 다시 만들어야 하는지 판단: 출전표(취소마 뺀 것)+마체중, 취소된 경주, 경주 기록 크기, 모델 파일"""
     import hashlib
@@ -282,6 +335,12 @@ def main() -> int:
                 log(f"예측 실패: {d}")
                 traceback.print_exc()
         os.chdir(ROOT)
+        for d in sorted(set(upcoming)):       # 조교 횟수 보정 (모델 확률에 곱함, 원래 값은 p0)
+            try:
+                apply_training(d)
+            except Exception:
+                log(f"조교 횟수 보정 실패: {d}")
+                traceback.print_exc()
     elif not exporter:
         log("work/site_export.py 가 없어 예측은 건너뜁니다 (출전표만 사이트에 표시).")
 

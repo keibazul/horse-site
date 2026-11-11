@@ -8,6 +8,11 @@
  *                선두권에 여럿이 붙으면 조금 더 밀어붙인다 (KAPPA).
  *   - 체력: 계획보다 빨리 달린 거리만큼 '빚'이 쌓이고, 결승 600m 전부터 그 빚만큼 처진다.
  *            막혀서 계획보다 늦게 달리면 일부를 아끼고, 앞말 바로 뒤(바람막이)에서는 조금씩 아낀다.
+ *   - 전개 효과(paceShift, 계획에 먼저 더함): 출발 200m 지점에서 선두와 0.2초 안에 몇 마리가 있는지(선두권)에 따라
+ *            선두권 말과 뒤따르는 말의 600m 전·200m 전·결승 시간을 조금씩 옮긴다. 2022~2026년 4,970경주에서
+ *            구간 기록 모델의 표본외 잔차로 잰 값(자기 200m 잔차를 뺀 뒤): 혼자 앞선 말은 결승이 0.59초 빠르고,
+ *            선두권이 5두 이상이면 선두권 말은 0.05초 느리고 뒤에 있던 말은 0.07초 빠르다.
+ *            넣기 전 시뮬레이션은 앞선 말이 너무 자주 졌음(200m 선두 우승 17%, 실제 27%) → 넣은 뒤 23%.
  * 세기(MATCH 0.8, LAMBDA 1.5)는 2015~2026년 실제 경주 11,962개의
  *   "초반이 1초 빠르면 앞선 말의 마지막 600m가 0.47초 느려짐", "선두 다툼 1두당 +0.04초",
  *   "초반 선두와 0.2초 안 말 수 평균 3.2두" 에 맞췄다. 지난 1년 2,000여 번 시뮬레이션에서 각각 0.47초, 0.05초, 3.4두.
@@ -16,6 +21,14 @@
   "use strict";
   const LEN = 2.4;                      // 말 몸길이 (m)
   const LANE = 1.25;                    // 옆 말과 필요한 간격 (m)
+  // 전개 효과 표: 선두권(F: 경쟁 상대 0~4두 이상) / 뒤따름(B: 선두권 1~5두 이상) → [600m 전, 200m 전, 결승] 초
+  const PACE = { W: 0.2, fx: { F0: [-0.022, -0.387, -0.591], F1: [-0.052, -0.187, -0.204], F2: [-0.046, -0.092, -0.059], F3: [-0.055, -0.059, -0.012], F4: [-0.098, -0.047, 0.052],
+                              B1: [0.006, 0.036, 0.05], B2: [0.025, 0.062, 0.063], B3: [0.035, 0.059, 0.039], B4: [0.048, 0.038, -0.008], B5: [0.041, -0.01, -0.074] } };
+  /** s1: 말별 계획 200m 통과 시간 → 말별 [600m 전, 200m 전, 결승]에 더할 초 (기록처럼 0.1초 단위로 반올림해 선두권을 셈) */
+  function paceShift(s1) {
+    const r = s1.map(x => Math.round(x * 10) / 10), mn = Math.min(...r), front = r.map(x => x - mn <= PACE.W + 1e-9), k = front.filter(Boolean).length;
+    return front.map(f => PACE.fx[f ? "F" + Math.min(k - 1, 4) : "B" + Math.min(k, 5)]);
+  }
   const P = { KAPPA: 0.004, MATCH: 0.8, LAMBDA: 1.5, BIAS: 0.007, DRAFT: 0.0035, RECOVER: 0.5, LAT_V: 1.2, A_MAX: 1.6, D_MAX: 2.6, FRONT_GAP: 3.0 };
 
   // 출발 가속 + 지점 사이 단조 3차 보간 (sim.html 과 같은 계획 곡선)
@@ -152,6 +165,6 @@
     return out;
   }
 
-  const api = { run, planTable, planMotion, PARAMS: P, LEN };
+  const api = { run, planTable, planMotion, paceShift, PACE, PARAMS: P, LEN };
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.RacePhysics = api;
 })(typeof window !== "undefined" ? window : globalThis);
