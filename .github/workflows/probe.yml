@@ -1,0 +1,17 @@
+name: probe
+on:
+  push:
+    paths: ['.github/workflows/probe.yml', 'pipeline/checks/probe.py']
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.13'}
+      - name: 확인
+        env:
+          KRA_API_KEY: ${{ secrets.KRA_API_KEY }}
+        run: python pipeline/checks/probe.py
