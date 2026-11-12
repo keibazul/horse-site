@@ -14,7 +14,9 @@
    걸 만한 조합이 없으면 그 경주는 건너뜀(이유 표시).  */
 (function (root) {
   "use strict";
-  const ALPHA = 0.1689, BETA = 0.9219, GAMMA = 0.8, DELTA = 0.7;
+  // 결합 계수 (work/winner_history/blend.json 과 같게, 2026-11-12): α·log 모델 + β·log 시장 + γ·(log 시장)² — γ 는 비인기마 편향
+  const BLEND = {a: 0.1569, b: 0.7616, g: -0.0368};
+  const GAMMA = 0.8, DELTA = 0.7;     // 하빌 2착·3착 보정
   const RACE_CAP = 100000, UNIT = 100;
   const POOLS = ["단승식", "연승식", "복승식", "쌍승식", "복연승식", "삼복승식", "삼쌍승식"];
   const PAYOUT = {"단승식": 0.8, "연승식": 0.8, "복승식": 0.73, "쌍승식": 0.73, "복연승식": 0.73, "삼복승식": 0.73, "삼쌍승식": 0.73};
@@ -32,7 +34,7 @@
   function combine(p, odds) {
     const ids = Object.keys(p);
     const q = norm(Object.fromEntries(ids.map(i => [i, 1 / odds[i]])));
-    const v = Object.fromEntries(ids.map(i => [i, Math.exp(ALPHA * Math.log(Math.max(p[i], 1e-9)) + BETA * Math.log(q[i]))]));
+    const v = Object.fromEntries(ids.map(i => { const lq = Math.log(q[i]); return [i, Math.exp(BLEND.a * Math.log(Math.max(p[i], 1e-9)) + BLEND.b * lq + BLEND.g * lq * lq)]; }));
     return {comb: norm(v), market: q};
   }
 
@@ -165,6 +167,6 @@
     return {races: res, total, bankroll: B, raceCap};
   }
 
-  const api = {plan, candidates, combos, combine, kelly, POOLS, RULES, RACE_CAP, MODES};
+  const api = {plan, candidates, combos, combine, kelly, POOLS, RULES, RACE_CAP, MODES, BLEND};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.Planner = api;
 })(typeof self !== "undefined" ? self : this);

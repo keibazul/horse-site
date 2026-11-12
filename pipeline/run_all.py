@@ -21,11 +21,13 @@ import sys
 import traceback
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import blend_coef  # noqa: E402  (결합 계수: work/winner_history/blend.json)
+
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "site" / "data"
 WORK = ROOT / "work"
 KST = dt.timezone(dt.timedelta(hours=9))
-ALPHA, BETA = 0.1689, 0.9219  # train_win_model_v5.py 결합 비중 (2008~2026)
 KEEP_PAST_DAYS = 2  # 지난 경주일도 몇 개 남겨 둠 (결과 확인용)
 
 
@@ -77,7 +79,7 @@ def day_stats(pred: dict) -> dict | None:
         od = r.get("odds") or {}
         if all(k in od and od[k] > 1 for k in live):
             s = sum(1 / od[k] for k in live)
-            sc = {k: ALPHA * math.log(max(v, 1e-9)) + BETA * math.log((1 / od[k]) / s) for k, v in live.items()}
+            sc = {k: blend_coef.score(v, (1 / od[k]) / s) for k, v in live.items()}
             hc += max(sc, key=sc.get) == str(res[0])
             hk += min(live, key=lambda k: od[k]) == str(res[0])
     return {"races": n, "model": hm, "comb": hc, "mkt": hk} if n else None
@@ -238,7 +240,7 @@ def write_index(today: dt.date, connected: bool, model_name: str | None = None) 
         days.append(item)
     idx = {
         "updated": dt.datetime.now(KST).strftime("%Y-%m-%dT%H:%M"),
-        "alpha": ALPHA, "beta": BETA,
+        "alpha": blend_coef.ALPHA, "beta": blend_coef.BETA, "gamma": blend_coef.GAMMA,
         "model": {"connected": connected, "name": model_name or ("v5" if connected else None)},
         "days": days,
     }

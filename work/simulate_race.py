@@ -132,7 +132,7 @@ def main():
     p = pr.race_normalize(win_art["model"].predict_proba(X[win_art["features"]])[:, 1], pd.factorize(X["race_no"])[0])
     einfo = entries.rename(columns={"rcNo": "race_no"})[["race_no", "hrNo", "chulNo", "hrName", "jkName", "rcDist", "wgBudam", "age", "sex", "rating"]]
     res = feat[["race_no", "hrNo", "n_prior_races"]].assign(p_model=p).merge(einfo, on=["race_no", "hrNo"])
-    res = pr.combine_market(res, odds, win_art["alpha"], win_art["beta"])
+    res = pr.combine_market(res, odds, *pr.blend_coefs(win_art))
 
     # ---- 구간 기록 예측 ----
     Xs = pr.prepare_inputs(feat, fv.CAT)

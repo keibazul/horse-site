@@ -12,10 +12,12 @@ import json
 import math
 import random
 from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import blend_coef  # noqa: E402  (결합 계수: work/winner_history/blend.json)
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "site" / "data"
-ALPHA, BETA = 0.1689, 0.9219
 UNIT = 100
 
 STRATS = [
@@ -42,7 +44,7 @@ def race_bets(r: dict) -> dict[str, list[tuple[float, float]]] | None:
     win = str(res[0])
     placed = {str(x) for x in res[: (3 if n >= 8 else 2)]}
     s = sum(1 / od[k] for k in live)
-    comb = {k: ALPHA * math.log(max(p[k], 1e-9)) + BETA * math.log((1 / od[k]) / s) for k in live}
+    comb = {k: blend_coef.score(p[k], (1 / od[k]) / s) for k in live}
     z = max(comb.values())
     tot = sum(math.exp(v - z) for v in comb.values())
     cp = {k: math.exp(comb[k] - z) / tot for k in live}

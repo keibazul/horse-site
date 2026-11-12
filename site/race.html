@@ -358,8 +358,8 @@ function probs(){
   if (oddsOK){ const v = ids.map(i => 1/(+state.odds[i])), s = v.reduce((a,b) => a+b, 0); market = Object.fromEntries(ids.map((i,k) => [i, v[k]/s])); }
   let final = null, src = "none";
   if (model && market){
-    const a = INDEX.alpha ?? 0.1689, b = INDEX.beta ?? 0.9219;
-    const v = ids.map(i => Math.exp(a*Math.log(model[i]) + b*Math.log(market[i]))), s = v.reduce((x,y) => x+y, 0);
+    const a = INDEX.alpha ?? 0.1569, b = INDEX.beta ?? 0.7616, g = INDEX.gamma ?? -0.0368;      // γ: 시장의 비인기마 편향
+    const v = ids.map(i => { const lq = Math.log(market[i]); return Math.exp(a*Math.log(model[i]) + b*lq + g*lq*lq); }), s = v.reduce((x,y) => x+y, 0);
     final = Object.fromEntries(ids.map((i,k) => [i, v[k]/s])); src = "comb";
   } else if (model){ final = model; src = "model"; }
   else if (market){ final = market; src = "market"; }

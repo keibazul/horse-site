@@ -12,10 +12,12 @@ import argparse
 import json
 import math
 from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import blend_coef  # noqa: E402  (결합 계수: work/winner_history/blend.json)
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "site" / "data"
-ALPHA, BETA = 0.1689, 0.9219
 
 
 def load(p: Path):
@@ -48,9 +50,7 @@ def race_review(rno: str, r: dict, ent: dict, extra: dict, sim: dict | None) -> 
     if have_odds:
         si = sum(1 / v for v in od.values())
         q = {k: (1 / od[k]) / si for k in p}
-        sc = {k: math.exp(ALPHA * math.log(max(p[k], 1e-9)) + BETA * math.log(q[k])) for k in p}
-        t = sum(sc.values())
-        comb = {k: v / t for k, v in sc.items()}
+        comb = blend_coef.combine(p, q)
     rk_m = ranks(p)
     rk_c = ranks(comb) if comb else {}
     rk_k = ranks(q) if q else {}

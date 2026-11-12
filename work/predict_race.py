@@ -20,6 +20,7 @@
 예전 모델(v2·v3 섞은 blend)은 --model blend 로 쓸 수 있습니다.
 """
 import argparse
+import json
 import os
 import re
 import sys
@@ -213,8 +214,21 @@ def ask_odds(entries):
     return pd.DataFrame(rows, columns=["rcNo", "chulNo", "winOdds"])
 
 
-def combine_market(result, odds, alpha, beta):
-    """결합 확률 ∝ exp(alpha·log 모델 + beta·log 시장). 시장 확률 = (1/배당)을 경주 안에서 합 1로"""
+BLEND_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "winner_history", "blend.json")
+
+
+def blend_coefs(art=None):
+    """결합 계수 (alpha, beta, gamma): winner_history/blend.json (2026-11-12, 비인기마 편향 항 γ 추가) → 없으면 모델 파일 값"""
+    try:
+        with open(BLEND_FILE, encoding="utf-8") as fh:
+            c = json.load(fh)
+        return float(c["alpha"]), float(c["beta"]), float(c.get("gamma", 0.0))
+    except (OSError, ValueError, KeyError):
+        return (art or {}).get("alpha", 0.1689), (art or {}).get("beta", 0.9219), 0.0
+
+
+def combine_market(result, odds, alpha, beta, gamma=0.0):
+    """결합 확률 ∝ exp(alpha·log 모델 + beta·log 시장 + gamma·(log 시장)²). 시장 확률 = (1/배당)을 경주 안에서 합 1로"""
     r = result.drop(columns=[c for c in ("winOdds",) if c in result.columns])
     r = r.assign(_k=r["chulNo"].astype(str).str.lstrip("0"))
     if odds is not None and len(odds):
@@ -231,7 +245,8 @@ def combine_market(result, odds, alpha, beta):
                 print(f"(주의) {race}경주: 배당이 빠진 말이 있어 시장 결합을 하지 않았습니다")
             continue
         q = (1 / od) / (1 / od).sum()
-        s = alpha * np.log(np.clip(r.loc[idx, "p_model"], 1e-9, None)) + beta * np.log(q)
+        lq = np.log(q)
+        s = alpha * np.log(np.clip(r.loc[idx, "p_model"], 1e-9, None)) + beta * lq + gamma * lq * lq
         e = np.exp(s - s.max())
         r.loc[idx, "q_market"] = q
         r.loc[idx, "p_comb"] = e / e.sum()
@@ -498,7 +513,7 @@ def main():
     elif args.ask_odds:
         odds = ask_odds(entries)
     if v5mode:
-        result = combine_market(result, odds, art["alpha"], art["beta"])
+        result = combine_market(result, odds, *blend_coefs(art))
         if odds is not None and len(odds) and result["p_comb"].isna().all() and not args.backtest:
             print("(주의) 입력한 배당에 예측하는 경주의 말이 없습니다 (경주번호 rcNo·출주번호 chulNo 를 확인하세요)")
     else:

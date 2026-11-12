@@ -11,10 +11,12 @@ import datetime as dt
 import json
 import math
 from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import blend_coef  # noqa: E402  (결합 계수: work/winner_history/blend.json)
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "site" / "data"
-ALPHA, BETA = 0.1689, 0.9219
 BINS = [0, .05, .10, .15, .20, .30, .40, 1.01]
 
 
@@ -39,9 +41,7 @@ def races():
             if all(k in od and od[k] > 1 for k in live):
                 si = sum(1 / od[k] for k in live)
                 q = {k: (1 / od[k]) / si for k in live}
-                v = {k: math.exp(ALPHA * math.log(max(pm[k], 1e-9)) + BETA * math.log(q[k])) for k in live}
-                t = sum(v.values())
-                pc = {k: x / t for k, x in v.items()}
+                pc = blend_coef.combine({k: pm[k] for k in live}, q)
             yield d, str(res[0]), pm, pc, q
 
 

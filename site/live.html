@@ -183,8 +183,8 @@ function probs(n){
     model = Object.fromEntries(ids.map((i, k) => [i, v[k] / s])); }
   const uo = userOdds(n), off = PR(n).odds || {}, od = i => +(uo[i] ?? off[i]);
   if (ids.length > 1 && ids.every(i => od(i) > 1)){ const v = ids.map(i => 1 / od(i)), s = v.reduce((a, b) => a + b, 0); market = Object.fromEntries(ids.map((i, k) => [i, v[k] / s])); }
-  if (model && market){ const a = INDEX.alpha ?? 0.1689, b = INDEX.beta ?? 0.9219;
-    const v = ids.map(i => Math.exp(a * Math.log(model[i]) + b * Math.log(market[i]))), s = v.reduce((x, y) => x + y, 0);
+  if (model && market){ const a = INDEX.alpha ?? 0.1569, b = INDEX.beta ?? 0.7616, g = INDEX.gamma ?? -0.0368;
+    const v = ids.map(i => { const lq = Math.log(market[i]); return Math.exp(a * Math.log(model[i]) + b * lq + g * lq * lq); }), s = v.reduce((x, y) => x + y, 0);
     final = Object.fromEntries(ids.map((i, k) => [i, v[k] / s])); src = "comb"; }
   else if (model){ final = model; src = "model"; } else if (market){ final = market; src = "market"; }
   return {ids, out, model, market, final, src};
