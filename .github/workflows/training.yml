@@ -1,0 +1,48 @@
+name: training-backfill
+# 일별 조교 기록(API338)을 work/training 에 채움 (첫 출전마 연구용). 이 파일을 고치면 실행
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/training.yml']
+permissions:
+  contents: write
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with: { python-version: '3.13' }
+      - name: 혈통 API 열리는지 (부마·모마)
+        env:
+          KRA_API_KEY: ${{ secrets.KRA_API_KEY }}
+          PYTHONUTF8: '1'
+        continue-on-error: true
+        run: |
+          python - <<'PY'
+          import json, sys
+          sys.path.insert(0, "pipeline")
+          import kra_api
+          for path, prm in (("API8_2/raceHorseInfo_2", {"meet": 1, "hr_name": "벌교의스타"}), ("API8_2/raceHorseInfo_2", {"meet": 1}), ("API42/totalHorseInfo", {"meet": 1})):
+              try:
+                  d = kra_api.get(path, {**prm, "pageNo": 1, "numOfRows": 3}); it = kra_api.items(d)
+                  print("OK", path, prm, kra_api.total_count(d), json.dumps(it[:2], ensure_ascii=False)[:1200])
+              except Exception as e:
+                  print("ERR", path, prm, type(e).__name__, str(e)[:200])
+          PY
+      - name: 받기
+        env:
+          KRA_API_KEY: ${{ secrets.KRA_API_KEY }}
+          PYTHONUTF8: '1'
+        run: python pipeline/fetch_training.py --since 20220101 --max 2700
+      - name: 커밋
+        run: |
+          git config user.name "horse-site bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add work/training
+          if git diff --cached --quiet; then echo "바뀐 것 없음"; else
+            git commit -q -m "일별 조교 기록 (첫 출전마 연구용)"
+            for i in 1 2 3; do git pull --rebase -q origin main && git push -q origin HEAD:main && break; sleep 5; done
+          fi
