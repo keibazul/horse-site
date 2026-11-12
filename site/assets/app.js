@@ -1,5 +1,5 @@
 /* 공통 화면 틀: 상단 바(PC 메뉴) · 휴대폰 하단 탭 · 바닥글 · 홈 화면 앱 등록
-   사용: <body data-page="home|live|race|plan|review|bets|results|guide"> 바로 뒤에 <script src="assets/app.js"></script> */
+   사용: <body data-page="home|live|race|plan|review|bets|my|results|guide"> 바로 뒤에 <script src="assets/app.js"></script> */
 (() => {
   const page = document.body.dataset.page || "";
   const I = {
@@ -14,7 +14,7 @@
   };
   const svg = k => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[k]}</svg>`;
   const items = [["home", "./", "홈"], ["live", "live.html", "현장"], ["race", "race.html", "경주 예측"], ["plan", "plan.html", "베팅 계획"], ["bets", "bets.html", "내 마권"]];
-  const more = [["review", "review.html", "주간 복기"], ["results", "results.html", "수익 검증"], ["guide", "guide.html", "사용법"]];
+  const more = [["my", "my.html", "내 마권 분석"], ["review", "review.html", "주간 복기"], ["results", "results.html", "수익 검증"], ["guide", "guide.html", "사용법"]];
   const cur = k => (k === page || (page === "sim" && k === "race")) ? ' aria-current="page"' : "";
   const logo = `<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M7 5.5h18a1.5 1.5 0 0 1 1.5 1.5v13.2c0 3.4-2.2 5.3-5.4 6L16 27.4l-5.1-1.2c-3.2-.7-5.4-2.6-5.4-6V7A1.5 1.5 0 0 1 7 5.5z" fill="#f5f8f6"/><text x="16" y="21.3" text-anchor="middle" font-size="15" font-weight="800" fill="#0f3a2a" font-family="Pretendard Variable,Pretendard,Noto Sans KR,sans-serif">1</text></svg>`;
   document.body.insertAdjacentHTML("afterbegin",

@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>내 마권 분석</title>
+<meta name="description" content="기록장에 적은 실제 마권으로 승식별 회수율, 계획대로 산 것과 직접 고른 것, 누적 손익을 봅니다">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="assets/app.css">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0f3a2a">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+.page{max-width:860px;gap:16px}
+.top h1{font-weight:800;letter-spacing:-.03em;font-size:30px;line-height:1.05}
+.top p{font-size:13.5px;color:var(--muted);margin-top:6px;max-width:62ch}
+.top .links{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+
+/* 맨 위: 손익 한 줄 */
+.sumrow{display:flex;flex-wrap:wrap;gap:6px 24px;align-items:baseline;border-bottom:2px solid var(--ink);padding-bottom:10px}
+.sumrow div{display:grid}
+.sumrow span{font-size:12px;color:var(--muted)}
+.sumrow b{font-family:var(--f-data);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
+.sumrow .plus b{color:var(--good)} .sumrow .minus b{color:var(--bad)}
+
+.box{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:16px 18px;display:grid;gap:10px;min-width:0}
+.box h2{font-size:17px;font-weight:800}
+.box .sub{font-size:13px;color:var(--muted);line-height:1.55;max-width:68ch}
+
+/* 운: 기대 적중 vs 실제 */
+.luck{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 16px;align-items:center}
+.luck .big{font-family:var(--f-data);font-size:34px;font-weight:700;letter-spacing:-.03em;line-height:1}
+.luck .big small{font-size:14px;color:var(--muted);font-weight:600;margin-left:3px}
+.luck p{font-size:14px;line-height:1.55}
+.meter{position:relative;height:30px;margin-top:4px}
+.meter .rail{position:absolute;left:0;right:0;top:13px;height:4px;border-radius:2px;background:var(--soft)}
+.meter .band{position:absolute;top:9px;height:12px;border-radius:6px;background:color-mix(in srgb,var(--brand) 22%,transparent)}
+.meter .exp{position:absolute;top:6px;width:2px;height:18px;background:var(--brand);transform:translateX(-1px)}
+.meter .act{position:absolute;top:7px;width:16px;height:16px;border-radius:50%;background:var(--gold);border:2px solid var(--panel);transform:translateX(-8px)}
+.meter-lab{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);font-family:var(--f-data)}
+.mkey{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+.mkey i{display:inline-block;vertical-align:-2px;margin-right:5px}
+.mkey .k1{width:12px;height:10px;border-radius:5px;background:color-mix(in srgb,var(--brand) 22%,transparent)}
+.mkey .k2{width:2px;height:12px;background:var(--brand)}
+.mkey .k3{width:11px;height:11px;border-radius:50%;background:var(--gold)}
+
+/* 누적 손익 그래프 */
+.chart{position:relative}
+.chart svg{display:block;width:100%;height:auto;overflow:visible;touch-action:pan-y}
+.chart .grid line{stroke:var(--line);stroke-width:1}
+.chart .zero{stroke:var(--muted);stroke-width:1.5}
+.chart text{font-family:var(--f-data);font-size:11px;fill:var(--muted)}
+.chart path.s{fill:none;stroke:var(--brand);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.chart circle.pt{fill:var(--brand);stroke:var(--panel);stroke-width:2}
+.chart .cross{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
+.chart circle.dot{fill:var(--brand);stroke:var(--panel);stroke-width:2}
+.tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:12.5px;box-shadow:0 4px 14px rgb(0 0 0 / .14);min-width:170px;z-index:2}
+.tip b{display:block;font-size:13px;margin-bottom:3px}
+.tip div{display:flex;justify-content:space-between;gap:12px}
+.tip div span:last-child{font-family:var(--f-data)}
+
+/* 나눠 보기 표 */
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl th{font-size:12px;color:var(--muted);font-weight:600;text-align:right;padding:4px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl th:first-child,.tbl td:first-child{text-align:left}
+.tbl td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:right;font-family:var(--f-data);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tbl td:first-child{font-family:var(--f-body);font-weight:700;white-space:normal}
+.tbl tr:last-child td{border-bottom:0}
+.tbl .roi.up{color:var(--good);font-weight:700}
+.tbl .roi.down{color:var(--bad)}
+.tbl small{display:block;font-family:var(--f-body);font-weight:500;color:var(--muted);font-size:11.5px}
+.split{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:720px){ .split{grid-template-columns:1fr} }
+@media (max-width:520px){ .top h1{font-size:26px} .sumrow b{font-size:17px} .tbl .hide-s{display:none} .luck .big{font-size:28px} }
+
+.wins{display:grid;gap:6px}
+.win{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line);font-size:14px;flex-wrap:wrap}
+.win:first-child{border-top:0}
+.win .combo{display:inline-flex;gap:3px;align-items:center}
+.win .combo em{font-style:normal;color:var(--muted);font-size:12px}
+.win b.r{font-family:var(--f-data);color:var(--good)}
+.empty{display:grid;gap:10px;padding:22px 18px;text-align:left}
+.empty h2{font-size:18px}
+.empty p{font-size:14px;color:var(--muted);line-height:1.6;max-width:60ch}
+</style>
+</head>
+<body data-page="my">
+<script src="assets/app.js"></script>
+<main id="main" class="page">
+  <header class="top">
+    <h1>내 마권 분석</h1>
+    <p>기록장에 적은 실제 마권을 경주 결과·확정 배당으로 정산해서 봅니다. 결과가 정해진 마권만 셉니다. 기록은 이 기기의 브라우저에만 있으니, 다른 기기에서 산 마권은 기록장의 '백업과 옮기기'로 합쳐 주세요.</p>
+    <div class="links"><a class="btn" href="bets.html">기록장</a><a class="btn" href="live.html">현장 화면</a></div>
+  </header>
+  <div id="out"><p class="sub">불러오는 중…</p></div>
+</main>
+<script src="assets/ledger.js"></script>
+<script>
+(() => {
+"use strict";
+const $ = id => document.getElementById(id);
+const {PI, store, settle, source} = Ledger;
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const won = v => Math.round(v).toLocaleString("ko-KR") + "원";
+const pm = v => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(Math.round(v)).toLocaleString("ko-KR") + "원";
+const pct = v => (v * 100).toFixed(v >= 10 ? 0 : 1) + "%";
+const dShort = d => `${+d.slice(4,6)}/${+d.slice(6,8)}`;
+const dLong = d => { const t = new Date(+d.slice(0,4), +d.slice(4,6)-1, +d.slice(6,8)); return `${d.slice(0,4)}.${+d.slice(4,6)}.${+d.slice(6,8)} (${"일월화수목금토"[t.getDay()]})`; };
+const SADDLE = {1:["#f4f4f1","#111"],2:["#1e1e22","#fff"],3:["#d8392b","#fff"],4:["#2c66d6","#fff"],5:["#f3c533","#111"],6:["#2c9b55","#fff"],
+  7:["#f08a24","#111"],8:["#e46aa3","#111"],9:["#7a4fd6","#fff"],10:["#47b9cb","#111"],11:["#8a5a3a","#fff"],12:["#b7c43a","#111"],
+  13:["#3a4a8c","#fff"],14:["#c9c9c9","#111"],15:["#9b2f5e","#fff"],16:["#2f6f6f","#fff"]};
+const chip = n => { const [bg, fg] = SADDLE[n] || ["#888","#fff"]; return `<span class="chip sm" style="background:${bg};color:${fg}">${n}</span>`; };
+
+/* 한 묶음(rows)의 합계: 장수, 구매, 환급, 회수율, 실제 적중, 모델 기대 적중 */
+function agg(rows){
+  const o = {n: rows.length, s: 0, r: 0, w: 0, e: 0, v: 0, eN: 0};
+  for (const x of rows){ o.s += x.b.amount; o.r += x.r.ret; o.w += x.r.st === "win";
+    if (x.r.st !== "ref" && x.r.prob != null){ o.e += x.r.prob; o.v += x.r.prob * (1 - x.r.prob); o.eN++; } }
+  o.roi = o.s ? o.r / o.s : null; return o;
+}
+function table(title, note, groups){
+  const rows = groups.filter(([, xs]) => xs.length).map(([lab, xs, sub]) => { const a = agg(xs);
+    return `<tr><td>${esc(lab)}${sub ? `<small>${esc(sub)}</small>` : ""}</td><td>${a.n}</td><td class="hide-s">${won(a.s)}</td><td>${won(a.r)}</td>
+      <td class="roi ${a.roi > 1 ? "up" : a.roi < 1 ? "down" : ""}">${a.roi == null ? "-" : pct(a.roi)}</td><td>${a.w}<small>기대 ${a.e.toFixed(1)}</small></td></tr>`; }).join("");
+  return `<section class="box"><h2>${title}</h2>${note ? `<p class="sub">${note}</p>` : ""}
+    <table class="tbl"><thead><tr><th>구분</th><th>마권</th><th class="hide-s">구매</th><th>환급</th><th>회수율</th><th>적중</th></tr></thead><tbody>${rows}</tbody></table></section>`;
+}
+
+/* 누적 손익: 경주일마다 한 점 */
+function cumChart(days, W){        // W: 그릴 상자의 실제 너비(px) — 글자가 휴대폰에서도 11px 로 보이게
+  const H = W < 520 ? 220 : 260, m = {l: 56, r: 12, t: 14, b: 30};
+  let c = 0; const pts = days.map(d => (c += d.r - d.s, {...d, c}));
+  const ys = [0, ...pts.map(p => p.c)], lo = Math.min(...ys), hi = Math.max(...ys), pad = Math.max((hi - lo) * 0.08, 1000);
+  const y0 = lo - pad, y1 = hi + pad, n = pts.length;
+  const X = i => n === 1 ? m.l + (W - m.l - m.r) / 2 : m.l + i * (W - m.l - m.r) / (n - 1), Y = v => m.t + (y1 - v) * (H - m.t - m.b) / (y1 - y0);
+  const step = (() => { const raw = (y1 - y0) / 4, p = Math.pow(10, Math.floor(Math.log10(raw))); return [1, 2, 5, 10].map(k => k * p).find(k => k >= raw); })();
+  let g = `<g class="grid">`;
+  for (let v = Math.ceil(y0 / step) * step; v <= y1; v += step) g += `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${m.l - 8}" y="${Y(v) + 4}" text-anchor="end">${v === 0 ? "0" : (v > 0 ? "+" : "−") + (Math.abs(v) >= 10000 ? (Math.abs(v) / 10000).toLocaleString("ko-KR") + "만" : Math.abs(v).toLocaleString("ko-KR"))}</text>`;
+  g += `</g><line class="zero" x1="${m.l}" x2="${W - m.r}" y1="${Y(0)}" y2="${Y(0)}"/>`;
+  const every = Math.max(1, Math.ceil(n / Math.max(3, Math.floor((W - m.l) / 70))));
+  pts.forEach((p, i) => { if (i % every === 0 || i === n - 1) g += `<text x="${X(i)}" y="${H - 8}" text-anchor="middle">${dShort(p.d)}</text>`; });
+  const path = pts.map((p, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(p.c).toFixed(1)}`).join("");
+  g += `<path class="s" d="${n === 1 ? `M${X(0) - 1},${Y(pts[0].c)}L${X(0) + 1},${Y(pts[0].c)}` : path}"/>`;
+  if (n <= 40) g += pts.map((p, i) => `<circle class="pt" r="4" cx="${X(i)}" cy="${Y(p.c)}"/>`).join("");
+  g += `<g id="hov" hidden><line class="cross" y1="${m.t}" y2="${H - m.b}"/><circle class="dot" r="5.5"/></g><rect id="hit" x="${m.l - 10}" y="0" width="${W - m.l - m.r + 20}" height="${H}" fill="transparent"/>`;
+  return {svg: `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="경주일마다 쌓인 내 손익">${g}</svg>`, pts, X, Y, W, H};
+}
+function bindChart(box, ch){
+  const svg = box.querySelector("svg"), hov = svg.querySelector("#hov"), tip = box.querySelector(".tip");
+  const show = ev => {
+    const r = svg.getBoundingClientRect(), x = (ev.clientX - r.left) * ch.W / r.width;
+    let i = 0, best = 1e9; ch.pts.forEach((p, k) => { const dd = Math.abs(ch.X(k) - x); if (dd < best){ best = dd; i = k; } });
+    const p = ch.pts[i]; hov.hidden = false;
+    hov.querySelector("line").setAttribute("x1", ch.X(i)); hov.querySelector("line").setAttribute("x2", ch.X(i));
+    hov.querySelector("circle").setAttribute("cx", ch.X(i)); hov.querySelector("circle").setAttribute("cy", ch.Y(p.c));
+    tip.innerHTML = `<b>${dLong(p.d)}</b><div><span>그날 구매</span><span>${won(p.s)}</span></div><div><span>그날 환급</span><span>${won(p.r)}</span></div><div><span>그날 손익</span><span>${pm(p.r - p.s)}</span></div><div><span>누적 손익</span><span>${pm(p.c)}</span></div>`;
+    tip.hidden = false;
+    const px = ch.X(i) * r.width / ch.W, tw = tip.offsetWidth;
+    const py = ch.Y(p.c) * r.height / ch.H;
+    tip.style.left = Math.min(Math.max(px - tw / 2, 0), r.width - tw) + "px"; tip.style.top = (py - tip.offsetHeight - 14 < 0 ? py + 14 : py - tip.offsetHeight - 14) + "px";
+  };
+  const hide = () => { hov.hidden = true; tip.hidden = true; };
+  svg.querySelector("#hit").addEventListener("pointermove", show);
+  svg.querySelector("#hit").addEventListener("pointerdown", show);
+  svg.addEventListener("pointerleave", hide);
+}
+
+async function main(){
+  const bets = store.load();
+  if (!bets.length){
+    $("out").innerHTML = `<section class="box empty"><h2>아직 기록한 마권이 없습니다</h2>
+      <p>경마장에서는 '현장' 화면의 '산 대로 기록'을, 다르게 샀다면 기록장에서 직접 넣으세요. 결과가 나온 마권이 쌓이면 여기서 승식별 회수율, 계획대로 산 것과 직접 고른 것의 차이, 경주일마다 쌓인 손익을 볼 수 있습니다.</p></section>`;
+    return;
+  }
+  const rs = await Promise.all(bets.map(settle));
+  const all = bets.map((b, k) => ({b, r: rs[k]}));
+  const done = all.filter(x => x.r.ret != null), wait = all.length - done.length;
+  if (!done.length){
+    $("out").innerHTML = `<section class="box empty"><h2>아직 결과가 정해진 마권이 없습니다</h2><p>기록한 마권 ${all.length}장이 모두 결과나 확정 배당을 기다리고 있습니다. 단승·연승을 뺀 확정 배당은 경주일 저녁에 들어옵니다.</p></section>`;
+    return;
+  }
+  const A = agg(done), pl = A.r - A.s, dayset = [...new Set(done.map(x => x.b.date))].sort();
+  let html = `<section class="sumrow" aria-label="전체 손익">
+    <div><span>정산된 마권</span><b>${A.n}장</b></div><div><span>구매</span><b>${won(A.s)}</b></div><div><span>환급</span><b>${won(A.r)}</b></div>
+    <div class="${pl > 0 ? "plus" : pl < 0 ? "minus" : ""}"><span>손익</span><b>${pm(pl)}</b></div><div><span>회수율</span><b>${pct(A.roi)}</b></div>
+    <div><span>경주일</span><b>${dayset.length}일</b></div>${wait ? `<div><span>결과 대기</span><b>${wait}장</b></div>` : ""}</section>`;
+
+  // 운: 모델 확률로 본 기대 적중 vs 실제
+  if (A.eN >= 3){
+    const sd = Math.sqrt(A.v), lo = Math.max(0, A.e - 1.64 * sd), hi = A.e + 1.64 * sd, max = Math.max(hi, A.w, 1) * 1.15;
+    const pos = v => (v / max * 100).toFixed(1) + "%";
+    const verdict = A.w > hi ? "모델이 본 것보다 꽤 많이 맞았습니다. 운이 좋았던 쪽입니다." : A.w < lo ? "모델이 본 것보다 꽤 적게 맞았습니다. 운이 나빴거나 고른 방식이 모델과 다릅니다." : "모델이 본 보통 범위 안입니다. 지금 손익은 운보다 승식과 배당의 결과로 보는 게 맞습니다.";
+    html += `<section class="box"><h2>운이 좋았나</h2>
+      <div class="luck"><div class="big">${A.w}<small>장 적중</small></div><p>모델 확률로 보면 평균 <b>${A.e.toFixed(1)}장</b>, 보통 범위는 ${lo.toFixed(1)}~${hi.toFixed(1)}장입니다. ${verdict}</p></div>
+      <div class="meter" role="img" aria-label="기대 적중 ${A.e.toFixed(1)}장, 보통 범위 ${lo.toFixed(1)}~${hi.toFixed(1)}장, 실제 ${A.w}장">
+        <div class="rail"></div><div class="band" style="left:${pos(lo)};width:calc(${pos(hi)} - ${pos(lo)})"></div><div class="exp" style="left:${pos(A.e)}"></div><div class="act" style="left:${pos(A.w)}"></div></div>
+      <div class="meter-lab"><span>0장</span><span>${Math.round(max)}장</span></div>
+      <div class="mkey"><span><i class="k1"></i>보통 범위(90%)</span><span><i class="k2"></i>모델 기대</span><span><i class="k3"></i>실제</span></div>
+      <p class="sub">확률을 알 수 있는 마권 ${A.eN}장 기준(출전 취소·환불 제외). 확률은 경주 전 모델 확률을 하빌 방식으로 조합에 나눈 값입니다.</p></section>`;
+  }
+
+  // 누적 손익
+  const byDay = dayset.map(d => { const xs = done.filter(x => x.b.date === d); return {d, s: xs.reduce((a, x) => a + x.b.amount, 0), r: xs.reduce((a, x) => a + x.r.ret, 0)}; });
+  html += `<section class="box"><h2>경주일마다 쌓인 손익</h2><div class="chart" id="cum"></div>
+    <p class="sub">점을 누르거나 위에 올리면 그날 구매·환급이 보입니다.</p></section>`;
+
+  // 나눠 보기
+  const P = Object.keys(PI);
+  html += `<div class="split">` + table("승식별", "", P.map(p => [p.replace("식", ""), done.filter(x => x.b.pool === p)]));
+  html += table("어떻게 골랐나", "계획대로 = 베팅 계획·현장 화면의 '산 대로 기록'.", [["계획대로", done.filter(x => source(x.b) === "plan")], ["직접 고름", done.filter(x => source(x.b) === "self")]]) + `</div>`;
+  const hasTop = x => x.r.top != null && x.b.nums.includes(x.r.top);
+  html += `<div class="split">` + table("모델 1순위 말이 들어갔나", "", [["들어감", done.filter(hasTop), "1순위 말이 조합에 있음"], ["안 들어감", done.filter(x => x.r.top != null && !hasTop(x))]]);
+  const amtBand = x => x.b.amount <= 1000 ? "1천원 이하" : x.b.amount <= 5000 ? "1천~5천원" : x.b.amount <= 20000 ? "5천~2만원" : "2만원 넘게";
+  html += table("한 장에 건 돈", "", ["1천원 이하", "1천~5천원", "5천~2만원", "2만원 넘게"].map(k => [k, done.filter(x => amtBand(x) === k)])) + `</div>`;
+
+  // 큰 적중
+  const wins = done.filter(x => x.r.st === "win").sort((a, b) => b.r.ret - a.r.ret).slice(0, 5);
+  if (wins.length) html += `<section class="box"><h2>큰 적중</h2><div class="wins">${wins.map(x => { const sep = PI[x.b.pool].ordered ? "<em>→</em>" : "<em>·</em>";
+    return `<div class="win"><span>${dShort(x.b.date)} ${x.b.race}R ${esc(x.b.pool.replace("식", ""))} <span class="combo">${x.b.nums.map(chip).join(sep)}</span> ${won(x.b.amount)}</span><b class="r">${won(x.r.ret)} · 배당 ${x.r.odds}</b></div>`; }).join("")}</div></section>`;
+
+  html += `<section class="box"><h2>읽는 법</h2><p class="sub">회수율은 마권이 적으면 운에 크게 흔들립니다. 단승도 수십 장, 삼쌍승은 수백 장이 쌓여야 차이가 의미를 가집니다. '적중' 칸의 기대는 모델 확률로 본 평균 적중 수라서, 실제가 기대보다 많으면 그 묶음은 운이 좋았던 것입니다. 마사회가 떼는 몫 때문에 모든 승식의 평균 회수율은 약 70~80%입니다.</p></section>`;
+  $("out").innerHTML = html;
+  drawCum = () => { const box = $("cum"); if (!box) return; const ch = cumChart(byDay, Math.max(280, Math.floor(box.clientWidth)));
+    box.innerHTML = ch.svg + `<div class="tip" hidden></div>`; bindChart(box, ch); };
+  drawCum();
+}
+let drawCum = () => {}, rz = null;
+addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => drawCum(), 200); });
+main();
+addEventListener("storage", e => { if (e.key === Ledger.KEY) main(); });
+})();
+</script>
+</body>
+</html>

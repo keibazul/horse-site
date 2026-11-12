@@ -92,6 +92,7 @@ select,input[type=number],input[type=text]{border:1px solid var(--line);backgrou
   <header class="top">
     <h1>내 마권 기록장</h1>
     <p>실제로 산 마권을 적어 두면, 경주가 끝난 뒤 결과와 확정 배당으로 환급금과 회수율을 계산합니다. 기록은 이 기기의 브라우저에만 저장되니 가끔 파일로 내보내 두세요.</p>
+    <p style="margin-top:10px"><a class="btn" href="my.html">내 마권 분석 보기</a></p>
   </header>
 
   <section class="ledger-sum" id="sum" aria-label="전체 손익"></section>
@@ -141,6 +142,7 @@ select,input[type=number],input[type=text]{border:1px solid var(--line);backgrou
   </footer>
 </main>
 
+<script src="assets/ledger.js"></script>
 <script>
 (() => {
 "use strict";
@@ -154,59 +156,8 @@ const SADDLE = {1:["#f4f4f1","#111"],2:["#1e1e22","#fff"],3:["#d8392b","#fff"],4
   7:["#f08a24","#111"],8:["#e46aa3","#111"],9:["#7a4fd6","#fff"],10:["#47b9cb","#111"],11:["#8a5a3a","#fff"],12:["#b7c43a","#111"],
   13:["#3a4a8c","#fff"],14:["#c9c9c9","#111"],15:["#9b2f5e","#fff"],16:["#2f6f6f","#fff"]};
 const chip = (n, cls="") => { const [bg, fg] = SADDLE[n] || ["#888","#fff"]; return `<span class="chip ${cls}" style="background:${bg};color:${fg}">${n}</span>`; };
-const POOLS = [["단승식",1,false,"1착"],["연승식",1,false,"3착 안 (7두 이하 2착 안)"],["복승식",2,false,"1·2착 순서 무관"],["쌍승식",2,true,"1→2착 순서대로"],
-               ["복연승식",2,false,"두 마리 모두 3착 안"],["삼복승식",3,false,"1~3착 순서 무관"],["삼쌍승식",3,true,"1→2→3착 순서대로"]];
-const PI = Object.fromEntries(POOLS.map(p => [p[0], {k:p[1], ordered:p[2], desc:p[3]}]));
-const KEY = "horse-bets-v1";
-const store = {
-  load(){ try { const v = JSON.parse(localStorage.getItem(KEY) || "[]"); return Array.isArray(v) ? v : []; } catch { return []; } },
-  save(v){ try { localStorage.setItem(KEY, JSON.stringify(v)); return true; } catch { return false; } }
-};
+const {POOLS, PI, store, getJSON, comboKey, comboProb, settle} = Ledger;     // 저장·조합 확률·정산은 assets/ledger.js (내 마권 분석과 같이 씀)
 let BETS = store.load();
-const cache = {};
-async function getJSON(url){ if (url in cache) return cache[url]; const p = fetch(url, {cache:"no-cache"}).then(r => r.ok ? r.json() : null).catch(() => null); cache[url] = p; return p; }
-const comboKey = (pool, nums) => PI[pool].ordered ? nums.join(">") : [...nums].sort((a,b)=>a-b).join("-");
-
-/* ---------- 조합 확률 (하빌, 2착 0.8·3착 0.7) ---------- */
-function comboProb(pool, nums, pMap){
-  const ids = Object.keys(pMap).map(Number); if (!ids.length) return null;
-  const p = ids.map(i => pMap[i]), s = p.reduce((a,b)=>a+b,0); if (!(s > 0)) return null;
-  const P = p.map(x => x/s), pw = e => { const v = P.map(x => Math.pow(x, e)), t = v.reduce((a,b)=>a+b,0); return v.map(x => x/t); };
-  const q = pw(0.8), r = pw(0.7), n = ids.length, ix = Object.fromEntries(ids.map((x,k) => [x,k]));
-  if (nums.some(x => !(x in ix))) return null;
-  const sel = nums.map(x => ix[x]);
-  const p12 = (a,b) => P[a]*q[b]/(1-q[a]);
-  const p123 = (a,b,c) => p12(a,b)*r[c]/(1-r[a]-r[b]);
-  if (pool === "단승식") return P[sel[0]];
-  if (pool === "쌍승식") return p12(sel[0], sel[1]);
-  if (pool === "복승식") return p12(sel[0], sel[1]) + p12(sel[1], sel[0]);
-  if (pool === "삼쌍승식") return p123(sel[0], sel[1], sel[2]);
-  let tot = 0; const place = n <= 7 ? 2 : 3;
-  for (let a=0;a<n;a++) for (let b=0;b<n;b++){ if (b===a) continue;
-    if (pool === "연승식" && place === 2){ if (a===sel[0] || b===sel[0]) tot += p12(a,b); continue; }
-    for (let c=0;c<n;c++){ if (c===a || c===b) continue; const v = p123(a,b,c), top = [a,b,c];
-      if (pool === "연승식" && top.includes(sel[0])) tot += v;
-      else if (pool === "복연승식" && top.includes(sel[0]) && top.includes(sel[1])) tot += v;
-      else if (pool === "삼복승식" && sel.every(x => top.includes(x))) tot += v; } }
-  return tot;
-}
-
-/* ---------- 정산 ---------- */
-async function settle(b){
-  const div = await getJSON(`data/div/${b.date}.json`), pred = await getJSON(`data/pred/${b.date}.json`);
-  const pr = pred?.races?.[b.race];
-  const out = new Set((div?.races?.[b.race]?.out || pr?.out || []).map(Number));
-  const live = {}; if (pr?.p) for (const [k,v] of Object.entries(pr.p)) if (!out.has(+k)) live[k] = v;
-  const prob = comboProb(b.pool, b.nums, live);
-  const dr = div?.races?.[b.race];
-  if (dr?.void || pr?.void) return {st:"ref", ret:b.amount, text:`${esc(dr?.void || pr?.void)} · 환불`, prob};
-  if (b.nums.some(x => out.has(x))) return {st:"ref", ret:b.amount, text:"출전 취소 · 환불", prob};
-  if (!dr || !dr.result) return {st:"wait", ret:null, text:pr?.result ? "배당 대기" : "결과 대기", prob};
-  const od = dr.pay?.[b.pool]?.[comboKey(b.pool, b.nums)];
-  const res = dr.result.slice(0,3);
-  if (od) return {st:"win", ret:b.amount*od, text:`적중 ${won(b.amount*od)} (배당 ${od})`, prob, res};
-  return {st:"lose", ret:0, text:"미적중", prob, res};
-}
 
 /* ---------- 목록·합계 ---------- */
 async function renderList(){
