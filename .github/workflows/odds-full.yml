@@ -19,7 +19,7 @@ jobs:
         env:
           KRA_API_KEY: ${{ secrets.KRA_API_KEY }}
           PYTHONUTF8: '1'
-        run: python pipeline/fetch_odds_full.py --since 20251101 --max 200
+        run: python pipeline/fetch_odds_full.py --since 20230101 --until 20251031 --history --max 300   # 2026-11-12: 승식 사이 배당 비교 검증용으로 예전 날짜 채움
       - name: 커밋
         run: |
           git config user.name "horse-site bot"
