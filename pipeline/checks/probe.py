@@ -1,25 +1,23 @@
-"""임시 확인: 신청한 API 가 열리는지 (끝나면 지움)"""
-import html, json, os, re, sys, urllib.request
+"""임시 확인: 일별 조교 기록이 얼마나 오래전까지 있는지, 기수변경·말취소 예 (끝나면 지움)"""
+import json, os, sys, collections
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import kra_api
-UA = {"User-Agent": "Mozilla/5.0"}
-for i in ("15144727", "15133770", "15140265"):
-    s = urllib.request.urlopen(urllib.request.Request(f"https://www.data.go.kr/en/data/{i}/openapi.do", headers=UA), timeout=40).read().decode("utf-8", "replace")
-    txt = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", s)))
-    a = txt.find("Request Parameter"); b = txt.find("Sample Data", a)
-    print(i, txt[a:a + 2500]); print("-----")
-def call(path, params):
+def call(path, params, n=3, rows=10):
     try:
-        d = kra_api.get(path, {**params, "pageNo": 1, "numOfRows": 10})
-        it = kra_api.items(d)
-        print("  OK", path, params, "total", kra_api.total_count(d), "rows", len(it))
-        for r in it[:3]: print("     ", json.dumps(r, ensure_ascii=False)[:700])
+        d = kra_api.get(path, {**params, "pageNo": 1, "numOfRows": rows}); it = kra_api.items(d)
+        print("  OK", params, "total", kra_api.total_count(d), "rows", len(it))
+        for r in it[:n]: print("     ", json.dumps(r, ensure_ascii=False)[:400])
+        return it
     except Exception as e:
-        print("  ERR", path, params, type(e).__name__, str(e)[:200])
-P338, P320, P329 = "API338/textDataSeDalyExer", "API320/textDataHoldSeChgInfo", "API329/textDataSeGtscol"
-for p in (P338, P320, P329):
-    call(p, {})
-for prm in ({"exer_dt": "20261108"}, {"exer_dt": "20261110"}, {"trng_dt": "20261110"}, {"dt": "20261110"}, {"exer_dt": "20190104"}, {"exer_dt": "20120104"}):
-    call(P338, prm)
-for prm in ({"rc_date": "20261108"}, {"race_dt": "20261108"}, {"rc_date": "20261031"}, {"rc_date": "20190105"}, {"meet": "1"}):
-    call(P320, prm)
+        print("  ERR", params, type(e).__name__, str(e)[:200]); return []
+P338, P320 = "API338/textDataSeDalyExer", "API320/textDataHoldSeChgInfo"
+for a, b in (("20261105", "20261111"), ("20260101", "20260107"), ("20250102", "20250108"), ("20230104", "20230110"), ("20210106", "20210112"), ("20190102", "20190108"), ("20150107", "20150113"), ("20120104", "20120110")):
+    call(P338, {"exer_stdt": a, "exer_spdt": b}, n=1)
+it = call(P338, {"exer_stdt": "20261101", "exer_spdt": "20261111"}, n=0, rows=1000)
+print("  11/1~11/11 날짜별", sorted(collections.Counter(r.get("exerDt") for r in it).items()))
+print("  remkTxt", collections.Counter(r.get("remkTxt") for r in it).most_common(12), "ridr", collections.Counter(r.get("ridr") for r in it).most_common(8), "belo", collections.Counter(r.get("belo") for r in it).most_common(5))
+print("  exerTm", collections.Counter(r.get("exerTm") for r in it).most_common(15))
+call(P338, {"hr_name": "벌교의스타", "exer_stdt": "20261001", "exer_spdt": "20261111"}, n=12, rows=100)
+for d in ("20261108", "20261107", "20261101", "20261031", "20261025", "20261019", "20260104", "20250105", "20230107", "20190105"):
+    call(P320, {"race_dt": d}, n=6, rows=100)
+call(P320, {"race_dt": "20261031", "gb": "1"}, n=6, rows=100)
