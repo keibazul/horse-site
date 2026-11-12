@@ -226,7 +226,14 @@ const store = {
   set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 };
 
-let INDEX = null, DAY = null, ENT = null, PRED = null, RACE = null, POOL = "단승식", FORM = null, EXTRA = null, BIAS = null;
+let INDEX = null, DAY = null, ENT = null, PRED = null, RACE = null, POOL = "단승식", FORM = null, EXTRA = null, BIAS = null, CHANGES = null;
+/* 기수변경·말취소(API320, 이유 포함) + 출전표에서 잡은 기수 변경 → {jk:[전, 후], wg:[전, 후], why, at} */
+function changeOf(n, i){
+  const c = (CHANGES?.rows || []).find(x => x.race === n && x.no === i && x.kind === "기수변경"), e = ENT?.chg?.[`${n}-${i}`];
+  if (!c && !e) return null;
+  return {jk: [c?.before || e?.jk?.[0], c?.after || e?.jk?.[1]], wg: [e?.wg?.[0] ?? "", c?.wgt || e?.wg?.[1] || ""], why: c?.why || "", at: e?.at || ""};
+}
+const scratchWhy = (n, i) => (CHANGES?.rows || []).find(x => x.race === n && x.no === i && x.kind === "말취소")?.why || "";
 const openForms = new Set();
 const state = { odds: {}, user: {}, official: {}, out: new Set() };   // odds = 실제로 쓰는 값 (user 수정 > 확정 배당)
 
@@ -273,7 +280,8 @@ async function openDay(date, race){
   const st = $("dayStat"), h = DAY.hits;
   st.hidden = !h;
   if (h) st.innerHTML = `이날 ${h.races}경주에서 1순위가 이긴 경주: 모델 <b>${h.model}</b>, 배당과 결합 <b>${h.comb}</b>, 인기마 <b>${h.mkt ?? "-"}</b>. <a href="review.html?date=${date}">이 주말 복기 보기</a>`;
-  ENT = null; PRED = null; FORM = null; EXTRA = null; BIAS = null; openForms.clear();
+  ENT = null; PRED = null; FORM = null; EXTRA = null; BIAS = null; CHANGES = null; openForms.clear();
+  getJSON(`data/changes/${date}.json`).then(f => { if (DAY && DAY.date === date){ CHANGES = f; if (RACE) render(); } }).catch(() => {});
   getJSON(`data/bias/${date}.json`).then(f => { if (DAY && DAY.date === date){ BIAS = f; if (RACE) render(); } }).catch(() => {});
   getJSON(`data/extra/${date}.json`).then(f => { if (DAY && DAY.date === date){ EXTRA = f; openForms.forEach(fillForm); } }).catch(() => {});
   getJSON(`data/form/${date}.json`).then(f => { if (DAY && DAY.date === date){ FORM = f; openForms.forEach(fillForm); } }).catch(() => {});
@@ -331,6 +339,7 @@ function mergeOdds(){
   for (const i of ids){ const v = i in state.user ? state.user[i] : state.official[i]; if (v !== "" && v != null) state.odds[i] = v; }
 }
 const hasOfficial = () => Object.keys(state.official).length > 0;
+const WANT_ODDS = location.hash === "#odds";      // 주소가 바뀌기 전에 기억 (아래 replaceState 가 # 를 지움)
 function horses(){ return ENT.rows.filter(r => +r.rcNo === RACE).sort((a,b) => a.chulNo - b.chulNo); }
 
 /* 확률: 모델(p) · 시장(배당) · 결합 */
@@ -390,14 +399,14 @@ function render(){
     const wg = PRED?.races?.[RACE]?.wg?.[i];
     const wgRate = wg && wg[0] - wg[1] > 0 ? wg[1] / (wg[0] - wg[1]) * 100 : null;
     const wgTxt = wg ? `마체중 ${wg[0]}(${wg[1] > 0 ? "+" : ""}${wg[1] || 0})` : "";
-    const cg = ENT.chg?.[`${RACE}-${i}`];
-    const cgFlag = cg ? `<em class="flag chgf" title="처음 출전표 ${esc(cg.jk[0])} ${cg.wg?.[0] ?? ""}kg → ${esc(cg.jk[1])} ${cg.wg?.[1] ?? ""}kg${cg.at ? ` (${esc(cg.at)} 확인)` : ""}. 확률은 바뀐 기수로 다시 계산했습니다.">기수 변경 · 전 ${esc(String(cg.jk[0]).replace(/^\(.*?\)/, ""))}</em>` : "";
+    const cg = changeOf(RACE, i);
+    const cgFlag = cg ? `<em class="flag chgf" title="처음 출전표 ${esc(cg.jk[0])} ${cg.wg?.[0] ?? ""}kg → ${esc(cg.jk[1])} ${cg.wg?.[1] ?? ""}kg${cg.at ? ` (${esc(cg.at)} 확인)` : ""}${cg.why ? `. 이유: ${esc(cg.why)}` : ""}. 확률은 바뀐 기수로 다시 계산했습니다.">기수 변경 · 전 ${esc(String(cg.jk[0]).replace(/^\(.*?\)/, ""))}</em>` : "";
     const meta = [`${r.sex ?? ""}${r.age ?? ""}`, r.jkName, r.wgBudam && `부담 ${r.wgBudam}kg`, r.rating && r.rating !== "-" && +r.rating > 0 && `R${r.rating}`, nPrior === 0 && "첫 출전"]
-      .filter(Boolean).map(x => `<i>${esc(x)}</i>`).join("") + (wgTxt ? `<i class="wg">${esc(wgTxt)}</i>` : "") + cgFlag;
+      .filter(Boolean).map(x => `<i>${esc(x)}</i>`).join("") + (wgTxt ? `<i class="wg">${esc(wgTxt)}</i>` : "") + cgFlag + (cg?.why ? `<i>${esc(cg.why)}</i>` : "");
     const flag = wgRate != null && +r.age >= 4 && wgRate >= 2 ? `<em class="flag" title="4세 이상이 직전보다 2% 넘게 늘면 배당 예상보다 덜 이기는 경향 (2010~2026년 16% 덜)">체중 +${wgRate.toFixed(1)}%</em>` : "";
     let prc;
     const fixed = state.fixed.has(i);
-    if (out) prc = `<span class="na">${fixed ? "출전 취소" : "출전 제외"}</span>`;
+    if (out){ const w = fixed ? scratchWhy(RACE, i) : ""; prc = `<span class="na"${w ? ` title="${esc(w)}"` : ""}>${fixed ? "출전 취소" : "출전 제외"}${w ? ` · ${esc(w)}` : ""}</span>`; }
     else if (p != null){
       const sub = P.src === "comb" ? `<small>모델 ${pct(P.model[i])}</small>` : "";
       prc = `<span class="v">${pct(p)}${sub}</span><span class="track"><i class="${P.src === "market" ? "mkt" : ""}" style="width:${(p/top*100).toFixed(1)}%"></i></span>`;
@@ -418,6 +427,10 @@ function render(){
   }).join("");
   openForms.forEach(fillForm);
   renderBets(P);
+  if (WANT_ODDS && !render.hashDone && !$("tools").hidden){      // 현장 화면의 '배당판 사진으로 읽기'에서 옴 → 배당 넣는 칸을 펼쳐 둠
+    render.hashDone = true; const pp = $("pastePanel"); pp.hidden = false; $("pasteBtn").setAttribute("aria-expanded", "true");
+    setTimeout(() => pp.scrollIntoView({block: "center"}), 50);
+  }
 }
 
 function biasNote(){

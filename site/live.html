@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>현장 화면 · 서울 경주 예측</title>
+<meta name="description" content="경마장에서 다음 경주 하나만: 우승 확률, 배당 넣기, 베팅 계획, 산 마권 기록">
+<meta name="theme-color" content="#0f3a2a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="assets/app.css">
+<style>
+.page{max-width:760px;gap:14px}
+/* 경주 띠: 지금 보는 경주만 강조 */
+.strip{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 0 4px;margin-inline:-2px}
+.strip::-webkit-scrollbar{display:none}
+.strip button{flex:0 0 auto;display:grid;justify-items:center;gap:1px;min-width:54px;padding:6px 8px 7px;border:1px solid var(--line);border-radius:9px;background:var(--panel);cursor:pointer;color:var(--ink)}
+.strip button b{font-size:15px;font-weight:800;line-height:1.1}
+.strip button small{font-size:11.5px;color:var(--muted);font-weight:600}
+.strip button.gone{background:transparent;border-style:dashed}
+.strip button.gone b{color:var(--muted)}
+.strip button[aria-current="true"]{border:2px solid var(--gold);padding:5px 7px 6px;background:var(--gold-soft)}
+.strip button[aria-current="true"] small{color:var(--gold)}
+
+/* 지금 경주 */
+.now{background:var(--brand);color:var(--brand-ink);border-radius:14px;padding:16px 18px 18px;display:grid;gap:12px}
+.now .top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.now .rn{font-size:15px;font-weight:700;color:var(--brand-muted)}
+.now .rn b{color:var(--brand-ink);font-size:22px;font-weight:800;margin-right:6px}
+.now .cd{font-size:clamp(34px,10vw,46px);font-weight:800;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
+.now .cd small{font-size:15px;font-weight:700;letter-spacing:-.01em;color:var(--brand-muted);margin-left:4px}
+.now .pick{display:flex;align-items:center;gap:10px;background:rgb(255 255 255 / .07);border-radius:10px;padding:10px 12px}
+.now .pick .chip{width:34px;height:31px;font-size:16px}
+.now .pick .nm{flex:1;min-width:0}
+.now .pick .nm b{display:block;font-size:17px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.now .pick .nm span{font-size:12.5px;color:var(--brand-muted)}
+.now .pick .pv{font-size:24px;font-weight:800;color:#f0c65f;font-variant-numeric:tabular-nums}
+.now .meta{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:13px;color:var(--brand-muted)}
+.now .wake{border:1px solid rgb(255 255 255 / .25);background:transparent;color:var(--brand-ink);border-radius:999px;padding:4px 11px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap}
+.now .wake[aria-pressed="true"]{background:var(--brand-ink);color:var(--brand)}
+.banner{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;background:var(--warn-bg);color:var(--warn-ink);border-radius:10px;padding:10px 14px;font-size:14px;font-weight:600}
+
+/* 블록 */
+.blk{padding:14px 16px 16px;display:grid;gap:10px}
+.blk h2{font-size:16.5px;font-weight:800;display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.blk h2 .aside{font-size:13px;font-weight:600;color:var(--muted)}
+.blk h2 a{font-size:13px;font-weight:700;text-decoration:none}
+.hint{font-size:13.5px;color:var(--muted);line-height:1.55}
+
+/* 말 목록 */
+.hl{display:grid}
+.hr{display:grid;grid-template-columns:30px minmax(0,1fr) 62px 72px;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.hr:first-child{border-top:0}
+.hr.out{opacity:.45}
+.hr .nm b{display:block;font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hr .nm span{display:block;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hr .nm .flag{font-style:normal;font-size:11.5px;font-weight:800;padding:1px 6px;border-radius:999px;background:var(--gold-soft);color:var(--gold);margin-left:4px;vertical-align:1px}
+.hr .pv{text-align:right;font-weight:800;font-size:15.5px;font-variant-numeric:tabular-nums}
+.hr .pv small{display:block;font-size:11.5px;font-weight:600;color:var(--muted)}
+.hr.top .pv{color:var(--gold)}
+.hr input{width:100%;font-size:16px;font-weight:700;text-align:right;padding:6px 8px;border-radius:8px}
+.hr input:disabled{background:transparent;border-style:dashed}
+.srcline{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;justify-content:space-between}
+
+/* 계획 */
+.pr{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
+.pr:first-of-type{border-top:0}
+.pr .pl{font-size:13.5px;font-weight:800;color:var(--muted)}
+.pr .cb{display:flex;align-items:center;gap:3px;flex-wrap:wrap}
+.pr .cb em{font-style:normal;color:var(--muted);font-size:12px}
+.pr .amt{font-size:16px;font-weight:800;text-align:right;font-variant-numeric:tabular-nums}
+.pr .cond{grid-column:2 / 4;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.pr .cond b{color:var(--ink)}
+.pr .cond input{width:84px;font-size:16px;font-weight:700;text-align:right;padding:5px 8px}
+.verd{display:inline-block;padding:3px 10px;border-radius:999px;font-size:13px;font-weight:800}
+.verd.ok{background:color-mix(in srgb,var(--good) 16%,transparent);color:var(--good)}
+.verd.no{background:color-mix(in srgb,var(--bad) 13%,transparent);color:var(--bad)}
+.pr.pass .cb,.pr.pass .pl{opacity:.5}
+.pr.pass .amt{color:var(--muted);font-size:13px;font-weight:700}
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.actions .msg{font-size:13.5px;color:var(--muted)}
+.setsum{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:13.5px;color:var(--muted)}
+.setsum b{color:var(--ink)}
+
+/* 내 마권 · 앞 경주 */
+.mb{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-size:14px;align-items:center}
+.mb:first-of-type{border-top:0}
+.mb .cb{display:flex;align-items:center;gap:3px}
+.mb .st{font-weight:700;white-space:nowrap}
+.mb .st.win{color:var(--good)}
+.res{display:flex;align-items:center;gap:5px;flex-wrap:wrap;font-size:14px}
+.res .chip{width:30px;height:27px}
+@media (max-width:420px){
+  .hr{grid-template-columns:28px minmax(0,1fr) 54px 66px;gap:8px}
+  .blk{padding:12px 13px 14px}
+}
+</style>
+</head>
+<body data-page="live">
+<script src="assets/app.js"></script>
+<main class="page" id="main">
+  <nav class="strip" id="strip" aria-label="경주 고르기"></nav>
+  <div id="banner"></div>
+  <section class="now" id="now" aria-live="polite"><p>불러오는 중…</p></section>
+
+  <section class="panel blk" aria-labelledby="hH">
+    <h2 id="hH">우승 확률 <span class="aside" id="srcAside"></span></h2>
+    <div class="hl" id="horses"></div>
+    <div class="srcline"><p class="hint" id="srcNote"></p><a class="btn" id="photoBtn" href="race.html">배당판 사진으로 읽기</a></div>
+  </section>
+
+  <section class="panel blk" aria-labelledby="pH">
+    <h2 id="pH">이 경주 베팅 계획 <a href="plan.html" id="planLink">자금·승식 바꾸기</a></h2>
+    <div class="setsum" id="setsum"></div>
+    <div id="plan"></div>
+  </section>
+
+  <section class="panel blk" aria-labelledby="mH">
+    <h2 id="mH">이 경주에 산 마권 <a href="bets.html" id="betsLink">기록장</a></h2>
+    <div id="mine"></div>
+  </section>
+
+  <section class="panel blk" aria-labelledby="rH" id="prevBox" hidden>
+    <h2 id="rH">앞 경주 결과 <span class="aside" id="prevAside"></span></h2>
+    <div id="prev"></div>
+  </section>
+</main>
+<script src="assets/planner.js"></script>
+<script>
+(() => {
+"use strict";
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const SADDLE = {1:["#f4f4f1","#111"],2:["#1e1e22","#fff"],3:["#d8392b","#fff"],4:["#2c66d6","#fff"],5:["#f3c533","#111"],6:["#2c9b55","#fff"],
+  7:["#f08a24","#111"],8:["#e46aa3","#111"],9:["#7a4fd6","#fff"],10:["#47b9cb","#111"],11:["#8a5a3a","#fff"],12:["#b7c43a","#111"],
+  13:["#3a4a8c","#fff"],14:["#c9c9c9","#111"],15:["#9b2f5e","#fff"],16:["#2f6f6f","#fff"]};
+const chip = (n, cls = "") => { const [bg, fg] = SADDLE[n] || ["#888","#fff"]; return `<span class="chip ${cls}" style="background:${bg};color:${fg}">${n}</span>`; };
+const won = v => Math.round(v).toLocaleString("ko-KR") + "원";
+const pct = p => p >= 0.1 ? (p*100).toFixed(0) + "%" : (p*100).toFixed(1) + "%";
+const DOW = "일월화수목금토";
+const toDate = d => new Date(+d.slice(0,4), +d.slice(4,6)-1, +d.slice(6,8));
+const ymd = d => `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}`;
+const short = d => { const t = toDate(d); return `${t.getMonth()+1}월 ${t.getDate()}일 (${DOW[t.getDay()]})`; };
+const stTime = r => { const m = String(r?.stTime ?? "").match(/(\d{1,2}):?(\d{2})/); return m ? `${m[1].padStart(2,"0")}:${m[2]}` : ""; };
+const minsOf = t => { const m = String(t || "").match(/(\d{1,2}):(\d{2})/); return m ? +m[1]*60 + +m[2] : null; };
+const get = u => fetch(u, {cache:"no-cache"}).then(r => r.ok ? r.json() : null).catch(() => null);
+const store = {
+  get(k){ try { return JSON.parse(localStorage.getItem(k) || "null"); } catch { return null; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } }
+};
+const SHORT = {"단승식":"단승","연승식":"연승","복승식":"복승","쌍승식":"쌍승","복연승식":"복연승","삼복승식":"삼복승","삼쌍승식":"삼쌍승"};
+const ORDERED = new Set(["쌍승식","삼쌍승식"]);
+const MODE_NAME = {safe: "조심스럽게", normal: "보통", all: "자금 모두 쓰기"};
+const comboKey = (pool, nums) => ORDERED.has(pool) ? nums.join(">") : [...nums].sort((a,b)=>a-b).join("-");
+
+let INDEX = null, DAY = null, ENT = null, PRED = null, BIAS = null, DIV = null, CHANGES = null;
+const chgRow = (n, i, kind) => (CHANGES?.rows || []).find(x => x.race === n && x.no === i && x.kind === kind);
+let RACE = null, pinned = false;            // pinned: 사용자가 경주를 직접 고름 → 자동으로 넘기지 않음
+const S = () => Object.assign({bank: 100000, mode: "normal", pools: ["단승식","연승식"]}, store.get("plan:settings") || {});
+const boardKey = () => `plan:board:${DAY.date}`;
+const oddsKey = n => `odds:${DAY.date}:${n}`;
+
+const now = () => new Date();
+const today = () => ymd(now());
+const nowM = () => { const d = now(); return d.getHours()*60 + d.getMinutes() + d.getSeconds()/60; };
+const races = () => [...new Set((ENT?.rows || []).map(r => +r.rcNo))].sort((a, b) => a - b);
+const rowsOf = n => (ENT?.rows || []).filter(r => +r.rcNo === n).sort((a, b) => a.chulNo - b.chulNo);
+const timeOf = n => stTime(rowsOf(n)[0]);
+const PR = n => PRED?.races?.[n] || {};
+const hasResult = n => !!PR(n).result?.length;
+const started = n => DAY.date < today() || (DAY.date === today() && (minsOf(timeOf(n)) ?? 9999) <= nowM());
+function nextRace(){ return races().find(n => !hasResult(n) && !PR(n).void && !started(n)) ?? null; }
+function outOf(n){ const sv = store.get(oddsKey(n)) || {}; return new Set([...(PR(n).out || []), ...(sv.out || [])].map(Number)); }
+function userOdds(n){ const sv = store.get(oddsKey(n)) || {}; return sv.user || sv.odds || {}; }
+
+/* 확률 (race.html 과 같은 계산): 모델 × 당일 주로 보정 → 모든 말 배당이 있으면 결합 */
+function probs(n){
+  const out = outOf(n), ids = rowsOf(n).map(r => +r.chulNo).filter(i => !out.has(i));
+  const pm = PR(n).p; let model = null, market = null, final = null, src = "none";
+  if (pm){ const bf = BIAS?.races?.[n]?.f || {}, v = ids.map(i => Math.max(+pm[i] || 0, 1e-6) * (bf[i] ?? 1)), s = v.reduce((a, b) => a + b, 0);
+    model = Object.fromEntries(ids.map((i, k) => [i, v[k] / s])); }
+  const uo = userOdds(n), off = PR(n).odds || {}, od = i => +(uo[i] ?? off[i]);
+  if (ids.length > 1 && ids.every(i => od(i) > 1)){ const v = ids.map(i => 1 / od(i)), s = v.reduce((a, b) => a + b, 0); market = Object.fromEntries(ids.map((i, k) => [i, v[k] / s])); }
+  if (model && market){ const a = INDEX.alpha ?? 0.1689, b = INDEX.beta ?? 0.9219;
+    const v = ids.map(i => Math.exp(a * Math.log(model[i]) + b * Math.log(market[i]))), s = v.reduce((x, y) => x + y, 0);
+    final = Object.fromEntries(ids.map((i, k) => [i, v[k] / s])); src = "comb"; }
+  else if (model){ final = model; src = "model"; } else if (market){ final = market; src = "market"; }
+  return {ids, out, model, market, final, src};
+}
+
+/* 베팅 계획 (plan.html 과 같은 입력 → 같은 결과) */
+function planAll(){
+  const BOARD = store.get(boardKey()) || {}, s = S();
+  const R = races().map(n => {
+    const pr = PR(n), out = [...outOf(n)], odds = {};
+    for (const [k, v] of Object.entries(userOdds(n))) if (+v > 1) odds[k] = +v;
+    const bf = BIAS?.races?.[n]?.f || {}, p = Object.fromEntries(Object.entries(pr.p || {}).map(([k, v]) => [k, v * (bf[k] ?? 1)]));
+    const live = Object.keys(pr.p || {}).filter(k => !out.includes(+k));
+    return {race: n, p, odds, board: BOARD[n] || {}, out, void: pr.void, done: hasResult(n) || started(n), nDebut: live.filter(k => (pr.n || {})[k] === 0).length};
+  });
+  return {pl: PRED ? Planner.plan(R, {bankroll: s.bank, mode: s.mode, pools: s.pools, margin: 0.1}) : null, s, BOARD};
+}
+
+/* ---------- 그리기 ---------- */
+function renderStrip(){
+  const nx = nextRace();
+  $("strip").innerHTML = races().map(n => {
+    const res = PR(n).result, gone = hasResult(n) || started(n);
+    const sub = res?.length ? `${res[0]}번 우승` : PR(n).void ? "취소" : n === nx ? "다음" : timeOf(n);
+    return `<button type="button" data-r="${n}" class="${gone ? "gone" : ""}" aria-current="${n === RACE}" aria-label="${n}경주 ${timeOf(n)}"><b>${n}R</b><small>${esc(sub)}</small></button>`;
+  }).join("");
+  const cur = $("strip").querySelector('[aria-current="true"]');
+  if (cur){ const box = $("strip"); box.scrollLeft = cur.offsetLeft - box.clientWidth / 2 + cur.clientWidth / 2; }
+}
+function countdown(n){
+  if (hasResult(n)) return `결과 ${PR(n).result.slice(0, 3).join("→")}`;
+  if (PR(n).void) return esc(PR(n).void);
+  const t = minsOf(timeOf(n));
+  if (DAY.date > today()){ const dd = Math.round((toDate(DAY.date) - toDate(today())) / 864e5); return `${dd === 1 ? "내일" : dd + "일 뒤"}<small>${timeOf(n)} 출발</small>`; }
+  if (t == null) return "";
+  const left = t - nowM();
+  if (left <= 0) return `출발함<small>결과 기다림</small>`;
+  const h = Math.floor(left / 60), m = Math.ceil(left % 60);
+  return h ? `${h}시간 ${m}분<small>남음</small>` : `${m}분<small>남음</small>`;
+}
+let wakeLock = null, wantWake = false;      // 화면 켜 두기: 다른 앱에 갔다 오면 다시 켬
+function renderNow(){
+  const n = RACE, r0 = rowsOf(n)[0] || {}, P = probs(n);
+  const top = P.final ? +Object.keys(P.final).reduce((a, b) => P.final[a] >= P.final[b] ? a : b) : null;
+  const tr = top != null ? rowsOf(n).find(r => +r.chulNo === top) : null;
+  const nLive = P.ids.length;
+  const meta = [short(DAY.date), r0.rcDist && `${r0.rcDist}m`, r0.rank, `${nLive}두`, r0.rcName && r0.rcName !== "일반" ? r0.rcName : ""].filter(Boolean);
+  const wakeOK = "wakeLock" in navigator;
+  $("now").innerHTML = `
+    <div class="top"><div><p class="rn"><b>${n}경주</b>${timeOf(n)} 출발</p></div>${wakeOK ? `<button class="wake" type="button" id="wake" aria-pressed="${wantWake && !!wakeLock}">화면 켜 두기</button>` : ""}</div>
+    <div class="cd num">${countdown(n)}</div>
+    ${tr ? `<div class="pick">${chip(top)}<div class="nm"><b>${esc(tr.hrName)}</b><span>1순위 · ${esc(tr.jkName || "")} · ${{comb:"결합 확률", model:"모델 확률", market:"배당 확률"}[P.src]}</span></div><span class="pv">${pct(P.final[top])}</span></div>` : `<p class="hint" style="color:var(--brand-muted)">이 경주는 아직 예측이 없습니다.</p>`}
+    <div class="meta">${meta.map(x => `<span>${esc(x)}</span>`).join("")}</div>`;
+  const w = $("wake"); if (w) w.onclick = toggleWake;
+}
+async function setWake(on){
+  wantWake = on;
+  try {
+    if (!on && wakeLock){ await wakeLock.release(); wakeLock = null; }
+    if (on && !wakeLock){ wakeLock = await navigator.wakeLock.request("screen"); wakeLock.addEventListener("release", () => { wakeLock = null; }); }
+  } catch { wakeLock = null; }
+  const b = $("wake"); if (b) b.setAttribute("aria-pressed", String(wantWake && !!wakeLock));
+}
+const toggleWake = () => setWake(!wantWake);
+function renderHorses(){
+  const n = RACE, P = probs(n), uo = userOdds(n), off = PR(n).odds || {}, chg = ENT.chg || {}, gone = hasResult(n) || started(n);
+  const top = P.final ? +Object.keys(P.final).reduce((a, b) => P.final[a] >= P.final[b] ? a : b) : null;
+  const order = rowsOf(n).slice().sort((a, b) => (P.final?.[b.chulNo] ?? -1) - (P.final?.[a.chulNo] ?? -1));
+  $("horses").innerHTML = order.map(r => {
+    const i = +r.chulNo, out = P.out.has(i), p = P.final?.[i], c2 = chgRow(n, i, "기수변경"), e2 = chg[`${n}-${i}`];
+    const cg = c2 || e2 ? {before: c2?.before || e2?.jk?.[0], why: c2?.why || ""} : null, sw = chgRow(n, i, "말취소")?.why;
+    const fixed = (PR(n).out || []).map(Number).includes(i);
+    const sub = out ? (fixed ? `출전 취소${sw ? " · " + sw : ""}` : "출전 제외") : [r.jkName, r.wgBudam && `${r.wgBudam}kg`, PR(n).n?.[i] === 0 && "첫 출전", cg && `전 기수 ${String(cg.before || "").replace(/^\(.*?\)/, "")}${cg.why ? " · " + cg.why : ""}`].filter(Boolean).join(" · ");
+    const pv = out ? "" : p != null ? `${pct(p)}${P.src === "comb" ? `<small>모델 ${pct(P.model[i])}</small>` : ""}` : "-";
+    const v = uo[i] ?? off[i] ?? "";
+    return `<div class="hr ${out ? "out" : ""} ${i === top ? "top" : ""}">${chip(i)}
+      <div class="nm"><b>${esc(r.hrName)}${cg ? `<em class="flag">기수 변경</em>` : ""}</b><span>${esc(sub)}</span></div>
+      <div class="pv">${pv}</div>
+      <input type="text" inputmode="decimal" autocomplete="off" placeholder="배당" data-od="${i}" value="${esc(v)}" aria-label="${i}번 단승 배당" ${out || gone ? "disabled" : ""}>
+    </div>`;
+  }).join("") || `<p class="empty">출전표가 없습니다.</p>`;
+  const nOd = P.ids.filter(i => +(uo[i] ?? off[i]) > 1).length, need = P.ids.length - nOd;
+  $("srcAside").textContent = {comb: "모델 + 배당", model: "모델", market: "배당만", none: ""}[P.src];
+  const bias = BIAS?.races?.[n]?.ib != null ? " 당일 주로 보정을 반영했습니다." : "";
+  $("srcNote").textContent = gone ? "출발한 경주입니다." : nOd === 0 ? `배당판의 단승 배당을 오른쪽 칸에 넣으면 배당과 섞은 확률로 바뀝니다.${bias}` : need > 0 ? `${need}두 더 넣으면 결합 확률로 바뀝니다.` : `배당판 배당과 섞은 확률입니다.${bias}`;
+  $("photoBtn").href = `race.html?date=${DAY.date}&race=${n}#odds`;
+  $("photoBtn").hidden = gone;
+}
+function renderPlan(){
+  const n = RACE, {pl, s, BOARD} = planAll();
+  $("setsum").innerHTML = `<span>자금 <b>${won(s.bank)}</b></span><span>${MODE_NAME[s.mode]}</span><span>${s.pools.map(p => SHORT[p]).join("·") || "승식 없음"}</span>`;
+  $("planLink").href = `plan.html?date=${DAY.date}`;
+  if (!pl){ $("plan").innerHTML = `<p class="hint">예측이 없어 계획을 만들 수 없습니다.</p>`; return; }
+  const p = pl.races.find(x => x.race === n);
+  const all = [...(p?.bets || []), ...(p?.passed || [])].sort((a, b) => Planner.POOLS.indexOf(a.pool) - Planner.POOLS.indexOf(b.pool) || b.p - a.p);
+  if (!p || !all.length){
+    const why = p?.skip === "끝난 경주" ? "출발한 경주라 계획이 없습니다." : `이 경주는 건너뜁니다: ${esc(p?.skip || "기준을 넘는 조합 없음")}`;
+    $("plan").innerHTML = `<p class="hint">${why}</p>`; return;
+  }
+  const bd = BOARD[n] || {};
+  const rows = all.map(b => {
+    const pass = !(p.bets || []).includes(b), k = `${b.pool}:${b.key}`;
+    const sep = ORDERED.has(b.pool) ? "<em>→</em>" : "<em>·</em>";
+    const verd = b.seen ? `<span class="verd ${pass && !b.small ? "no" : "ok"}">${pass && !b.small ? "넘기기" : "사기"}</span>` : "";
+    const hint = !b.seen && b.cur != null ? `<span class="verd ok">사기</span><span>위 단승 칸 ${b.cur}</span>` : "";
+    return `<div class="pr ${pass ? "pass" : ""}"><span class="pl">${SHORT[b.pool]}</span><span class="cb">${b.nums.map(x => chip(x, "sm")).join(sep)}</span>
+      <span class="amt">${pass ? (b.small ? "100원 미만" : "사지 않음") : won(b.stake)}</span>
+      <div class="cond"><span>배당 <b>${b.minOdds}</b> 이상이면 사기</span><input type="text" inputmode="decimal" autocomplete="off" placeholder="배당판" data-bo="${n}|${k}" value="${esc(bd[k] ?? "")}" aria-label="${SHORT[b.pool]} ${b.nums.join("-")} 배당판 배당">${verd}${hint}</div></div>`;
+  }).join("");
+  const unseen = (p.bets || []).filter(b => !b.seen).length;
+  $("plan").innerHTML = rows + `<div class="actions" style="margin-top:6px">${p.bets ? `<button class="btn primary" type="button" id="recBtn">산 대로 기록 · ${won(p.total)}</button>` : ""}<span class="msg" id="recMsg">${unseen ? `배당판 값을 넣지 않은 ${unseen}장은 산 것으로 담깁니다.` : ""}</span></div>`;
+  const rb = $("recBtn"); if (rb) rb.onclick = () => record(p);
+}
+function record(p){
+  const bets = store.get("horse-bets-v1") || [], t = Date.now(), buy = p.bets.filter(x => x.cur == null || x.cur >= x.minOdds);
+  buy.forEach((x, k) => bets.push({id: `${t}-${k}-${Math.random().toString(36).slice(2,7)}`, grp: `p${t}-${k}`, date: DAY.date, race: p.race, pool: x.pool, nums: x.nums, amount: x.stake, memo: "현장 화면", created: t + k}));
+  const ok = store.set("horse-bets-v1", bets);
+  renderMine();
+  $("recMsg").textContent = ok ? `${buy.length}장 ${won(buy.reduce((a, x) => a + x.stake, 0))} 담음` : "이 브라우저에서는 저장할 수 없습니다.";
+}
+/* 산 마권 정산: 단승·연승은 경주 끝나고 바로(당일 결과), 나머지는 확정 배당이 들어오는 저녁에 */
+function settle(b){
+  const pr = PR(b.race), res = pr.result, out = new Set((pr.out || []).map(Number));
+  if (pr.void) return {st: "ref", text: "환불", ret: b.amount};
+  if (b.nums.some(x => out.has(x))) return {st: "ref", text: "출전 취소 · 환불", ret: b.amount};
+  if (!res?.length) return {st: "wait", text: "결과 기다림", ret: null};
+  const pay = DIV?.races?.[b.race]?.pay?.[b.pool];
+  if (pay){ const od = pay[comboKey(b.pool, b.nums)]; return od ? {st: "win", text: `적중 ${won(b.amount * od)}`, ret: b.amount * od} : {st: "lose", text: "미적중", ret: 0}; }
+  const nRan = rowsOf(b.race).length - out.size, plcN = nRan <= 7 ? 2 : 3;
+  if (b.pool === "단승식"){ const od = pr.odds?.[b.nums[0]]; return b.nums[0] === res[0] ? (od ? {st: "win", text: `적중 ${won(b.amount * od)}`, ret: b.amount * od} : {st: "win", text: "적중 · 배당 기다림", ret: null}) : {st: "lose", text: "미적중", ret: 0}; }
+  if (b.pool === "연승식"){ const hit = res.slice(0, plcN).includes(b.nums[0]), od = pr.plc?.[b.nums[0]]; return hit ? (od ? {st: "win", text: `적중 ${won(b.amount * od)}`, ret: b.amount * od} : {st: "win", text: "적중 · 배당 기다림", ret: null}) : {st: "lose", text: "미적중", ret: 0}; }
+  const top = res.slice(0, 3), s = new Set(b.nums);
+  const hit = b.pool === "쌍승식" ? b.nums[0] === res[0] && b.nums[1] === res[1] : b.pool === "복승식" ? s.has(res[0]) && s.has(res[1])
+    : b.pool === "삼쌍승식" ? b.nums.every((x, k) => x === res[k]) : b.pool === "삼복승식" ? top.every(x => s.has(x)) : b.nums.every(x => top.includes(x));
+  return hit ? {st: "win", text: "적중 · 배당은 저녁에", ret: null} : {st: "lose", text: "미적중", ret: 0};
+}
+function mineOf(n){ return (store.get("horse-bets-v1") || []).filter(b => b.date === DAY.date && +b.race === n); }
+function betRows(list){
+  return list.map(b => { const st = settle(b), sep = ORDERED.has(b.pool) ? "→" : "·";
+    return `<div class="mb"><span class="cb"><b style="font-size:13px;color:var(--muted);margin-right:4px">${SHORT[b.pool]}</b>${b.nums.map(x => chip(x, "sm")).join(`<em style="font-style:normal;color:var(--muted)">${sep}</em>`)}</span>
+      <span>${won(b.amount)}</span><span class="st ${st.st === "win" ? "win" : ""}">${esc(st.text)}</span></div>`; }).join("");
+}
+function renderMine(){
+  const list = mineOf(RACE);
+  $("betsLink").href = `bets.html`;
+  $("mine").innerHTML = list.length ? betRows(list) + `<p class="hint" style="margin-top:4px">${list.length}장 · ${won(list.reduce((a, b) => a + (+b.amount || 0), 0))}</p>`
+    : `<p class="hint">아직 없습니다. 계획대로 샀다면 '산 대로 기록'을, 다르게 샀다면 기록장에서 직접 넣으세요.</p>`;
+}
+function renderPrev(){
+  const done = races().filter(n => n < RACE && hasResult(n)), n = done[done.length - 1];
+  $("prevBox").hidden = n == null;
+  if (n == null) return;
+  const pr = PR(n), res = pr.result, P = probs(n);
+  const pm = PR(n).p ? Object.entries(PR(n).p).filter(([k]) => !P.out.has(+k)).sort((a, b) => b[1] - a[1])[0] : null;
+  const topId = pm ? +pm[0] : null, nm = k => rowsOf(n).find(r => +r.chulNo === k)?.hrName || "";
+  const mine = mineOf(n), sts = mine.map(settle), spent = mine.reduce((a, b) => a + (+b.amount || 0), 0), ret = sts.reduce((a, s) => a + (s.ret || 0), 0), wait = sts.some(s => s.ret == null && s.st !== "lose");
+  $("prevAside").textContent = `${n}경주`;
+  $("prev").innerHTML = `<div class="res">${res.slice(0, 3).map(x => chip(x)).join("")}<span style="margin-left:4px"><b>${esc(nm(res[0]))}</b> 우승${pr.odds?.[res[0]] ? ` · 단승 ${pr.odds[res[0]]}` : ""}</span></div>
+    <p class="hint">${topId != null ? (topId === res[0] ? `모델 1순위 ${topId}번 적중` : `모델 1순위는 ${topId}번 (${res.indexOf(topId) >= 0 ? res.indexOf(topId) + 1 + "착" : "3착 밖"})`) : ""}${mine.length ? ` · 내 마권 ${mine.length}장 ${won(spent)} → ${won(ret)}${wait ? " (나머지는 저녁 확정 배당 뒤)" : ""}` : ""}</p>
+    ${mine.length ? betRows(mine) : ""}`;
+}
+function renderBanner(){
+  const nx = nextRace(), b = $("banner");
+  if (pinned && RACE !== nx && nx != null && (started(RACE) || hasResult(RACE))){
+    b.innerHTML = `<div class="banner"><span>${RACE}경주는 출발했습니다.</span><button class="btn" type="button" id="goNext">다음 경주 ${nx}R로</button></div>`;
+    $("goNext").onclick = () => { pinned = false; RACE = nx; render(); scrollTo({top: 0}); };
+  } else if (nx == null && DAY.date === today() && races().length){
+    b.innerHTML = `<div class="banner"><span>오늘 경주가 모두 출발했습니다. 결과와 확정 배당은 저녁에 모두 들어옵니다.</span><a class="btn" href="review.html">주간 복기</a></div>`;
+  } else b.innerHTML = "";
+}
+function render(){
+  if (!DAY || !RACE) return;
+  const a = document.activeElement, fk = a?.dataset?.od ? "od:" + a.dataset.od : a?.dataset?.bo ? "bo:" + a.dataset.bo : null, fpos = fk ? a.selectionStart : null;
+  renderStrip(); renderBanner(); renderNow(); renderHorses(); renderPlan(); renderMine(); renderPrev();
+  if (fk){ const [t, v] = [fk.slice(0, 2), fk.slice(3)];
+    const el = [...document.querySelectorAll(`[data-${t}]`)].find(x => x.dataset[t] === v);
+    if (el && !el.disabled){ el.focus({preventScroll: true}); try { el.setSelectionRange(fpos, fpos); } catch {} } }
+  const u = new URL(location.href); u.searchParams.set("date", DAY.date); if (pinned) u.searchParams.set("race", RACE); else u.searchParams.delete("race"); history.replaceState(null, "", u);
+}
+
+/* ---------- 입력 ---------- */
+$("strip").addEventListener("click", e => { const b = e.target.closest("[data-r]"); if (!b) return; RACE = +b.dataset.r; pinned = RACE !== nextRace(); render(); });
+let tmr = null;
+document.addEventListener("input", e => {
+  const t = e.target, clean = v => v.replace(",", ".").replace(/[^0-9.]/g, "");
+  if (t.dataset.od){
+    const v = clean(t.value); if (v !== t.value) t.value = v;
+    const sv = store.get(oddsKey(RACE)) || {}, user = sv.user || {};
+    if (v === "") delete user[t.dataset.od]; else user[t.dataset.od] = v;
+    store.set(oddsKey(RACE), {...sv, user});
+  } else if (t.dataset.bo){
+    const v = clean(t.value); if (v !== t.value) t.value = v;
+    const [n, key] = t.dataset.bo.split("|"), B = store.get(boardKey()) || {}, o = B[n] = B[n] || {};
+    if (v === "") delete o[key]; else o[key] = v;
+    if (!Object.keys(o).length) delete B[n];
+    store.set(boardKey(), B);
+  } else return;
+  clearTimeout(tmr); tmr = setTimeout(render, 700);
+});
+addEventListener("pageshow", e => { if (e.persisted) render(); });    // 예측 화면에서 배당을 넣고 돌아옴
+addEventListener("storage", e => { if (e.key && (e.key.startsWith("odds:") || e.key.startsWith("plan:") || e.key === "horse-bets-v1")) render(); });
+
+/* ---------- 불러오기 · 자동 갱신 ---------- */
+async function loadDay(d){
+  DAY = INDEX.days.find(x => x.date === d);
+  [ENT, PRED, BIAS, CHANGES] = await Promise.all([get(`data/${DAY.entries}`), DAY.pred ? get(`data/${DAY.pred}`) : null, get(`data/bias/${d}.json`), get(`data/changes/${d}.json`)]);
+  DIV = get(`data/div/${d}.json`).then(x => { DIV = x; if (x) render(); });
+}
+async function refresh(){
+  if (!DAY || document.hidden) return;
+  const [e, p, b, c] = await Promise.all([get(`data/${DAY.entries}`), DAY.pred ? get(`data/${DAY.pred}`) : null, get(`data/bias/${DAY.date}.json`), get(`data/changes/${DAY.date}.json`)]);
+  if (e) ENT = e; if (p) PRED = p; BIAS = b || BIAS; CHANGES = c || CHANGES;
+  tick(true);
+}
+function tick(force){
+  if (!DAY) return;
+  if (!pinned){ const nx = nextRace(); if (nx != null && nx !== RACE){ RACE = nx; force = true; } }
+  if (force) render(); else { renderNow(); renderStrip(); renderBanner(); }
+}
+(async () => {
+  INDEX = await get("data/index.json");
+  const days = INDEX?.days || [];
+  if (!days.length){ $("now").innerHTML = `<p>아직 출전표가 나온 경주일이 없습니다.</p>`; return; }
+  const q = new URLSearchParams(location.search), t = today();
+  const pick = days.find(x => x.date === q.get("date")) || days.find(x => x.date === t) || days.find(x => x.date > t) || days[days.length - 1];
+  await loadDay(pick.date);
+  const want = +q.get("race");
+  if (want && races().includes(want)){ RACE = want; pinned = want !== nextRace(); }
+  else RACE = nextRace() ?? races()[races().length - 1];
+  render();
+  setInterval(() => tick(false), 20000);
+  setInterval(refresh, 120000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden){ refresh(); if (wantWake && !wakeLock) setWake(true); } });
+})();
+})();
+</script>
+</body>
+</html>

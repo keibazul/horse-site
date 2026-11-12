@@ -126,6 +126,7 @@
       <nav class="strip" id="strip" aria-label="경주 시간표"></nav>
       <div class="cta">
         <a class="btn primary" id="ctaRace" href="race.html">경주 예측 보기</a>
+        <a class="btn ghost" href="live.html">경마장에서: 현장 화면</a>
         <a class="btn ghost" href="plan.html">오늘 베팅 계획</a>
         <a class="btn ghost" href="guide.html">처음이라면: 사용법</a>
       </div>
@@ -176,11 +177,13 @@ const ICON = {
   review: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/><path d="m9 15 2 2 4-4"/>',
   bets: '<path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2.2a2.8 2.8 0 0 0 0 5.6V17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2.2a2.8 2.8 0 0 0 0-5.6z"/>',
   results: '<path d="M4 20h16"/><path d="M6.5 16v-4M11 16V8M15.5 16v-6M20 16V5"/>',
-  plan: '<rect x="3.5" y="6" width="17" height="13" rx="2.5"/><path d="M3.5 10h17"/><circle cx="16" cy="14.5" r="1.2"/><path d="M7 3.5h10"/>'
+  plan: '<rect x="3.5" y="6" width="17" height="13" rx="2.5"/><path d="M3.5 10h17"/><circle cx="16" cy="14.5" r="1.2"/><path d="M7 3.5h10"/>',
+  live: '<circle cx="12" cy="13.5" r="7"/><path d="M12 13.5V10M10 3.5h4M12 3.5v3M18 7.5l1.3-1.3"/>'
 };
 const ic = k => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
 
 $("feats").innerHTML = [
+  ["live", "live.html", "현장 화면", "경마장에서 쓰는 화면. 다음 경주 하나만 크게: 1순위와 확률, 단승·배당판 배당 넣기, 이 경주 베팅 계획과 '사기/넘기기', 산 마권 기록. 경주가 출발하면 다음 경주로 넘어갑니다."],
   ["race", "race.html", "경주 예측", "출전마마다 우승 확률. 경주 직전 단승 배당을 넣으면 배당과 섞은 확률과 7가지 승식의 유력 조합을 보여 줍니다."],
   ["plan", "plan.html", "베팅 계획", "오늘 쓸 자금을 넣으면 경주마다 승식·조합·금액과 '배당이 얼마 이상일 때만 사기' 조건을 나눠 줍니다. 한 경주 10만 원 상한을 지키고, 걸 만한 조합이 없으면 건너뜁니다."],
   ["sim", "race.html", "전개 시뮬레이션", "구간 기록 모델과 물리 엔진으로 경주를 수천 번 돌려 초반 자리다툼과 막판 추입을 그림으로 봅니다. 예측 화면의 경주 카드에서 엽니다."],

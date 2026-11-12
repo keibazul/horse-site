@@ -100,11 +100,17 @@ def add_weights(d: str, rows: list[dict]) -> list[dict]:
 
 
 def pre_race_changes(d: str) -> tuple[dict[int, set[int]], set[int]]:
-    """출전표정보(API78)의 특이사항 → (경주별 '말취소' 번호, '경주취소'된 경주).
-    site/data/extra/날짜.json 에서 읽음 (경주일에는 실행마다 새로 받으므로 취소가 뜨면 다음 실행에 반영)."""
+    """출전표정보(API78)의 특이사항 + 기수변경·말취소(API320) → (경주별 '말취소' 번호, '경주취소'된 경주).
+    site/data/extra/날짜.json, site/data/changes/날짜.json 에서 읽음 (경주일에는 실행마다 새로 받으므로 취소가 뜨면 다음 실행에 반영)."""
     f = DATA / "extra" / f"{d}.json"
     gone: dict[int, set[int]] = {}
     void: set[int] = set()
+    try:
+        for x in json.loads((DATA / "changes" / f"{d}.json").read_text(encoding="utf-8")).get("rows", []):
+            if x.get("kind") == "말취소":
+                gone.setdefault(int(x["race"]), set()).add(int(x["no"]))
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
     if not f.exists():
         return gone, void
     try:
@@ -115,7 +121,7 @@ def pre_race_changes(d: str) -> tuple[dict[int, set[int]], set[int]]:
         spn = {int(c): (h or {}).get("spn") or "" for c, h in hs.items()}
         g = {c for c, v in spn.items() if "말취소" in v}
         if g:
-            gone[int(rn)] = g
+            gone[int(rn)] = gone.get(int(rn), set()) | g
         if spn and all("경주취소" in v for v in spn.values()):
             void.add(int(rn))
     return gone, void
@@ -291,6 +297,9 @@ def main() -> int:
     xd = [f.stem for f in ent_files if f.stem >= t8] + [f.stem for f in ent_files if f.stem < t8 and f.stem not in have_x][-4:]
     if xd:
         step("참고 정보", [sys.executable, str(ROOT / "pipeline" / "extra_site.py"), "--dates", ",".join(xd)], ROOT)
+    cd_ = [f.stem for f in ent_files if f.stem >= t8]
+    if cd_:     # 기수변경·말취소 (이유 포함) — 앞으로 열릴 날만
+        step("기수변경·말취소", [sys.executable, str(ROOT / "pipeline" / "changes.py"), "--dates", ",".join(cd_)], ROOT)
 
     exporter = load_exporter()
     model_name = None
