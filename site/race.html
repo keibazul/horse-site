@@ -145,6 +145,7 @@ td.p{font-weight:800}
 <script src="assets/app.js"></script>
 <script src="assets/oddsocr.js"></script>
 <script src="assets/mktmodel.js"></script>
+<script src="assets/oddslog.js"></script>
 <main id="main" class="page">
   <header class="page-head">
     <div class="row-end">
@@ -451,7 +452,7 @@ function biasNote(){
   const lab = e >= 0.2 ? "안쪽 게이트가 꽤 유리" : e >= 0.08 ? "안쪽 게이트가 조금 유리" : e <= -0.2 ? "바깥쪽 게이트가 꽤 유리" : e <= -0.08 ? "바깥쪽 게이트가 조금 유리" : "게이트 치우침 거의 없음";
   return `, 당일 주로 보정(앞 ${b.nprev}경주: ${lab})`;
 }
-function save(){ store.set(`odds:${DAY.date}:${RACE}`, { user: state.user, out: [...state.out].filter(i => !state.fixed.has(i)) }); }
+function save(){ store.set(`odds:${DAY.date}:${RACE}`, { user: state.user, out: [...state.out].filter(i => !state.fixed.has(i)) }); OddsLog.add(DAY.date, RACE, state.user); }
 
 $("field").addEventListener("click", e => {
   const fb = e.target.closest("[data-form]");

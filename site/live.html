@@ -124,6 +124,7 @@
 </main>
 <script src="assets/planner.js"></script>
 <script src="assets/mktmodel.js"></script>
+<script src="assets/oddslog.js"></script>
 <script>
 (() => {
 "use strict";
@@ -369,7 +370,7 @@ document.addEventListener("input", e => {
     const v = clean(t.value); if (v !== t.value) t.value = v;
     const sv = store.get(oddsKey(RACE)) || {}, user = sv.user || {};
     if (v === "") delete user[t.dataset.od]; else user[t.dataset.od] = v;
-    store.set(oddsKey(RACE), {...sv, user});
+    store.set(oddsKey(RACE), {...sv, user}); OddsLog.add(DAY.date, RACE, user);
   } else return;
   clearTimeout(tmr); tmr = setTimeout(render, 700);
 });

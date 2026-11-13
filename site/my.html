@@ -94,8 +94,10 @@
     <div class="links"><a class="btn" href="bets.html">기록장</a><a class="btn" href="live.html">현장 화면</a></div>
   </header>
   <div id="out"><p class="sub">불러오는 중…</p></div>
+  <div id="olog"></div>
 </main>
 <script src="assets/ledger.js"></script>
+<script src="assets/oddslog.js"></script>
 <script>
 (() => {
 "use strict";
@@ -229,6 +231,43 @@ let drawCum = () => {}, rz = null;
 addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => drawCum(), 200); });
 main();
 addEventListener("storage", e => { if (e.key === Ledger.KEY) main(); });
+})();
+</script>
+<script>
+/* 넣은 배당 기록 (assets/oddslog.js): 출발 전 마지막으로 넣은 단승 배당과 확정 배당을 비교 */
+(async () => {
+  "use strict";
+  const el = document.getElementById("olog"), L = OddsLog.all(), days = Object.keys(L).sort();
+  const get = u => fetch(u, {cache: "no-cache"}).then(r => r.ok ? r.json() : null).catch(() => null);
+  const med = a => { const b = a.slice().sort((x, y) => x - y); return b.length ? b[b.length >> 1] : null; };
+  const head = `<h2>넣은 배당과 확정 배당</h2><p class="sub">현장 화면이나 경주 예측에 단승 배당을 넣으면 시각과 함께 이 브라우저에 저장됩니다. 베팅 계획의 과거 검증은 확정 배당으로 계산했기 때문에, 실제로 살 때 본 배당이 확정 배당과 얼마나 다른지 여기서 잽니다. 몇 주 쌓이면 '내려받기' 파일로 계획을 살 때 배당 기준으로 다시 검증할 수 있습니다.</p>`;
+  if (!days.length){ el.innerHTML = `<section class="box">${head}<p class="sub">아직 넣은 배당이 없습니다.</p></section>`; return; }
+  const X = []; let nr = 0, wait = 0, late = 0;
+  for (const d of days.slice(-12)){
+    const [ent, pred] = await Promise.all([get(`data/entries/${d}.json`), get(`data/pred/${d}.json`)]);
+    for (const [n, list] of Object.entries(L[d])){
+      const fin = pred?.races?.[n]?.odds, m = String(ent?.rows?.find(r => +r.rcNo === +n)?.stTime ?? "").match(/(\d{1,2}):?(\d{2})/);
+      if (!fin || !pred.races[n].result?.length || !m){ wait++; continue; }
+      const start = new Date(+d.slice(0,4), +d.slice(4,6)-1, +d.slice(6,8), +m[1], +m[2]).getTime();
+      const snap = list.filter(x => x.t < start).pop();
+      if (!snap){ late++; continue; }
+      nr++;
+      for (const [k, o] of Object.entries(snap.o)) if (+fin[k] > 1) X.push({o, r: fin[k] / o, lead: (start - snap.t) / 60000});
+    }
+  }
+  const pc = v => v == null ? "-" : `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v * 100).toFixed(1)}%`;
+  const bucket = (a, b) => { const x = X.filter(z => z.o >= a && z.o < b); return `<tr><td>${a}~${b === Infinity ? "" : b}배</td><td>${x.length}</td><td>${pc(med(x.map(z => z.r - 1)))}</td><td>${x.length ? (med(x.map(z => Math.abs(z.r - 1))) * 100).toFixed(1) + "%" : "-"}</td></tr>`; };
+  const body = nr ? `<p class="sub">비교한 경주 <b>${nr}</b>개(말 ${X.length}마리), 넣은 시각은 출발 <b>${med(X.map(z => z.lead)).toFixed(0)}분</b> 전(중앙값). 넣은 뒤 확정까지 배당 변화 크기 중앙값 <b>${(med(X.map(z => Math.abs(z.r - 1))) * 100).toFixed(1)}%</b>.</p>
+    <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>넣은 배당</th><th>말</th><th>확정까지 변화(중앙값)</th><th>변화 크기(중앙값)</th></tr></thead><tbody>${bucket(1, 5)}${bucket(5, 20)}${bucket(20, Infinity)}</tbody></table></div>`
+    : `<p class="sub">아직 비교할 수 있는 경주가 없습니다.</p>`;
+  el.innerHTML = `<section class="box">${head}${body}
+    <p class="sub">기록 ${days.length}일${wait ? ` · 결과를 기다리는 경주 ${wait}개` : ""}${late ? ` · 출발 뒤에 넣어 뺀 경주 ${late}개` : ""}</p>
+    <div><button class="btn" type="button" id="ologDl">배당 기록 내려받기</button></div></section>`;
+  document.getElementById("ologDl").onclick = () => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([JSON.stringify({made: new Date().toISOString(), log: L})], {type: "application/json"}));
+    a.download = `odds-log-${days[days.length - 1]}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
 })();
 </script>
 </body>
