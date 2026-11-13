@@ -44,6 +44,18 @@ jobs:
           python train_win_model_v5.py --out new/win_model_v5.joblib
           python train_sectional_model.py --out new/sect_model_v1.joblib
           python fit_day_bias.py          # 당일 게이트 경향 보정 계수 (winner_history/day_bias.json)
+          # 배당 반영 모델: 검증 손실이 정상 범위일 때만 교체 (사이트용 JSON 도 같이)
+          python train_mkt_model.py --out new/win_mkt_v1.joblib --no-site && python - <<'PY'
+          import joblib, shutil, sys
+          sys.path.insert(0, ".")
+          import train_mkt_model as tm
+          n = joblib.load("new/win_mkt_v1.joblib")
+          print(f"배당 반영 모델: 학습 ~{n['trained_through']} 검증 손실 {n['val_loss']:.4f}, 트리 {n['n_trees']}")
+          if 1.65 < n["val_loss"] < 1.95:
+              shutil.copy("new/win_mkt_v1.joblib", "winner_history/win_mkt_v1.joblib"); tm.export_json(n, tm.SITE_MODEL)
+          else:
+              print("배당 반영 모델은 교체하지 않음")
+          PY
       - name: 새 모델 확인 후 교체
         working-directory: work
         run: |

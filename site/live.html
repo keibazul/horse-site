@@ -60,6 +60,7 @@
 .hr .pv{text-align:right;font-weight:800;font-size:15.5px;font-variant-numeric:tabular-nums}
 .hr .pv small{display:block;font-size:11.5px;font-weight:600;color:var(--muted)}
 .hr.top .pv{color:var(--gold)}
+.hr .pv small.evp{color:var(--good);font-weight:800}
 .hr input{width:100%;font-size:16px;font-weight:700;text-align:right;padding:6px 8px;border-radius:8px}
 .hr input:disabled{background:transparent;border-style:dashed}
 .srcline{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;justify-content:space-between}
@@ -128,6 +129,7 @@
   </section>
 </main>
 <script src="assets/planner.js"></script>
+<script src="assets/mktmodel.js"></script>
 <script>
 (() => {
 "use strict";
@@ -155,7 +157,8 @@ const ORDERED = new Set(["쌍승식","삼쌍승식"]);
 const MODE_NAME = {safe: "조심스럽게", normal: "보통", all: "자금 모두 쓰기"};
 const comboKey = (pool, nums) => ORDERED.has(pool) ? nums.join(">") : [...nums].sort((a,b)=>a-b).join("-");
 
-let INDEX = null, DAY = null, ENT = null, PRED = null, BIAS = null, DIV = null, CHANGES = null;
+let INDEX = null, DAY = null, ENT = null, PRED = null, BIAS = null, DIV = null, CHANGES = null, MKT = null, MKX = null;
+MktModel.load().then(m => { MKT = m; if (RACE) render(); });
 const chgRow = (n, i, kind) => (CHANGES?.rows || []).find(x => x.race === n && x.no === i && x.kind === kind);
 let RACE = null, pinned = false;            // pinned: 사용자가 경주를 직접 고름 → 자동으로 넘기지 않음
 const S = () => Object.assign({bank: 100000, mode: "normal", pools: ["단승식","연승식"]}, store.get("plan:settings") || {});
@@ -183,7 +186,10 @@ function probs(n){
     model = Object.fromEntries(ids.map((i, k) => [i, v[k] / s])); }
   const uo = userOdds(n), off = PR(n).odds || {}, od = i => +(uo[i] ?? off[i]);
   if (ids.length > 1 && ids.every(i => od(i) > 1)){ const v = ids.map(i => 1 / od(i)), s = v.reduce((a, b) => a + b, 0); market = Object.fromEntries(ids.map((i, k) => [i, v[k] / s])); }
-  if (model && market){ const a = INDEX.alpha ?? 0.1569, b = INDEX.beta ?? 0.7616, g = INDEX.gamma ?? -0.0368;
+  const pa = market && MKT ? MktModel.predict(MKT, MKX?.races?.[n], Object.fromEntries(ids.map(i => [i, od(i)])), ids) : null;
+  if (pa){ const bf = BIAS?.races?.[n]?.f || {}, v = ids.map(i => pa[i] * (bf[i] ?? 1)), s = v.reduce((x, y) => x + y, 0);
+    final = Object.fromEntries(ids.map((i, k) => [i, v[k] / s])); src = "mkt"; }
+  else if (model && market){ const a = INDEX.alpha ?? 0.1569, b = INDEX.beta ?? 0.7616, g = INDEX.gamma ?? -0.0368;
     const v = ids.map(i => { const lq = Math.log(market[i]); return Math.exp(a * Math.log(model[i]) + b * lq + g * lq * lq); }), s = v.reduce((x, y) => x + y, 0);
     final = Object.fromEntries(ids.map((i, k) => [i, v[k] / s])); src = "comb"; }
   else if (model){ final = model; src = "model"; } else if (market){ final = market; src = "market"; }
@@ -236,7 +242,7 @@ function renderNow(){
   $("now").innerHTML = `
     <div class="top"><div><p class="rn"><b>${n}경주</b>${timeOf(n)} 출발</p></div>${wakeOK ? `<button class="wake" type="button" id="wake" aria-pressed="${wantWake && !!wakeLock}">화면 켜 두기</button>` : ""}</div>
     <div class="cd num">${countdown(n)}</div>
-    ${tr ? `<div class="pick">${chip(top)}<div class="nm"><b>${esc(tr.hrName)}</b><span>1순위 · ${esc(tr.jkName || "")} · ${{comb:"결합 확률", model:"모델 확률", market:"배당 확률"}[P.src]}</span></div><span class="pv">${pct(P.final[top])}</span></div>` : `<p class="hint" style="color:var(--brand-muted)">이 경주는 아직 예측이 없습니다.</p>`}
+    ${tr ? `<div class="pick">${chip(top)}<div class="nm"><b>${esc(tr.hrName)}</b><span>1순위 · ${esc(tr.jkName || "")} · ${{mkt:"배당 반영 확률", comb:"결합 확률", model:"모델 확률", market:"배당 확률"}[P.src]}</span></div><span class="pv">${pct(P.final[top])}</span></div>` : `<p class="hint" style="color:var(--brand-muted)">이 경주는 아직 예측이 없습니다.</p>`}
     <div class="meta">${meta.map(x => `<span>${esc(x)}</span>`).join("")}</div>`;
   const w = $("wake"); if (w) w.onclick = toggleWake;
 }
@@ -258,7 +264,8 @@ function renderHorses(){
     const cg = c2 || e2 ? {before: c2?.before || e2?.jk?.[0], why: c2?.why || ""} : null, sw = chgRow(n, i, "말취소")?.why;
     const fixed = (PR(n).out || []).map(Number).includes(i);
     const sub = out ? (fixed ? `출전 취소${sw ? " · " + sw : ""}` : "출전 제외") : [r.jkName, r.wgBudam && `${r.wgBudam}kg`, PR(n).n?.[i] === 0 && "첫 출전", cg && `전 기수 ${String(cg.before || "").replace(/^\(.*?\)/, "")}${cg.why ? " · " + cg.why : ""}`].filter(Boolean).join(" · ");
-    const pv = out ? "" : p != null ? `${pct(p)}${P.src === "comb" ? `<small>모델 ${pct(P.model[i])}</small>` : ""}` : "-";
+    const ev = !out && p != null && (P.src === "mkt" || P.src === "comb") ? p * +(uo[i] ?? off[i]) : null;
+    const pv = out ? "" : p != null ? `${pct(p)}${ev != null ? `<small class="${ev >= 1.2 && P.src === "mkt" ? "evp" : ""}">기대 ${ev.toFixed(2)}</small>` : ""}` : "-";
     const v = uo[i] ?? off[i] ?? "";
     return `<div class="hr ${out ? "out" : ""} ${i === top ? "top" : ""}">${chip(i)}
       <div class="nm"><b>${esc(r.hrName)}${cg ? `<em class="flag">기수 변경</em>` : ""}</b><span>${esc(sub)}</span></div>
@@ -267,9 +274,9 @@ function renderHorses(){
     </div>`;
   }).join("") || `<p class="empty">출전표가 없습니다.</p>`;
   const nOd = P.ids.filter(i => +(uo[i] ?? off[i]) > 1).length, need = P.ids.length - nOd;
-  $("srcAside").textContent = {comb: "모델 + 배당", model: "모델", market: "배당만", none: ""}[P.src];
+  $("srcAside").textContent = {mkt: "배당 반영", comb: "모델 + 배당", model: "모델", market: "배당만", none: ""}[P.src];
   const bias = BIAS?.races?.[n]?.ib != null ? " 당일 주로 보정을 반영했습니다." : "";
-  $("srcNote").textContent = gone ? "출발한 경주입니다." : nOd === 0 ? `배당판의 단승 배당을 오른쪽 칸에 넣으면 배당과 섞은 확률로 바뀝니다.${bias}` : need > 0 ? `${need}두 더 넣으면 결합 확률로 바뀝니다.` : `배당판 배당과 섞은 확률입니다.${bias}`;
+  $("srcNote").textContent = gone ? "출발한 경주입니다." : nOd === 0 ? `배당판의 단승 배당을 오른쪽 칸에 넣으면 배당 반영 확률로 바뀝니다.${bias}` : need > 0 ? `${need}두 더 넣으면 배당 반영 확률로 바뀝니다.` : P.src === "mkt" ? `배당판 배당을 말 정보와 함께 넣어 계산한 확률입니다. '기대'는 확률 × 배당이고, 1.2 이상(초록)은 과거 검증에서 단승 회수율이 100%를 넘긴 구간입니다(확실하지는 않음).${bias}` : `배당판 배당과 섞은 확률입니다.${bias}`;
   $("photoBtn").href = `race.html?date=${DAY.date}&race=${n}#odds`;
   $("photoBtn").hidden = gone;
 }
@@ -390,7 +397,7 @@ addEventListener("storage", e => { if (e.key && (e.key.startsWith("odds:") || e.
 /* ---------- 불러오기 · 자동 갱신 ---------- */
 async function loadDay(d){
   DAY = INDEX.days.find(x => x.date === d);
-  [ENT, PRED, BIAS, CHANGES] = await Promise.all([get(`data/${DAY.entries}`), DAY.pred ? get(`data/${DAY.pred}`) : null, get(`data/bias/${d}.json`), get(`data/changes/${d}.json`)]);
+  [ENT, PRED, BIAS, CHANGES, MKX] = await Promise.all([get(`data/${DAY.entries}`), DAY.pred ? get(`data/${DAY.pred}`) : null, get(`data/bias/${d}.json`), get(`data/changes/${d}.json`), get(`data/mkx/${d}.json`)]);
   DIV = get(`data/div/${d}.json`).then(x => { DIV = x; if (x) render(); });
 }
 async function refresh(){

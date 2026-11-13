@@ -47,6 +47,38 @@ def _art(d: str):
     return _cache[d]
 
 
+def _mkt():
+    """배당 반영 모델(work/train_mkt_model.py) — 없으면 None"""
+    if "mkt" not in _cache:
+        f = os.path.join("winner_history", "win_mkt_v1.joblib")
+        _cache["mkt"] = joblib.load(f) if os.path.exists(f) else None
+    return _cache["mkt"]
+
+
+def export_mkx(date: str, X: pd.DataFrame, chul: pd.Series, data_dir: Path) -> None:
+    """배당 반영 모델이 쓰는 말마다 특징(시장 특징 빼고) → data_dir/mkx/날짜.json. 브라우저(assets/mktmodel.js)가
+    사용자가 넣은 단승 배당과 합쳐 직접 계산. 모델 학습이 그날보다 앞에서 끝났을 때만 (지난 날 검증과 같은 조건)."""
+    mk = _mkt()
+    if not mk or str(mk.get("trained_through")) >= date:
+        return
+    import json
+    import numpy as np
+    enc = mk["model"].named_steps["prep"].named_transformers_["cat"]
+    base = [f for f in mk["features"] if f not in mk["market"]]
+    codes = enc.transform(X[mk["cat_features"]].astype(object).where(X[mk["cat_features"]].notna(), None))
+    nums = X[base[len(mk["cat_features"]):]].apply(pd.to_numeric, errors="coerce").to_numpy(dtype=float)
+    M = np.column_stack([codes, nums])
+    races: dict = {}
+    for (rno, c), row in zip(zip(X["race_no"], chul), M):
+        if pd.isna(c):
+            continue
+        races.setdefault(str(int(rno)), {})[str(int(c))] = [None if not np.isfinite(v) else float(v) for v in row]     # 줄이지 않음 (트리 경계와 같은 값이 있음)
+    out = Path(data_dir) / "mkx"
+    out.mkdir(parents=True, exist_ok=True)
+    (out / f"{date}.json").write_text(json.dumps({"date": date, "model": "mkt_v1", "trained_through": mk["trained_through"],
+                                                  "n": len(base), "races": races}, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+
+
 def pick_model(date: str) -> str:
     """학습 기간이 그 경주일보다 앞에서 끝나는 모델 중 가장 최근 것 (없으면 기본 모델)"""
     for d in MODEL_DIRS:
@@ -67,6 +99,11 @@ def export(date: str, rows: list[dict], data_dir: Path) -> dict:
     p = pr.race_normalize(art["model"].predict_proba(X[art["features"]])[:, 1], pd.factorize(X["race_no"])[0])
     res = feat[["race_no", "hrNo", "n_prior_races"]].assign(p_model=p).merge(
         entries.rename(columns={"rcNo": "race_no"})[["race_no", "hrNo", "chulNo"]], on=["race_no", "hrNo"])
+    try:      # 배당 반영 모델용 말마다 특징 (실패해도 예측은 그대로)
+        chul = X[["race_no", "hrNo"]].merge(entries.rename(columns={"rcNo": "race_no"})[["race_no", "hrNo", "chulNo"]], on=["race_no", "hrNo"], how="left")["chulNo"]
+        export_mkx(date, X.reset_index(drop=True), chul.reset_index(drop=True), data_dir)
+    except Exception as e:  # noqa: BLE001
+        print(f"  배당 반영 모델 특징 저장 실패: {type(e).__name__}: {e}", flush=True)
     print(f"  {date} 우승 확률 {len(res)}두 ({time.time() - t:.0f}초)", flush=True)
 
     races = {}

@@ -144,6 +144,7 @@ td.p{font-weight:800}
 <body data-page="race">
 <script src="assets/app.js"></script>
 <script src="assets/oddsocr.js"></script>
+<script src="assets/mktmodel.js"></script>
 <main id="main" class="page">
   <header class="page-head">
     <div class="row-end">
@@ -227,6 +228,8 @@ const store = {
 };
 
 let INDEX = null, DAY = null, ENT = null, PRED = null, RACE = null, POOL = "단승식", FORM = null, EXTRA = null, BIAS = null, CHANGES = null;
+let MKT = null, MKX = null;       // 배당 반영 모델(assets/mktmodel.js)과 그날 말마다 특징(data/mkx/날짜.json)
+MktModel.load().then(m => { MKT = m; if (RACE) render(); });
 /* 기수변경·말취소(API320, 이유 포함) + 출전표에서 잡은 기수 변경 → {jk:[전, 후], wg:[전, 후], why, at} */
 function changeOf(n, i){
   const c = (CHANGES?.rows || []).find(x => x.race === n && x.no === i && x.kind === "기수변경"), e = ENT?.chg?.[`${n}-${i}`];
@@ -280,7 +283,8 @@ async function openDay(date, race){
   const st = $("dayStat"), h = DAY.hits;
   st.hidden = !h;
   if (h) st.innerHTML = `이날 ${h.races}경주에서 1순위가 이긴 경주: 모델 <b>${h.model}</b>, 배당과 결합 <b>${h.comb}</b>, 인기마 <b>${h.mkt ?? "-"}</b>. <a href="review.html?date=${date}">이 주말 복기 보기</a>`;
-  ENT = null; PRED = null; FORM = null; EXTRA = null; BIAS = null; CHANGES = null; openForms.clear();
+  ENT = null; PRED = null; FORM = null; EXTRA = null; BIAS = null; CHANGES = null; MKX = null; openForms.clear();
+  getJSON(`data/mkx/${date}.json`).then(f => { if (DAY && DAY.date === date){ MKX = f; if (RACE) render(); } }).catch(() => {});
   getJSON(`data/changes/${date}.json`).then(f => { if (DAY && DAY.date === date){ CHANGES = f; if (RACE) render(); } }).catch(() => {});
   getJSON(`data/bias/${date}.json`).then(f => { if (DAY && DAY.date === date){ BIAS = f; if (RACE) render(); } }).catch(() => {});
   getJSON(`data/extra/${date}.json`).then(f => { if (DAY && DAY.date === date){ EXTRA = f; openForms.forEach(fillForm); } }).catch(() => {});
@@ -356,8 +360,14 @@ function probs(){
   const oddsOK = ids.length > 1 && ids.every(i => +state.odds[i] > 1);
   let market = null;
   if (oddsOK){ const v = ids.map(i => 1/(+state.odds[i])), s = v.reduce((a,b) => a+b, 0); market = Object.fromEntries(ids.map((i,k) => [i, v[k]/s])); }
-  let final = null, src = "none";
-  if (model && market){
+  let final = null, src = "none", comb = null;
+  // 배당 반영 모델: 모든 말 배당이 있고 그날 특징이 있으면 이것을 씀 (2016~2026 검증에서 아래 결합보다 나음). 당일 주로 보정도 곱함
+  const pa = market && MKT ? MktModel.predict(MKT, MKX?.races?.[RACE], state.odds, ids) : null;
+  if (pa){
+    const bf = BIAS?.races?.[RACE]?.f || {}, v = ids.map(i => pa[i] * (bf[i] ?? 1)), s = v.reduce((x,y) => x+y, 0);
+    final = Object.fromEntries(ids.map((i,k) => [i, v[k]/s])); src = "mkt";
+  }
+  else if (model && market){
     const a = INDEX.alpha ?? 0.1569, b = INDEX.beta ?? 0.7616, g = INDEX.gamma ?? -0.0368;      // γ: 시장의 비인기마 편향
     const v = ids.map(i => { const lq = Math.log(market[i]); return Math.exp(a*Math.log(model[i]) + b*lq + g*lq*lq); }), s = v.reduce((x,y) => x+y, 0);
     final = Object.fromEntries(ids.map((i,k) => [i, v[k]/s])); src = "comb";
@@ -365,6 +375,7 @@ function probs(){
   else if (market){ final = market; src = "market"; }
   return { ids, model, market, final, src };
 }
+const SRC_PILL = {mkt:"배당 반영", comb:"결합", model:"모델", market:"배당만", none:"-"};
 
 function render(){
   const rows = horses(), P = probs();
@@ -374,9 +385,9 @@ function render(){
   $("tools").hidden = false;
   const off = hasOfficial(), edited = Object.keys(state.user).length > 0;
   const oddsWord = off ? (edited ? "확정 배당 + 직접 고친 값" : "확정 단승 배당, 마감 후 값") : "입력한 단승 배당";
-  const srcText = {comb:`모델과 ${oddsWord}을 섞은 확률`, model:"경주 전 정보로 낸 모델 확률", market:`${oddsWord}로만 계산한 확률`, none:"확률 없음"}[P.src];
-  $("srcPill").textContent = {comb:"결합", model:"모델", market:"배당만", none:"-"}[P.src];
-  $("srcPill").className = "pill " + (P.src === "comb" ? "good" : "");
+  const srcText = {mkt:`${oddsWord}을 말 정보와 함께 넣어 계산한 배당 반영 확률`, comb:`모델과 ${oddsWord}을 섞은 확률`, model:"경주 전 정보로 낸 모델 확률", market:`${oddsWord}로만 계산한 확률`, none:"확률 없음"}[P.src];
+  $("srcPill").textContent = SRC_PILL[P.src];
+  $("srcPill").className = "pill " + (P.src === "comb" || P.src === "mkt" ? "good" : "");
   $("clearOdds").textContent = off ? "확정 배당으로 되돌리기" : "배당 지우기";
   $("clearOdds").hidden = off ? !edited && state.out.size === state.fixed.size : false;
   const need = P.ids.length - entered;
@@ -408,13 +419,13 @@ function render(){
     const fixed = state.fixed.has(i);
     if (out){ const w = fixed ? scratchWhy(RACE, i) : ""; prc = `<span class="na"${w ? ` title="${esc(w)}"` : ""}>${fixed ? "출전 취소" : "출전 제외"}${w ? ` · ${esc(w)}` : ""}</span>`; }
     else if (p != null){
-      const sub = P.src === "comb" ? `<small>모델 ${pct(P.model[i])}</small>` : "";
+      const sub = (P.src === "comb" || P.src === "mkt") && P.model ? `<small>모델 ${pct(P.model[i])}</small>` : "";
       prc = `<span class="v">${pct(p)}${sub}</span><span class="track"><i class="${P.src === "market" ? "mkt" : ""}" style="width:${(p/top*100).toFixed(1)}%"></i></span>`;
     } else prc = `<span class="na">-</span>`;
     const o = +state.odds[i];
     let ev = "";
     if (!out && p != null){
-      if (o > 1 && P.src !== "market"){ const e = p*o; ev = `<span class="ev ${e >= 1 ? "plus" : ""}">기대값 ${e.toFixed(2)}</span>`; }
+      if (o > 1 && P.src !== "market"){ const e = p*o; ev = `<span class="ev ${e >= (P.src === "mkt" ? 1.2 : 1) ? "plus" : ""}" ${P.src === "mkt" && e >= 1.2 ? 'title="배당 반영 확률 × 배당이 1.2 이상: 2016~2026 검증에서 이런 말만 단승으로 샀다면 회수율 114% [99~130%] (마감 배당 기준)"' : ""}>기대값 ${e.toFixed(2)}</span>`; }
       else ev = `<span class="ev">적정 ${fair(p)}</span>`;
     }
     return `<div class="row ${out ? "out" : ""} ${i === topId ? "top" : ""}">
@@ -643,7 +654,7 @@ function renderBets(P){
   const list = [...C.entries()].sort((a,b) => b[1]-a[1]).slice(0, POOL === "단승식" || POOL === "연승식" ? 16 : 12);
   const maxp = list[0]?.[1] || 1;
   const desc = POOLS.find(x => x[0] === POOL)[1];
-  const srcWord = {comb:"결합 확률", model:"모델 확률", market:"시장 확률"}[P.src];
+  const srcWord = {mkt:"배당 반영 확률", comb:"결합 확률", model:"모델 확률", market:"시장 확률"}[P.src];
   $("betSub").textContent = `${POOL}: ${desc}. ${srcWord} 기준, 가능성 높은 순서.`;
   const sep = POOL.includes("쌍") ? "<em>→</em>" : "<em>·</em>";
   $("betTable").innerHTML = `<thead><tr><th>조합</th><th>확률</th><th class="r">적정 배당</th></tr></thead><tbody>` +
