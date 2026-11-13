@@ -9,3 +9,4 @@ work/odds_input_*.csv
 work/sim_*.json
 work/race_details/daily_usage.json
 work/kra_race_collector.py
+work/exp/
