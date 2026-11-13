@@ -233,6 +233,8 @@ def write_index(today: dt.date, connected: bool, model_name: str | None = None) 
         item = {"date": d, "entries": f"entries/{d}.json", "past": past}
         if pf.exists():
             item["pred"] = f"pred/{d}.json"
+            if (DATA / "mkx" / f"{d}.json").exists():
+                item["mkx"] = True          # 배당 반영 확률을 계산할 말 특징이 있음 (베팅 계획 연습 보기)
             if past:
                 st = day_stats(json.loads(pf.read_text(encoding="utf-8")))
                 if st:

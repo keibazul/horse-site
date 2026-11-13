@@ -425,7 +425,7 @@ function render(){
     const o = +state.odds[i];
     let ev = "";
     if (!out && p != null){
-      if (o > 1 && P.src !== "market"){ const e = p*o; ev = `<span class="ev ${e >= (P.src === "mkt" ? 1.2 : 1) ? "plus" : ""}" ${P.src === "mkt" && e >= 1.2 ? 'title="배당 반영 확률 × 배당이 1.2 이상: 2016~2026 검증에서 이런 말만 단승으로 샀다면 회수율 114% [99~130%] (마감 배당 기준)"' : ""}>기대값 ${e.toFixed(2)}</span>`; }
+      if (o > 1 && P.src !== "market"){ const e = p*o; const buy = P.src === "mkt" && e >= 1.2 && p >= 0.05; ev = `<span class="ev ${(P.src === "mkt" ? buy : e >= 1) ? "plus" : ""}" ${buy ? 'title="베팅 계획이 사는 말: 배당 반영 확률 5% 이상, 확률 × 배당 1.2 이상. 2016~2026 검증에서 이런 말만 단승 100원씩 샀다면 회수율 125% [107~148%] (마감 배당 기준이라 실제는 더 낮을 수 있음)"' : ""}>기대값 ${e.toFixed(2)}</span>`; }
       else ev = `<span class="ev">적정 ${fair(p)}</span>`;
     }
     return `<div class="row ${out ? "out" : ""} ${i === topId ? "top" : ""}">

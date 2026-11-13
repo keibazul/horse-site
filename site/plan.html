@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>베팅 계획 · 서울 경주 예측</title>
-<meta name="description" content="오늘 쓸 자금을 넣으면 경주마다 승식·조합·금액을 대강 나눠 주는 계획표. 한 경주 10만 원 상한, 걸 만한 조합이 없으면 건너뜀">
+<meta name="description" content="배당판의 단승 배당을 넣으면 배당 반영 확률 × 배당이 1.2 이상인 말의 단승만 골라 금액을 나눠 주는 계획표. 한 경주 10만 원 상한">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link rel="stylesheet" href="assets/app.css">
@@ -15,7 +15,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <style>
-/* 베팅 계획: 설정(자금·방식·승식) → 계획 합계 한 줄 → 경주별 카드(살 마권과 조건 / 건너뛰기) → 계산 방법·과거 검증 */
+/* 베팅 계획: 설정(자금·방식) → 계획 합계 한 줄 → 경주별 카드(살 말 / 배당 대기 / 건너뛰기) → 실전 기록 · 계산 방법 · 과거 검증 */
 .setup{padding:0;display:block}
 .setup > summary{list-style:none;cursor:pointer;padding:14px 18px;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:14.5px}
 .setup > summary::-webkit-details-marker{display:none}
@@ -37,9 +37,6 @@
 .money .unit{font-weight:700;color:var(--muted)}
 .quick{display:flex;flex-wrap:wrap;gap:5px}
 .quick button{border:1px solid var(--line-strong);background:var(--panel);border-radius:999px;padding:3px 11px;font-size:12.5px;font-weight:700;cursor:pointer}
-.toggles{display:flex;flex-wrap:wrap;gap:5px}
-.toggles button{border:1px solid var(--line-strong);background:var(--panel);border-radius:999px;padding:5px 12px;font-size:13.5px;font-weight:700;cursor:pointer;color:var(--muted)}
-.toggles button[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
 .hint{font-size:12.5px;color:var(--muted);line-height:1.5}
 
 .sum{display:flex;flex-wrap:wrap;gap:6px 26px;align-items:baseline;border-bottom:2px solid var(--ink);padding-bottom:12px}
@@ -63,47 +60,49 @@
 .bt th{font-size:11.5px;color:var(--muted);font-weight:700;background:var(--soft)}
 .bt th:first-child,.bt td:first-child{padding-left:16px}
 .bt td.r,.bt th.r{text-align:right}
-.bt .combo{display:inline-flex;gap:3px;align-items:center}
-.bt .combo em{font-style:normal;color:var(--muted);font-size:12px}
+.bt .hn{display:inline-flex;gap:7px;align-items:center;min-width:0}
+.bt .hn b{font-weight:700;overflow:hidden;text-overflow:ellipsis}
 .bt .stake{font-weight:800;font-size:15px}
-.bt .cond{font-weight:700}
-.bt .now{font-size:12px;font-weight:700;margin-left:6px}
-.bt .now.ok{color:var(--good)} .bt .now.no{color:var(--bad)}
-.bt .bo{width:68px;margin-left:8px;padding:4px 7px;font-size:14px;font-weight:700;text-align:right;border:1px solid var(--line-strong);border-radius:8px;background:var(--panel);color:var(--ink)}
-.bt .bo::placeholder{font-weight:600;color:var(--muted);font-size:12.5px}
-.bt .verd{display:inline-block;margin-left:6px;padding:2px 9px;border-radius:999px;font-size:12.5px;font-weight:800}
-.bt .verd.ok{background:color-mix(in srgb,var(--good) 16%,transparent);color:var(--good)}
-.bt .verd.no{background:color-mix(in srgb,var(--bad) 13%,transparent);color:var(--bad)}
-.bt tr.pass .combo,.bt tr.pass td:first-child{opacity:.5}
-.bt tr.pass .stake{color:var(--muted);font-weight:700;font-size:13px}
+.bt .odd b{font-weight:800}
+.bt .odd small{display:block;font-size:11.5px;color:var(--muted);font-weight:600}
+.bt .ev{font-weight:800;color:var(--good)}
+.bt .res.win{color:var(--good);font-weight:800}
+.wait{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:0 16px 13px}
+.wait .btn{padding:6px 11px;font-size:13px}
+.wait .msg{font-size:13.5px;color:var(--muted);flex-basis:100%}
+.years{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.years span{display:grid;gap:1px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;font-size:12px;color:var(--muted);text-align:center;min-width:52px}
+.years span b{font-size:13.5px;color:var(--ink)}
+.years span.lo b{color:var(--bad)}
 .rc-f{display:flex;flex-wrap:wrap;gap:6px;padding:10px 16px 13px;border-top:1px solid var(--line)}
 .rc-f .btn{padding:6px 11px;font-size:13px}
 .rc-f .msg{font-size:12.5px;color:var(--good);font-weight:700;align-self:center}
 @media (max-width:620px){
-  /* 휴대폰: 한 마권 = 두 줄 (승식·조합 | 금액 / 사는 조건 · 확률·결과) */
+  /* 휴대폰: 한 말 = 두 줄 (말 | 금액 / 배당 · 확률 · 기대값) */
   .bt thead{display:none}
   .bt,.bt tbody{display:block}
-  .bt tr{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:10px 14px;border-top:1px solid var(--line)}
+  .bt tr{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:4px 12px;align-items:center;padding:10px 14px;border-top:1px solid var(--line)}
   .bt td{display:block;padding:0;border:0;white-space:normal}
   .bt th:first-child,.bt td:first-child{padding-left:0}
-  .bt td:nth-child(1){font-weight:700;font-size:13px;color:var(--muted)}
-  .bt td:nth-child(2){min-width:0}
-  .bt td:nth-child(2) .muted{display:none}
-  .bt td:nth-child(3){text-align:right}
-  .bt td:nth-child(4){grid-column:1 / 3;font-size:13px}
-  .bt td:nth-child(4)::before{content:"사는 조건: 배당 ";color:var(--muted);font-weight:600}
-  .bt td:nth-child(5){display:block!important;text-align:right;font-size:12.5px;color:var(--muted)}
-  .bt:not(.past) td:nth-child(5)::before{content:"모델 "}
+  .bt td:nth-child(1){grid-column:1 / 3}
+  .bt td:nth-child(2){text-align:right}
+  .bt td:nth-child(3){font-size:13px}
+  .bt td:nth-child(3) small{display:inline;margin-left:4px}
+  .bt td:nth-child(4),.bt td:nth-child(5){font-size:13px;text-align:left}
+  .bt td:nth-child(4)::before{content:"확률 ";color:var(--muted);font-weight:600}
+  .bt td:nth-child(5)::before{content:"기대 ";color:var(--muted);font-weight:600}
+  .bt.past td:nth-child(5)::before{content:""}
   .rc-h .right{margin-left:0;width:100%}
   .rc-h{padding:12px 14px}
   .rc-f{padding:10px 14px 12px}
+  .wait{padding:0 14px 12px}
 }
-.about{display:grid;gap:10px;max-width:72ch}
+.about{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;max-width:72ch}
 .about h2{font-size:17px;font-weight:800}
 .about ul{margin:0;padding-left:20px;display:grid;gap:5px;font-size:14px;color:var(--muted);line-height:1.65}
 .about b{color:var(--ink)}
 .chk{width:100%;border-collapse:collapse;font-size:13.5px;max-width:560px}
-.chk th,.chk td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right}
+.chk th,.chk td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 .chk th:first-child,.chk td:first-child{text-align:left}
 .chk th{font-size:12px;color:var(--muted);font-weight:700}
 </style>
@@ -111,10 +110,11 @@
 <body data-page="plan">
 <script src="assets/app.js"></script>
 <script src="assets/planner.js"></script>
+<script src="assets/mktmodel.js"></script>
 <main id="main" class="page">
   <header class="page-head">
     <h1>베팅 계획</h1>
-    <p>경주마다 살 마권과 금액, 사는 조건을 나눠 드립니다. 한 경주 합계는 10만 원 이하, 걸 만한 조합이 없으면 건너뜁니다.</p>
+    <p>배당판의 단승 배당을 넣으면, 배당 반영 확률 × 배당(기대값)이 1.2 이상인 말의 단승만 골라 금액을 나눠 드립니다. 그런 말이 없으면 그 경주는 건너뜁니다. 한 경주 합계는 10만 원 이하.</p>
   </header>
 
   <details class="setup panel" id="setupBox" aria-label="계획 설정">
@@ -132,9 +132,8 @@
         <p class="hint" id="modeHint"></p>
       </div>
     </div>
-    <div class="fld"><span class="lab" id="poolLab">살 승식</span>
-      <div class="toggles" id="pools" role="group" aria-labelledby="poolLab"></div>
-      <p class="hint" id="poolHint">지난 1년 검증에서 승식별 회수율은 모두 90~99% 안팎으로 비슷했습니다. 쌍승·삼복승·삼쌍승은 적중이 드물어 하루·한 달 결과가 크게 흔들립니다. 처음에는 단승·연승 위주를 권합니다.</p>
+    <div class="fld"><span class="lab">살 승식</span>
+      <p class="hint">단승만 삽니다. 연승·복승·쌍승·복연승·삼복승·삼쌍승도 같은 확률로 시험했지만, 앞 기간에서 고른 기준이 뒤 기간에서 유지되지 않아 계획에서 뺐습니다.</p>
     </div>
   </details>
 
@@ -148,20 +147,19 @@
 
   <section class="about" aria-labelledby="trkH">
     <h2 id="trkH">실전 기록</h2>
-    <p class="muted" style="font-size:14px;line-height:1.65">사이트가 경주마다 출발 직전의 계획(자금 10만 원, 보통, 배당 안 넣음)을 고정해 두고, 결과가 나오면 확정 배당으로 정산합니다. 과거에 다시 적용해 본 검증과 달리 앞으로 실제로 맞는지 보는 기록입니다. 몇 주는 쌓여야 의미가 있습니다.</p>
+    <p class="muted" style="font-size:14px;line-height:1.65">11월 14일부터 경주 결과가 나올 때마다, 그 경주의 확정 단승 배당을 넣었다고 보고 이 계획(자금 10만 원, 보통)을 계산해 정산합니다. 모델은 그날보다 앞서 학습을 끝낸 것이라 아래 과거 검증과 같은 방식으로 앞으로의 경주를 보는 기록입니다. 확정 배당을 쓰므로 실제로 사기 직전 배당으로 산 결과와는 다릅니다. 몇 달은 쌓여야 의미가 있습니다.</p>
     <div id="track"><p class="muted" style="font-size:14px">불러오는 중…</p></div>
   </section>
 
   <section class="about" aria-labelledby="howH">
     <h2 id="howH">이렇게 계산합니다</h2>
     <ul>
-      <li><b>사는 조건</b>: 모든 마권에 '배당이 이 값 이상일 때만 사기' 조건이 붙습니다. 최소 배당 = 1.1 ÷ 모델 확률, 즉 모델이 보기에 10% 이상 남는 값입니다. 사기 직전 현장 배당판에서 그 조합의 배당을 보고 '배당판' 칸에 넣으면, 조건 이상일 때 '사기', 낮으면 '넘기기'로 알려 줍니다. 배당은 마감까지 계속 바뀌므로 될수록 늦게 확인하세요.</li>
-      <li><b>확률</b>은 경주 전 정보만 쓴 모델 확률에, 경주일 오후에는 <b>당일 주로 보정</b>(앞서 끝난 경주에서 안쪽·바깥쪽 게이트가 유리했던 정도)을 곱한 값입니다. 배당과 섞은 결합 확률은 시장과 거의 같아져서 싼 마권을 찾는 데 쓰지 않습니다. 예측 화면에서 단승 배당을 넣어 두면 단승은 그 배당으로 바로 판단하고, 다른 승식도 배당에서 추정한 값이 조건에 크게 못 미치면 뺍니다.</li>
-      <li><b>건너뛰기</b>: 승식마다 최소 조합 확률(단승 20%, 연승 45%, 복승 8%, 쌍승 5%, 복연승 15%, 삼복승 4%, 삼쌍승 1.2%)을 넘는 조합이 없거나, 배당이 이미 낮게 몰렸거나, 첫 출전 말이 절반 이상인 경주는 건너뜁니다.</li>
-      <li><b>금액</b>: 켈리 기준(확률과 배당으로 정하는 자금 비율)의 일부를 씁니다. 조심스럽게 1/8, 보통 1/4. '자금 모두 쓰기'는 같은 비율로 늘려 하루 합계가 자금과 같아지게 합니다(한 경주 10만 원 상한 때문에 남을 수 있음). 최소 배당에서 산다고 보고 계산하므로(보수적) 배당판 배당이 더 높아도 금액은 그대로이고, 넘긴 마권의 돈을 다른 마권에 더 얹지도 않습니다.</li>
-      <li>한 경주 합계는 모든 승식을 합쳐 <b>10만 원 이하</b>, 하루 합계는 입력한 자금 이하, 모든 금액은 100원 단위입니다.</li>
+      <li><b>확률</b>: 말 정보(경주 전 기록·조교·체중 등)와 그 경주의 단승 배당을 함께 넣어 계산한 <b>배당 반영 확률</b>입니다. 출전하는 모든 말의 단승 배당이 있어야 계산되므로, 배당을 넣기 전에는 '배당 대기'로 둡니다. 경주일 오후에는 당일 주로 보정(앞서 끝난 경주에서 안쪽·바깥쪽 게이트가 유리했던 정도)도 곱합니다.</li>
+      <li><b>살 말</b>: 확률 5% 이상이고, 확률 × 단승 배당(기대값)이 1.2 이상인 말. 한 경주에 여러 마리일 수 있습니다. '기준 배당'은 지금 확률로 기대값 1.2가 되는 배당입니다. 배당은 마감까지 바뀌므로 출발 1~2분 전 배당판 값을 다시 넣고, 기준 아래로 내려간 말은 사지 마세요.</li>
+      <li><b>금액</b>: 켈리 기준(확률과 배당으로 정하는 자금 비율, 한 마권 최대 10%)에 조심스럽게 1/8, 보통 1/4를 곱합니다. '자금 모두 쓰기'는 10배를 곱해 과거 평균적인 날 하루 합계가 자금과 비슷해지게 한 것입니다. 배당은 경주마다 출발 직전에야 알 수 있으므로 앞 경주부터 차례로 금액을 정하고, 기록장에 담은 앞 경주 마권 금액은 남은 자금에서 뺍니다.</li>
+      <li>한 경주 합계는 <b>10만 원 이하</b>, 하루 합계는 입력한 자금 이하, 모든 금액은 100원 단위입니다.</li>
     </ul>
-    <h2 id="chkH" style="margin-top:6px">지난 1년에 이대로 샀다면</h2>
+    <h2 id="chkH" style="margin-top:6px">지난 경주에 이대로 샀다면</h2>
     <div id="check"><p class="muted" style="font-size:14px">검증 결과를 불러오는 중…</p></div>
   </section>
 </main>
@@ -187,197 +185,187 @@ const store = {
   get(k){ try { return JSON.parse(localStorage.getItem(k) || "null"); } catch { return null; } },
   set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } }
 };
-const SHORT = {"단승식":"단승","연승식":"연승","복승식":"복승","쌍승식":"쌍승","복연승식":"복연승","삼복승식":"삼복승","삼쌍승식":"삼쌍승"};
-const ORDERED = new Set(["쌍승식","삼쌍승식"]);
-const MODE_HINT = {safe: "켈리 비율의 1/8. 대부분의 날 자금의 일부만 씁니다.", normal: "켈리 비율의 1/4. 확률이 맞다고 볼 때 자금이 크게 줄 위험을 낮춘 보통 수준입니다.",
-  all: "같은 기준으로 고른 마권에 자금을 모두 나눕니다. 한 경주 10만 원을 넘으면 그 경주는 10만 원에서 멈춥니다."};
+const MODE_NAME = {safe: "조심스럽게", normal: "보통", all: "자금 모두 쓰기"};
+const MODE_HINT = {safe: "켈리 비율의 1/8. 과거 검증에서 자금 10만 원이면 하루 평균 약 1,100원.",
+  normal: "켈리 비율의 1/4. 과거 검증에서 자금 10만 원이면 하루 평균 약 2,400원. 기대값이 작아 많이 사지 않습니다.",
+  all: "켈리 비율의 10배. 과거 평균적인 날 자금만큼 삽니다. 날마다 쓰는 돈이 크게 다르고, 앞 경주에서 자금을 다 쓰면 뒤 경주는 못 삽니다. 큰 손실이 날 수 있습니다."};
 
-let S = Object.assign({bank: 100000, mode: "normal", pools: ["단승식","연승식"]}, store.get("plan:settings") || {});
-let INDEX = null, DAY = null, ENT = null, PRED = null, DIV = null, PAST = false, BIAS = null;
-let BOARD = {};      // 배당판에서 본 배당: {경주: {"승식:조합": "5.4"}} — 경주일마다 따로 저장
-const boardKey = () => `plan:board:${DAY.date}`;
+let S = Object.assign({bank: 100000, mode: "normal"}, store.get("plan:settings") || {});
+let INDEX = null, DAY = null, ENT = null, PRED = null, PAST = false, BIAS = null, MKX = null, MKT = null;
+const mktReady = MktModel.load().then(m => { MKT = m; return m; });
 
 function saveS(){ store.set("plan:settings", S); }
 function renderSetup(){
-  const MODE_NAME = {safe: "조심스럽게", normal: "보통", all: "자금 모두 쓰기"};
-  $("setupSum").innerHTML = `<span>${DAY ? short(DAY.date) : ""}</span><b>${won(S.bank)}</b><span>· ${MODE_NAME[S.mode]}</span><span>· ${S.pools.map(p => SHORT[p]).join("·") || "승식 없음"}</span><span class="chg"></span>`;
+  $("setupSum").innerHTML = `<span>${DAY ? short(DAY.date) : ""}</span><b>${won(S.bank)}</b><span>· ${MODE_NAME[S.mode] || "보통"}</span><span>· 단승</span><span class="chg"></span>`;
   $("bank").value = S.bank;
   [...$("mode").children].forEach(b => b.setAttribute("aria-pressed", b.dataset.m === S.mode));
-  $("modeHint").textContent = MODE_HINT[S.mode];
-  $("pools").innerHTML = Planner.POOLS.map(p => `<button type="button" data-p="${p}" aria-pressed="${S.pools.includes(p)}">${SHORT[p]}</button>`).join("");
+  $("modeHint").textContent = MODE_HINT[S.mode] || "";
 }
 $("bank").addEventListener("input", () => { S.bank = Math.max(0, Math.floor(+$("bank").value || 0)); saveS(); render(); });
 $("quick").onclick = e => { const b = e.target.closest("[data-v]"); if (!b) return; S.bank = +b.dataset.v; saveS(); renderSetup(); render(); };
 $("mode").onclick = e => { const b = e.target.closest("[data-m]"); if (!b) return; S.mode = b.dataset.m; saveS(); renderSetup(); render(); };
-$("pools").onclick = e => { const b = e.target.closest("[data-p]"); if (!b) return; const p = b.dataset.p;
-  S.pools = S.pools.includes(p) ? S.pools.filter(x => x !== p) : Planner.POOLS.filter(x => x === p || S.pools.includes(x)); saveS(); renderSetup(); render(); };
 $("daySel").onchange = async e => { await openDay(e.target.value); renderSetup(); };
 
 async function openDay(d){
   DAY = INDEX.days.find(x => x.date === d);
   PAST = !!DAY.past;
-  BOARD = store.get(boardKey()) || {};
-  [ENT, PRED, DIV, BIAS] = await Promise.all([get(`data/${DAY.entries}`), DAY.pred ? get(`data/${DAY.pred}`) : null, PAST ? get(`data/div/${d}.json`) : null, get(`data/bias/${d}.json`)]);
+  [ENT, PRED, BIAS, MKX] = await Promise.all([get(`data/${DAY.entries}`), DAY.pred ? get(`data/${DAY.pred}`) : null, get(`data/bias/${d}.json`), DAY.mkx ? get(`data/mkx/${d}.json`) : null, mktReady]);
   render();
 }
 
+/* 경주마다 입력: 넣은 단승 배당(지난 경주일은 확정 배당) → 배당 반영 확률 × 당일 주로 보정 */
 function raceInputs(){
   const rows = ENT?.rows || [];
   const races = [...new Set(rows.map(r => +r.rcNo))].sort((a, b) => a - b);
   const now = new Date(), today = ymd(now), nowM = now.getHours()*60 + now.getMinutes();
   return races.map(n => {
     const pr = PRED?.races?.[n] || {}, first = rows.find(r => +r.rcNo === n);
-    const saved = store.get(`odds:${DAY.date}:${n}`) || {};
-    const board = PAST ? {} : (BOARD[n] || {});
+    const saved = PAST ? {} : (store.get(`odds:${DAY.date}:${n}`) || {});
     const out = [...new Set([...(pr.out || []), ...(saved.out || [])].map(Number))];
-    const user = saved.user || saved.odds || {};
-    const odds = {}; for (const [k, v] of Object.entries(user)) if (+v > 1) odds[k] = +v;
-    const live = Object.keys(pr.p || {}).filter(k => !out.includes(+k));
+    const ids = rows.filter(r => +r.rcNo === n).map(r => String(+r.chulNo)).filter(k => !out.includes(+k));
+    const src = PAST ? (pr.odds || {}) : (saved.user || saved.odds || {});
+    const odds = {}; for (const k of ids) if (+src[k] > 1) odds[k] = +src[k];
     const t = stTime(first), [h, m] = (t || "0:0").split(":").map(Number);
     const started = DAY.date < today || (DAY.date === today && t && h*60 + m <= nowM);
-    if (PAST) Object.assign(odds, pr.odds || {});
-    const bf = BIAS?.races?.[n]?.f || {}, p = Object.fromEntries(Object.entries(pr.p || {}).map(([k, v]) => [k, v * (bf[k] ?? 1)]));
-    return {race: n, time: t, dist: first?.rcDist, rank: first?.rank, p, odds, board, out, void: pr.void, ib: BIAS?.races?.[n]?.ib,
-      done: PAST ? false : (!!pr.result?.length || started), started, result: pr.result, plc: pr.plc || {}, nDebut: live.filter(k => (pr.n || {})[k] === 0).length,
-      names: Object.fromEntries(rows.filter(r => +r.rcNo === n).map(r => [+r.chulNo, r.hrName])), nOdds: Object.keys(odds).length, nLive: live.length};
+    let pm = null;
+    if (MKT && MKX && Object.keys(odds).length === ids.length){
+      const pa = MktModel.predict(MKT, MKX.races?.[n], odds, ids);
+      if (pa){ const bf = BIAS?.races?.[n]?.f || {}, v = ids.map(i => pa[i] * (bf[i] ?? 1)), s = v.reduce((a, b) => a + b, 0); pm = Object.fromEntries(ids.map((i, k) => [i, v[k] / s])); }
+    }
+    return {race: n, time: t, dist: first?.rcDist, rank: first?.rank, pm, odds, ids, out, void: pr.void, ib: BIAS?.races?.[n]?.ib,
+      done: PAST ? false : (!!pr.result?.length || started), started, result: pr.result,
+      names: Object.fromEntries(rows.filter(r => +r.rcNo === n).map(r => [+r.chulNo, r.hrName])), nOdds: Object.keys(odds).length, nLive: ids.length};
   });
+}
+/* 오늘 앞 경주(출발했거나 끝난 경주)에 기록장으로 담은 금액 → 남은 자금에서 뺌 */
+function spentBefore(R){
+  if (PAST) return 0;
+  const done = new Set(R.filter(r => r.done).map(r => r.race));
+  return (store.get("horse-bets-v1") || []).filter(b => b.date === DAY.date && done.has(+b.race)).reduce((a, b) => a + (+b.amount || 0), 0);
 }
 
 let LAST = null;
-/* 지난 경주일: 조건(확정 배당 ≥ 최소 배당)이 맞았는지, 맞았다면 적중·환급 */
-function settle(r, b){
-  const pay = DIV?.races?.[r.race]?.pay?.[b.pool] || {};
-  const won = pay[b.key];
-  let fo = b.pool === "단승식" ? r.odds[b.key] : b.pool === "연승식" ? r.plc[b.key] : won;
-  if (fo == null) return {st: "lose", text: "미적중", bought: true, ret: 0};   // 진 조합은 확정 배당을 몰라 산 것으로 셈
-  if (fo < b.minOdds) return {st: "skip", text: `안 삼 (확정 ${fo})`, bought: false, ret: 0};
-  return won ? {st: "win", text: `적중 ${(b.stake * won).toLocaleString("ko-KR")}원`, bought: true, ret: b.stake * won} : {st: "lose", text: "미적중", bought: true, ret: 0};
-}
 function render(){
   if (!DAY) return;
-  const a = document.activeElement, fk = a?.dataset?.bo, fpos = fk ? a.selectionStart : null;   // 배당 칸에 쓰는 중이면 다시 그린 뒤 그 칸으로 돌아감
-  renderInner();
-  if (fk){ const n = [...document.querySelectorAll("[data-bo]")].find(x => x.dataset.bo === fk); if (n && n !== document.activeElement){ n.focus({preventScroll: true}); try { n.setSelectionRange(fpos, fpos); } catch {} } }
-}
-function renderInner(){
   const R = raceInputs();
-  if (!PRED){ $("list").innerHTML = `<p class="empty">이 경주일은 아직 예측이 없어 계획을 만들 수 없습니다.</p>`; $("sum").innerHTML = ""; return; }
-  const pl = Planner.plan(R.map(r => ({race: r.race, p: r.p, odds: r.odds, board: r.board, out: r.out, void: r.void, done: r.done, nDebut: r.nDebut})),
-    {bankroll: S.bank, mode: S.mode, pools: S.pools, margin: 0.1});
+  if (!PRED){ $("list").innerHTML = `<p class="empty">이 경주일은 아직 예측이 없어 계획을 만들 수 없습니다.</p>`; $("sum").innerHTML = ""; $("warnline").textContent = ""; return; }
+  if (!MKX || !MKT){
+    $("sum").innerHTML = ""; $("listAside").textContent = short(DAY.date);
+    $("warnline").textContent = "";
+    $("list").innerHTML = `<p class="empty">${!MKT ? "배당 반영 모델을 불러오지 못했습니다. 잠시 뒤 새로 고쳐 주세요." : PAST ? "이 경주일은 배당 반영 확률에 쓸 말 특징이 저장되어 있지 않아 연습 보기를 만들 수 없습니다. 11월 14일 경주부터 볼 수 있습니다." : "이 경주일의 말 특징이 아직 준비되지 않았습니다. 출전표가 나오고 예측이 만들어지면 생깁니다."}</p>`;
+    return;
+  }
+  const spent = spentBefore(R);
+  const pl = Planner.plan(R.map(r => ({race: r.race, pm: r.pm, odds: r.odds, ids: r.ids, out: r.out, void: r.void, done: r.done})), {bankroll: S.bank, mode: S.mode, spent});
   LAST = pl;
-  const bet = pl.races.filter(r => r.bets), skip = pl.races.filter(r => !r.bets && r.skip !== "끝난 경주"), done = pl.races.filter(r => r.skip === "끝난 경주");
-  const nSeen = pl.races.reduce((a, r) => a + [...(r.bets || []), ...(r.passed || [])].filter(b => b.seen).length, 0);
-  const maxR = Math.max(0, ...bet.map(r => r.total));
-  $("sum").innerHTML = [["계획 합계", won(pl.total), S.bank ? `자금의 ${(pl.total / S.bank * 100).toFixed(0)}%` : ""], ["걸 경주", `${bet.length}경주`, ""], ["건너뛸 경주", `${skip.length}경주`, done.length ? `지난 경주 ${done.length}` : ""],
-    ["한 경주 최대", won(maxR), "상한 100,000원"]].map(([a, b, c]) => `<div><span>${a}</span><b>${b}</b>${c ? `<small>${c}</small>` : ""}</div>`).join("");
-  const withOdds = R.filter(r => !r.done && r.nOdds && r.nOdds >= r.nLive).length;
-  $("warnline").innerHTML = `<b>사기 직전 배당판에서 그 조합의 배당을 보고 '배당판' 칸에 넣으세요.</b> 조건 이상이면 '사기', 낮으면 '넘기기'가 바로 나옵니다. 넘긴 마권의 돈은 다른 마권으로 옮기지 않습니다. 합계는 넘긴 것을 빼고, 아직 넣지 않은 마권은 산다고 보고 센 금액입니다. 지난 1년 기준 약 절반의 경주에서는 조건에 맞는 마권이 없어 아무것도 사지 않았습니다.${nSeen ? ` 지금 배당판 배당을 넣은 마권 ${nSeen}장.` : ""}${withOdds ? ` 단승 배당을 모두 넣은 경주 ${withOdds}개는 그 배당도 반영했습니다.` : ""}`;
-  $("listAside").textContent = `${short(DAY.date)} · ${PRED.model || "모델"}`;
+  const bet = pl.races.filter(r => r.bets), wait = pl.races.filter(r => r.wait), done = pl.races.filter(r => r.skip === "끝난 경주");
+  const skip = pl.races.filter(r => !r.bets && !r.wait && r.skip !== "끝난 경주");
+  $("sum").innerHTML = [["계획 합계", won(pl.total), S.bank ? `자금의 ${(pl.total / S.bank * 100).toFixed(0)}%` : ""], ["살 경주", `${bet.length}경주`, ""],
+    PAST ? null : ["배당 대기", `${wait.length}경주`, "배당을 넣으면 계산"], ["건너뛸 경주", `${skip.length}경주`, done.length ? `출발한 경주 ${done.length}` : ""],
+    spent ? ["앞 경주에 쓴 돈", won(spent), `남은 자금 ${won(Math.max(0, S.bank - spent))}`] : null].filter(Boolean)
+    .map(([a, b, c]) => `<div><span>${a}</span><b>${b}</b>${c ? `<small>${c}</small>` : ""}</div>`).join("");
+  $("warnline").innerHTML = PAST ? "" : `<b>배당은 마감까지 바뀝니다.</b> 출발 1~2분 전 배당판의 단승 배당을 현장 화면이나 예측 화면에 넣으면 이 계획이 그 배당으로 다시 계산됩니다. 과거 검증에서는 약 6경주 중 5경주를 건너뛰었고, 산 날의 70% 이상은 손실이었습니다(가끔 맞는 높은 배당이 이익을 만듦).`;
+  $("listAside").textContent = `${short(DAY.date)} · 배당 반영 모델`;
+  const head = r => `<span class="rn">${r.race}R</span><span class="meta">${[r.time, r.dist && r.dist + "m", r.rank].filter(Boolean).join(" · ")}</span>`;
   const card = p => {
     const r = R.find(x => x.race === p.race);
-    const head = `<span class="rn">${p.race}R</span><span class="meta">${[r.time, r.dist && r.dist + "m", r.rank].filter(Boolean).join(" · ")}</span>`;
-    const all = [...(p.bets || []), ...(p.passed || [])].sort((a, b) => Planner.POOLS.indexOf(a.pool) - Planner.POOLS.indexOf(b.pool) || b.p - a.p);
-    if (!all.length){
-      const tag = p.skip === "끝난 경주" ? `<span class="pill">${r.started && !PRED.races?.[p.race]?.result ? "출발함" : "끝남"}</span>` : `<span class="pill">건너뛰기</span>`;
-      const why = p.skip === "끝난 경주" ? "" : `<p class="why">${esc(p.skip)}</p>`;
-      return `<article class="rc panel skip"><div class="rc-h">${head}<span class="right">${tag}</span></div>${why}</article>`;
+    if (p.skip === "끝난 경주")
+      return `<article class="rc panel skip"><div class="rc-h">${head(r)}<span class="right"><span class="pill">${r.started && !r.result?.length ? "출발함" : "끝남"}</span></span></div></article>`;
+    if (p.wait && PAST)
+      return `<article class="rc panel skip"><div class="rc-h">${head(r)}<span class="right"><span class="pill">건너뛰기</span></span></div><p class="why">확정 단승 배당이 모두 있지 않아 계산하지 못했습니다.</p></article>`;
+    if (p.wait)
+      return `<article class="rc panel skip"><div class="rc-h">${head(r)}<span class="right"><span class="pill">배당 대기</span></span></div>
+        <div class="wait"><span class="msg">${r.nOdds ? `${r.nLive}두 중 ${r.nOdds}두 넣음. 나머지 ${r.nLive - r.nOdds}두의 단승 배당을 넣으면 계산합니다.` : `출전하는 ${r.nLive}두의 단승 배당을 모두 넣으면 계산합니다.`}</span>
+        <a class="btn" href="live.html?date=${DAY.date}&race=${r.race}">현장 화면에서 넣기</a><a class="btn" href="race.html?date=${DAY.date}&race=${r.race}#odds">배당판 사진으로 읽기</a></div></article>`;
+    if (!p.bets){
+      const ev = r.pm ? Math.max(...Object.keys(r.pm).map(i => r.pm[i] * r.odds[i])) : null;
+      const res = PAST && r.result?.length ? `<span class="pill">결과 ${r.result.slice(0, 3).join("→")}</span>` : "";
+      return `<article class="rc panel skip"><div class="rc-h">${head(r)}<span class="right">${res}<span class="pill">건너뛰기</span></span></div><p class="why">${esc(p.skip)}${ev != null && p.skip.startsWith("기대값") ? ` (가장 높은 말 ${ev.toFixed(2)})` : ""}</p></article>`;
     }
-    const oddsTag = (r.nOdds && r.nOdds >= r.nLive ? `<span class="pill good">단승 배당 반영</span>` : "") + (r.ib != null && !PAST ? `<span class="pill">당일 주로 보정</span>` : "");
-    const live = !PAST && !r.done;
-    const rows = all.map(b => {
-      const pass = !(p.bets || []).includes(b);
-      const bk = `${p.race}|${b.pool}:${b.key}`, bv = r.board[`${b.pool}:${b.key}`] ?? "";
-      const inp = live ? `<input class="bo" type="text" inputmode="decimal" autocomplete="off" placeholder="배당판" data-bo="${bk}" value="${esc(bv)}" aria-label="${p.race}경주 ${SHORT[b.pool]} ${b.nums.join("-")} 배당판 배당">` : "";
-      const verd = b.seen ? `<span class="verd ${pass && !b.small ? "no" : "ok"}">${pass && !b.small ? "넘기기" : "사기"}</span>` : "";
-      const sep = ORDERED.has(b.pool) ? "<em>→</em>" : "<em>·</em>";
-      const names = b.nums.map(n => r.names[n] || "").join(", ");
-      const now = b.seen ? "" : b.cur != null ? `<span class="now ${b.cur >= b.minOdds ? "ok" : "no"}">지금 ${b.cur}</span>` : (b.est ? `<span class="now">예상 ${b.est >= 100 ? Math.round(b.est) : b.est.toFixed(1)}</span>` : "");
-      const st = PAST ? settle(r, b) : null;
-      if (st){ p.spent = (p.spent || 0) + (st.bought ? b.stake : 0); p.ret = (p.ret || 0) + st.ret; }
-      const last = st ? `<td class="r"><span class="now ${st.st === "win" ? "ok" : ""}" style="margin:0">${st.text}</span></td>` : `<td class="r hide-s">${pct(b.p)}</td>`;
-      return `<tr class="${pass ? "pass" : ""}"><td>${SHORT[b.pool]}</td><td><span class="combo">${b.nums.map(chip).join(sep)}</span> <span class="muted hide-s" style="font-size:12.5px">${esc(names)}</span></td>
-        <td class="r stake">${pass ? (b.small ? "100원 미만" : "사지 않음") : won(b.stake)}</td><td class="cond">${b.minOdds} 이상${PAST ? "" : now}${inp}${verd}</td>${last}</tr>`;
+    let spentR = 0, retR = 0;
+    const rows = p.bets.map(b => {
+      const n = b.nums[0], st = PAST && r.result?.length ? (n === r.result[0] ? "win" : "lose") : null;
+      if (st){ spentR += b.stake; if (st === "win") retR += b.stake * b.cur; }
+      const odd = PAST ? `<b>${b.cur}</b><small>확정 배당</small>` : `<b>${b.cur}</b><small>${b.minOdds} 아래면 사지 않기</small>`;
+      const last = st ? `<td class="r res ${st}">${st === "win" ? `적중 ${won(b.stake * b.cur)}` : "미적중"}</td>` : `<td class="r ev">${b.ev.toFixed(2)}</td>`;
+      return `<tr><td><span class="hn">${chip(n)}<b>${esc(r.names[n] || "")}</b></span></td><td class="r stake">${won(b.stake)}</td><td class="odd">${odd}</td><td class="r">${pct(b.p)}</td>${last}</tr>`;
     }).join("");
-    const res = PAST && r.result ? `<span class="pill">결과 ${r.result.slice(0, 3).join("→")}</span>` : "";
-    const foot = PAST ? `<div class="rc-f"><span class="msg" style="color:var(--muted)">조건에 맞아 산 금액 ${won(p.spent || 0)} · 환급 ${won(p.ret || 0)}</span></div>`
-      : `<div class="rc-f"><a class="btn" href="race.html?date=${DAY.date}&race=${p.race}">예측 화면에서 배당 넣기</a>${p.bets ? `<button class="btn" type="button" data-rec="${p.race}">산 대로 기록장에 담기</button>` : ""}<span class="msg" id="msg-${p.race}"></span></div>`;
-    return `<article class="rc panel"><div class="rc-h">${head}<span class="right">${PAST ? res : oddsTag}<span class="amt">${won(p.total || 0)}</span></span></div>
-      <table class="bt${PAST ? " past" : ""}"><thead><tr><th>승식</th><th>조합</th><th class="r">금액</th><th>사는 조건 (배당) · 배당판에서 본 값</th><th class="r${PAST ? "" : " hide-s"}">${PAST ? "결과" : "모델 확률"}</th></tr></thead><tbody>${rows}</tbody></table>
+    if (PAST){ p.spent = spentR; p.ret = retR; }
+    const tags = (r.ib != null && !PAST ? `<span class="pill">당일 주로 보정</span>` : "") + (PAST && r.result?.length ? `<span class="pill">결과 ${r.result.slice(0, 3).join("→")}</span>` : "");
+    const foot = PAST ? `<div class="rc-f"><span class="msg" style="color:var(--muted)">산 금액 ${won(spentR)} · 환급 ${won(retR)}</span></div>`
+      : `<div class="rc-f"><a class="btn" href="live.html?date=${DAY.date}&race=${p.race}">현장 화면</a><button class="btn" type="button" data-rec="${p.race}">산 대로 기록장에 담기</button><span class="msg" id="msg-${p.race}"></span></div>`;
+    return `<article class="rc panel"><div class="rc-h">${head(r)}<span class="right">${tags}<span class="amt">${won(p.total || 0)}</span></span></div>
+      <table class="bt${PAST ? " past" : ""}"><thead><tr><th>단승</th><th class="r">금액</th><th>${PAST ? "배당" : "넣은 배당 · 기준"}</th><th class="r">확률</th><th class="r">${PAST ? "결과" : "기대값"}</th></tr></thead><tbody>${rows}</tbody></table>
       ${foot}</article>`;
   };
-  const ended = p => p.skip === "끝난 경주";
-  const ahead = pl.races.filter(p => !ended(p)), gone = pl.races.filter(ended);
+  const ahead = pl.races.filter(p => p.skip !== "끝난 경주"), gone = pl.races.filter(p => p.skip === "끝난 경주");
   $("list").innerHTML = (ahead.map(card).join("") + (gone.length ? `<details class="gone"><summary>+ 출발한 경주 ${gone.length}개</summary>${gone.map(card).join("")}</details>` : "")) || `<p class="empty">출전표가 없습니다.</p>`;
   if (PAST){
     const sp = pl.races.reduce((a, x) => a + (x.spent || 0), 0), rt = pl.races.reduce((a, x) => a + (x.ret || 0), 0);
-    $("warnline").innerHTML = `<b>지난 경주일 연습 보기</b>: 확정 단승 배당을 넣었다고 보고 만든 계획을 확정 배당으로 정산했습니다. 조건에 맞아 실제로 샀을 금액 <b>${won(sp)}</b>, 환급 <b>${won(rt)}</b>, 회수율 <b>${sp ? (rt / sp * 100).toFixed(0) + "%" : "-"}</b>. 하루 결과는 운의 영향이 매우 큽니다.`;
+    $("warnline").innerHTML = `<b>지난 경주일 연습 보기</b>: 확정 단승 배당을 넣었다고 보고 계산했습니다. 산 금액 <b>${won(sp)}</b>, 환급 <b>${won(rt)}</b>, 회수율 <b>${sp ? (rt / sp * 100).toFixed(0) + "%" : "-"}</b>. 하루 결과는 운의 영향이 매우 큽니다.`;
   }
 }
 
-// 배당판에서 본 배당 넣기 → 저장하고 잠깐 뒤 다시 계산 (쓰는 동안 칸이 사라지지 않게)
-let boTmr = null;
-$("list").addEventListener("input", e => {
-  const t = e.target.closest("[data-bo]"); if (!t) return;
-  const [n, key] = t.dataset.bo.split("|"), v = t.value.replace(",", ".").replace(/[^0-9.]/g, "");
-  if (v !== t.value) t.value = v;
-  const o = BOARD[n] = BOARD[n] || {};
-  if (v === "") delete o[key]; else o[key] = v;
-  if (!Object.keys(o).length) delete BOARD[n];
-  store.set(boardKey(), BOARD);
-  clearTimeout(boTmr); boTmr = setTimeout(render, 600);
-});
-// 산 마권을 기록장(bets.html)에 담기: 조건이 맞아 실제로 산 것만 담도록 안내
+// 산 마권을 기록장(bets.html)에 담기
 $("list").addEventListener("click", e => {
   const b = e.target.closest("[data-rec]"); if (!b || !LAST) return;
   const n = +b.dataset.rec, p = LAST.races.find(x => x.race === n); if (!p?.bets) return;
-  const r = raceInputs().find(x => x.race === n);
   const bets = store.get("horse-bets-v1") || [], now = Date.now(), grp = `p${now}`;
-  const buy = p.bets.filter(x => x.cur == null || x.cur >= x.minOdds);
-  buy.forEach((x, k) => bets.push({id: `${now}-${k}-${Math.random().toString(36).slice(2,7)}`, grp: `${grp}-${k}`, date: DAY.date, race: n, pool: x.pool, nums: x.nums, amount: x.stake, memo: "베팅 계획", created: now + k}));
+  p.bets.forEach((x, k) => bets.push({id: `${now}-${k}-${Math.random().toString(36).slice(2,7)}`, grp: `${grp}-${k}`, date: DAY.date, race: n, pool: x.pool, nums: x.nums, amount: x.stake, memo: "베팅 계획", created: now + k}));
   const ok = store.set("horse-bets-v1", bets);
-  $(`msg-${n}`).innerHTML = ok ? `${buy.length}장 ${won(buy.reduce((a, x) => a + x.stake, 0))} 담음 · <a href="bets.html">기록장에서 고치기</a>` : "이 브라우저에서는 저장할 수 없습니다.";
+  $(`msg-${n}`).innerHTML = ok ? `${p.bets.length}장 ${won(p.total)} 담음 · <a href="bets.html">기록장에서 고치기</a>` : "이 브라우저에서는 저장할 수 없습니다.";
 });
-// 예측 화면에서 배당을 넣고 돌아오면 다시 계산
-addEventListener("storage", e => { if (e.key && e.key.startsWith("odds:")) render(); });
+// 현장 화면·예측 화면에서 배당을 넣거나 마권을 담으면 다시 계산
+addEventListener("storage", e => { if (e.key && (e.key.startsWith("odds:") || e.key === "horse-bets-v1")) render(); });
 document.addEventListener("visibilitychange", async () => { if (!document.hidden && DAY){ BIAS = await get(`data/bias/${DAY.date}.json`); render(); } });
+setInterval(() => { if (!document.hidden && DAY && !PAST) render(); }, 60000);     // 출발한 경주를 접기
 
 async function showCheck(){
   const c = await get("data/plan_check.json");
-  if (!c){ $("check").innerHTML = `<p class="muted" style="font-size:14px">검증 결과가 아직 없습니다.</p>`; return; }
-  const ci = x => `${(x.ci[0]*100).toFixed(0)}~${(x.ci[1]*100).toFixed(0)}%`;
-  const row = (lab, x, note) => `<tr><td>${lab}</td><td>${x.bets.toLocaleString()}장</td><td>${x.hits.toLocaleString()}</td><td><b>${(x.roi*100).toFixed(1)}%</b></td><td>${ci(x)}${note ? ` <span class="muted">${note}</span>` : ""}</td></tr>`;
-  const head = `<thead><tr><th>설정</th><th>산 마권</th><th>적중</th><th>회수율</th><th>95% 구간</th></tr></thead>`;
-  $("check").innerHTML = `<p style="font-size:14px;color:var(--muted);line-height:1.65;margin-bottom:8px">${esc(c.period)} 경주일 ${c.days}일(${c.races.toLocaleString()}경주)에 그날보다 앞서 학습을 끝낸 모델로 이 계산을 그대로 돌렸습니다. 조건부 마권은 그 조합의 확정 배당이 최소 배당 이상일 때만 산 것으로 보고 확정 배당으로 정산했습니다(확정 배당은 마감 후 값이라 실제보다 조금 유리합니다). <b style="color:var(--ink)">어느 설정도 확실하게 본전(100%)을 넘지 못했습니다.</b> 95% 구간이 100%를 걸치는 것은 운에 따라 이익이 날 수도 있다는 뜻이지 이익이 난다는 뜻이 아닙니다. 그래도 같은 기간 아무 기준 없이 산 평균(단승·연승 약 80%, 다른 승식 약 73%)보다는 손실이 작았습니다.</p>
-    <div style="overflow-x:auto"><table class="chk">${head}<tbody>${c.rows.map(x => row(x.label, x)).join("")}</tbody></table></div>
-    <h3 style="font-size:15px;font-weight:800;margin:14px 0 6px">승식별 (그 승식만 산 경우, 조건만)</h3>
-    <div style="overflow-x:auto"><table class="chk">${head.replace("설정", "승식")}<tbody>${c.pools.map(x => row(SHORT[x.pool], x, x.hits < 10 ? "적중이 적어 믿기 어려움" : "")).join("")}</tbody></table></div>`;
+  if (!c?.configs){ $("check").innerHTML = `<p class="muted" style="font-size:14px">검증 결과가 아직 없습니다.</p>`; return; }
+  const p0 = x => x.roi == null ? "-" : `${(x.roi*100).toFixed(0)}%`;
+  const ci = x => x.ci ? `<span class="muted">${(x.ci[0]*100).toFixed(0)}~${(x.ci[1]*100).toFixed(0)}</span>` : "";
+  const fy = d => `${d.slice(0,4)}.${+d.slice(4,6)}`;
+  const rows = c.configs.map(x => { const [all, a, b] = x.rows;
+    return `<tr><td>${esc(x.label)}</td><td>${all.bets.toLocaleString()}장</td><td><b>${p0(all)}</b> ${ci(all)}</td><td>${p0(a)} ${ci(a)}</td><td>${p0(b)} ${ci(b)}</td><td>${x.key === "flat" ? "-" : won(x.perDayStake)}</td></tr>`; }).join("");
+  const flat = c.configs.find(x => x.key === "flat");
+  $("check").innerHTML = `<p style="font-size:14px;color:var(--muted);line-height:1.65;margin-bottom:8px">${fy(c.first)}~${fy(c.last)} 경주일 ${c.days.toLocaleString()}일(${c.races.toLocaleString()}경주, 코로나 무관중 기간 제외)에, 연도마다 그 전 해까지의 경주로만 학습한 모델로 이 계산을 그대로 돌렸습니다. 기준(확률 5% 이상·기대값 1.2 이상)은 <b style="color:var(--ink)">2016~2022년 결과만 보고 정했고</b>, 2023~2026년은 기준을 정한 뒤 확인한 기간입니다. 자금은 날마다 10만 원으로 시작했습니다.</p>
+    <div style="overflow-x:auto"><table class="chk" style="max-width:none"><thead><tr><th>설정</th><th>산 마권</th><th>회수율 (95% 구간)</th><th>2016~2022</th><th>2023~2026</th><th>하루 평균</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <p style="font-size:14px;color:var(--muted);line-height:1.65;margin-top:8px"><b style="color:var(--ink)">확실한 이익이라고 할 수는 없습니다.</b> 말을 고를 때와 정산할 때 모두 마감 후 확정 배당을 썼는데, 실제로는 사기 직전 배당으로 골라야 하고 산 뒤에도 배당이 바뀝니다. 그래서 실제 결과는 이보다 나쁠 수 있습니다. 최근 기간(2023~2026)은 95% 구간 아래쪽이 100% 근처이고, 해마다 결과가 크게 흔들렸습니다(100원씩 기준, 아래).</p>
+    ${flat ? `<div class="years" aria-label="연도별 회수율 (100원씩)">${c.years.map(y => `<span class="${y.roi < 1 ? "lo" : ""}">${y.label}<b>${p0(y)}</b>${y.bets}장</span>`).join("")}</div>` : ""}
+    <p class="muted" style="font-size:13px;margin-top:6px">같은 기간 단승을 아무 기준 없이 산 평균 회수율은 약 80%입니다(마권 값의 약 20%가 세금·수수료).</p>`;
 }
 
 async function showTrack(){
   const t = await get("data/plan_track/summary.json");
   if (!t){ $("track").innerHTML = `<p class="muted" style="font-size:14px">아직 기록이 없습니다.</p>`; return; }
   const sd = d => `${+d.slice(4,6)}/${+d.slice(6,8)}`;
-  const rows = Object.values(t.tracks).map(x => `<tr><td>${esc(x.label)}</td><td>${x.races}경주 · ${x.bets}장</td><td>${x.hits}</td><td>${won(x.spent)}</td><td>${won(x.ret)}</td><td><b>${x.spent ? (x.ret / x.spent * 100).toFixed(1) + "%" : "-"}</b></td><td>${x.pending ? `${x.pending}경주` : "-"}</td></tr>`).join("");
-  const days = [...new Set(Object.values(t.tracks).flatMap(x => x.days.map(d => d.date)))].sort().reverse();
-  const drows = days.map(d => `<tr><td>${sd(d)}</td>${Object.values(t.tracks).map(x => { const y = x.days.find(z => z.date === d); return y ? `<td>${won(y.spent)} → ${won(y.ret)}</td>` : "<td>-</td>"; }).join("")}</tr>`).join("");
-  $("track").innerHTML = `<div style="overflow-x:auto"><table class="chk" style="max-width:none"><thead><tr><th>설정</th><th>산 경주·마권</th><th>적중</th><th>산 금액</th><th>환급</th><th>회수율</th><th>정산 대기</th></tr></thead><tbody>${rows}</tbody></table></div>
-    ${drows ? `<div style="overflow-x:auto;margin-top:10px"><table class="chk"><thead><tr><th>경주일</th>${Object.values(t.tracks).map(x => `<th>${esc(x.label)}</th>`).join("")}</tr></thead><tbody>${drows}</tbody></table></div>` : ""}
-    <p class="muted" style="font-size:13px;margin-top:6px">${sd(t.start)}부터 기록. 결과와 모든 조합 확정 배당은 경주일 저녁에 들어옵니다.</p>`;
+  const tr = Object.values(t.tracks || {}), old = Object.values(t.old || {});
+  const row = x => `<tr><td>${esc(x.label)}</td><td>${x.races}경주 · ${x.bets}장</td><td>${x.hits}</td><td>${won(x.spent)}</td><td>${won(x.ret)}</td><td><b>${x.spent ? (x.ret / x.spent * 100).toFixed(1) + "%" : "-"}</b></td><td>${x.skipped}경주</td></tr>`;
+  const thead = `<thead><tr><th>설정</th><th>산 경주·마권</th><th>적중</th><th>산 금액</th><th>환급</th><th>회수율</th><th>건너뜀</th></tr></thead>`;
+  const days = [...new Set(tr.flatMap(x => x.days.map(d => d.date)))].sort().reverse();
+  const drows = days.map(d => `<tr><td>${sd(d)}</td>${tr.map(x => { const y = x.days.find(z => z.date === d); return y ? `<td>${won(y.spent)} → ${won(y.ret)}</td>` : "<td>-</td>"; }).join("")}</tr>`).join("");
+  const any = tr.some(x => x.races || x.skipped);
+  $("track").innerHTML = (any ? `<div style="overflow-x:auto"><table class="chk" style="max-width:none">${thead}<tbody>${tr.map(row).join("")}</tbody></table></div>
+    ${drows ? `<div style="overflow-x:auto;margin-top:10px"><table class="chk"><thead><tr><th>경주일</th>${tr.map(x => `<th>산 금액 → 환급</th>`).join("")}</tr></thead><tbody>${drows}</tbody></table></div>` : ""}`
+    : `<p class="muted" style="font-size:14px">${sd(t.start)} 첫 경주 결과가 나오면 기록이 시작됩니다.</p>`)
+    + (old.length ? `<details style="margin-top:8px"><summary class="muted" style="font-size:13px;cursor:pointer">이전 방식 기록 (모델 확률로 조건부 승식, ${sd(old[0].ended)} 하루로 끝냄)</summary><div style="overflow-x:auto;margin-top:6px"><table class="chk" style="max-width:none">${thead}<tbody>${old.map(row).join("")}</tbody></table></div></details>` : "");
 }
 
 (async () => {
   if (!store.get("plan:settings")) $("setupBox").open = true;
+  if (!MODE_NAME[S.mode]) S.mode = "normal";
   renderSetup();
   showTrack();
   INDEX = await get("data/index.json");
   const days = INDEX?.days || [];
   if (!days.length){ $("list").innerHTML = `<p class="empty">아직 출전표가 나온 경주일이 없습니다.</p>`; return; }
   const today = ymd(new Date());
-  const up = days.filter(d => d.date >= today || !d.past), past = days.filter(d => d.past).slice(-6).reverse();
+  const up = days.filter(d => d.date >= today || !d.past), past = days.filter(d => d.past && d.mkx).slice(-6).reverse();
   $("daySel").innerHTML = up.map(d => `<option value="${d.date}">${short(d.date)}${d.date === today ? " · 오늘" : ""}</option>`).join("") +
     (past.length ? `<optgroup label="지난 경주일 (연습용)">${past.filter(d => !up.includes(d)).map(d => `<option value="${d.date}">${short(d.date)}</option>`).join("")}</optgroup>` : "");
   const want = new URLSearchParams(location.search).get("date");
-  const start = days.find(d => d.date === want)?.date || (up[0] || days[days.length - 1]).date;
+  const start = (up.concat(past)).find(d => d.date === want)?.date || (up[0] || past[0] || days[days.length - 1]).date;
   $("daySel").value = start;
   await openDay(start);
   renderSetup();
