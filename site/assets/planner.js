@@ -10,7 +10,8 @@
    3) 다른 승식(연승·복승·쌍승·복연승·삼복승·삼쌍승)은 같은 확률로 하빌 조합 확률 × 확정 배당을 시험했지만
       앞 기간에서 고른 규칙이 뒤 기간에서 유지되지 않아(79~130%, 들쭉날쭉) 계획에 넣지 않음
    4) 금액: 켈리 기준(확률·배당으로 정한 자금 비율, 한 마권 최대 10%) × 운용 비율
-        조심스럽게 1/8, 보통 1/4, 자금 모두 쓰기 ×10 (과거 하루 켈리 비율 합 평균이 0.099 → 평균적인 날 자금만큼 삼)
+        조심스럽게 1/8, 보통 1/4, 자금 모두 쓰기 ×22 (과거 하루 켈리 비율 합 평균이 0.045 → 평균적인 날 자금만큼 삼)
+        켈리 비율을 구할 때는 확률 × 0.85 (기대값 1.2 이상으로 고른 말은 모델이 확률을 높게 잡는 경향 → 승자의 저주 보정)
         배당은 경주마다 출발 직전에야 알 수 있으므로 앞 경주부터 차례로 금액을 정하고, 하루 합계가 자금에 닿으면 뒤 경주는 못 삼
         (opt.spent: 이미 끝난 경주에 쓴 돈 → 남은 자금에서 셈)
    5) 한 경주 합계는 법정 상한 10만 원 이하, 하루 합계는 입력한 자금 이하, 100원 단위
@@ -29,7 +30,7 @@
     "복승식": {k: 2, minP: 0.08}, "쌍승식": {k: 2, minP: 0.05}, "복연승식": {k: 2, minP: 0.15},
     "삼복승식": {k: 2, minP: 0.04}, "삼쌍승식": {k: 2, minP: 0.012}
   };
-  const MODES = {safe: 0.125, normal: 0.25, all: 10};
+  const MODES = {safe: 0.125, normal: 0.25, all: 22};
 
   function norm(o) { const s = Object.values(o).reduce((a, b) => a + b, 0); const r = {}; for (const k in o) r[k] = o[k] / s; return r; }
 
@@ -73,7 +74,7 @@
   const keyNums = k => k.split(/[>-]/).map(Number);
 
   // 단승 가치 기준 (배당 반영 확률): 위 설명의 검증 결과로 정함
-  const VALUE = {minP: 0.05, minEV: 1.2};
+  const VALUE = {minP: 0.05, minEV: 1.2, shrink: 0.85};   // shrink: 금액을 정할 때 확률에 곱함 (고른 말은 실제 우승이 예측의 0.83~0.89배 — pipeline/checks/plan_ev_curve.py)
 
   /** 한 경주의 후보 마권 (금액 전)
       race = {race, pm?:{번호:배당 반영 확률}, odds?:{번호:단승 배당}, out?:[번호], done?:bool, void?:str}
@@ -111,7 +112,7 @@
     // 앞 경주부터: 켈리 × 운용 비율 → 경주 상한·남은 자금으로 줄임 → 100원 단위 (내림), 100원 미만은 뺌
     for (const r of res.slice().sort((x, y) => x.race - y.race)) {
       if (!r.bets) continue;
-      for (const b of r.bets) { b.k = kelly(b.p, b.cur ?? b.minOdds); b.amt = frac * b.k * B; }
+      for (const b of r.bets) { b.k = kelly(b.p * (VALUE.shrink || 1), b.cur ?? b.minOdds); b.amt = frac * b.k * B; }
       const sum = r.bets.reduce((a, b) => a + b.amt, 0), lim = Math.min(raceCap, left);
       if (sum > lim) r.bets.forEach(b => b.amt *= lim / sum);
       r.bets.forEach(b => b.stake = Math.floor(b.amt / UNIT) * UNIT);

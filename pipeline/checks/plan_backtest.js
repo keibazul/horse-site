@@ -51,7 +51,7 @@ const r4 = o => JSON.stringify(o, (k, v) => typeof v === "number" ? Math.round(v
 if (arg("site")) {
   // 사이트 표 (site/data/plan_check.json): 1장씩, 조심스럽게, 보통, 자금 모두 쓰기 — 자금 10만 원
   const C = [["flat", "100원씩", "normal", true], ["safe", "조심스럽게", "safe", false], ["normal", "보통", "normal", false], ["all", "자금 모두 쓰기", "all", false]];
-  const res = C.map(([key, label, mode, flat]) => ({key, label, ...run(mode, 100000, flat)}));
+  const res = C.map(([key, label, mode, flat]) => ({key, label, ...run(mode, flat ? 1e7 : 100000, flat)}));   // 100원씩: 기준을 넘는 말 전부 (금액 100원 미만으로 빠지는 말이 없게 큰 자금으로)
   const first = Object.keys(days).sort()[0], last = Object.keys(days).sort().pop();
   const out = {version: 2, made: new Date().toISOString().slice(0, 10), first, last, days: res[0].days, races: res[0].races, value: P.VALUE, bankroll: 100000,
     configs: res.map(({key, label, rows, perDayStake, medianDayStake, maxDayStake, betDays, loseDays}) => ({key, label, rows, perDayStake, medianDayStake, maxDayStake, betDays, loseDays})),
