@@ -2,6 +2,7 @@
 // - 경주 결과가 나오면 그 경주의 확정 단승 배당을 넣었다고 보고 지금 계획(site/assets/planner.js)을 그대로 계산해 정산
 //   확률: 그날보다 앞서 학습을 끝낸 배당 반영 모델(site/data/model/mkt_v1.json) + 그날 말 특징(site/data/mkx) × 당일 주로 보정
 //   → 과거 검증(pipeline/checks/plan_backtest.js)과 같은 방식을 앞으로의 경주에 적용한 기록. 살 때 배당이 아니라 확정 배당이라 실제보다 유리할 수 있음.
+// - 2026-11-15 경주부터 그날 마지막 경주와 1200m 이하 경주는 자동으로 뺌 (11/14 기록은 빼기 전 기준 그대로 둠)
 // - 자금 10만 원 · 보통, 하루 안에서는 앞 경주부터 차례로 금액을 정함 (계획과 같음)
 // - 2026-11-08 하루는 이전 방식(모델 확률로 조건부 7개 승식, 출발 전 고정) 기록 → 그대로 두고 따로 보여 줌
 // 출력: site/data/plan_track/날짜.json, site/data/plan_track/summary.json
@@ -38,21 +39,25 @@ for (const d of days) {
     const r = pred.races?.[n];
     if (!r) break;
     if (r.void) { inputs.push({race: n, void: r.void}); continue; }
-    if (!r.result?.length) break;
+    if (!r.result?.length || r.partial) break;                                // partial: 1~3착만 올라온 상태 (나머지 말이 아직 정리되지 않음)
     const out = (r.out || []).map(String), ids = Object.keys(r.p || {}).filter(k => !out.includes(k));
     const odds = Object.fromEntries(ids.map(i => [i, +r.odds?.[i]]));
     let pm = MK.predict(M, X.races?.[n], odds, ids);
     if (!pm) break;                                                           // 확정 배당이 아직 모두 들어오지 않음
     const bf = bias?.races?.[n]?.f || {}, v = Object.fromEntries(ids.map(i => [i, pm[i] * (bf[i] ?? 1)])), s = Object.values(v).reduce((a, b) => a + b, 0);
     pm = Object.fromEntries(ids.map(i => [i, v[i] / s]));
-    inputs.push({race: n, pm, odds, out: r.out, result: r.result});
+    inputs.push({race: n, pm, odds, out: r.out, result: r.result, dist: +ent.rows.find(x => +x.rcNo === n)?.rcDist || 0});
   }
+  // 마지막 경주·1200m 이하는 planner 가 자동으로 뺌 (2026-11-15 경주부터; 그날 모든 경주 결과가 나와야 마지막 경주를 앎 → 그 전에는 마지막 번호 경주를 기다림)
+  const lastNo = Math.max(...raceNos.filter(n => !pred.races?.[n]?.void));
+  for (const x of inputs) x.last = x.race === lastNo;
   const pl = P.plan(inputs, {bankroll: BANK, mode: MODE});
   for (const pr of pl.races) {
     const n = pr.race, inp = inputs.find(x => x.race === n);
     if (t.races[n]) continue;
     let x;
     if (inp.void) x = {skip: "경주 취소"};
+    else if (pr.off) x = {skip: pr.skip, off: pr.off};
     else if (!pr.bets) x = {skip: pr.skip, top: inp.pm ? +Math.max(...Object.keys(inp.pm).map(i => inp.pm[i] * inp.odds[i])).toFixed(3) : null};
     else {
       let spent = 0, ret = 0;

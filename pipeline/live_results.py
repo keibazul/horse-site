@@ -54,14 +54,20 @@ def main() -> int:
         race = pred.get("races", {}).get(rn)
         if race is None:
             continue
-        fin = sorted(((int(r.get("ord") or 0), int(r["chulNo"])) for r in rs if 1 <= int(r.get("ord") or 0) <= 16))
+        ords = {int(r["chulNo"]): int(r.get("ord") or 0) for r in rs}
+        fin = sorted((o, c) for c, o in ords.items() if 1 <= o <= 16)
         if len(fin) < 3:
             continue
         res = [c for _, c in fin]
-        gone = sorted(int(r["chulNo"]) for r in rs if not 1 <= int(r.get("ord") or 0) <= 16)
         odds = {str(int(r["chulNo"])): num(r.get("winOdds")) for r in rs if num(r.get("winOdds"))}
         plc = {str(int(r["chulNo"])): num(r.get("plcOdds")) for r in rs if num(r.get("plcOdds"))}
-        new = {"result": res, "odds": odds, "plc": plc, "out": sorted(set(map(int, race.get("out", []))) | set(gone)), "live": True}
+        # 출전 취소: 취소 코드(93 출발제외·94 경주제외·95 출전취소)이거나, 착순도 단승 배당도 없는 말.
+        # 결과는 1~3착부터 올라오고 나머지 착순은 조금 뒤에 채워짐 → 착순이 아직 없어도 배당이 있으면 달린 말 (2026-11-14: 이런 말을 취소로 잘못 넣었음)
+        gone = sorted(c for c, o in ords.items() if o in (93, 94, 95) or (o == 0 and str(c) not in odds))
+        partial = any(o == 0 and str(c) in odds for c, o in ords.items())
+        if "out0" not in race:
+            race["out0"] = sorted(map(int, race.get("out", []))) if not race.get("live") else []      # 경주 전에 알려진 취소
+        new = {"result": res, "odds": odds, "plc": plc, "out": sorted(set(race["out0"]) | set(gone)), "live": True, "partial": partial}
         if any(race.get(k) != v for k, v in new.items()):
             race.update(new)
             changed.append(int(rn))

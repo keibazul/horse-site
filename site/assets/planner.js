@@ -10,11 +10,18 @@
    3) 다른 승식(연승·복승·쌍승·복연승·삼복승·삼쌍승)은 같은 확률로 하빌 조합 확률 × 확정 배당을 시험했지만
       앞 기간에서 고른 규칙이 뒤 기간에서 유지되지 않아(79~130%, 들쭉날쭉) 계획에 넣지 않음
    4) 금액: 켈리 기준(확률·배당으로 정한 자금 비율, 한 마권 최대 10%) × 운용 비율
-        조심스럽게 1/8, 보통 1/4, 자금 모두 쓰기 ×22 (과거 하루 켈리 비율 합 평균이 0.045 → 평균적인 날 자금만큼 삼)
+        조심스럽게 1/8, 보통 1/4, 자금 모두 쓰기는 아래 7)
         켈리 비율을 구할 때는 확률 × 0.85 (기대값 1.2 이상으로 고른 말은 모델이 확률을 높게 잡는 경향 → 승자의 저주 보정)
         배당은 경주마다 출발 직전에야 알 수 있으므로 앞 경주부터 차례로 금액을 정하고, 하루 합계가 자금에 닿으면 뒤 경주는 못 삼
         (opt.spent: 이미 끝난 경주에 쓴 돈 → 남은 자금에서 셈)
    5) 한 경주 합계는 법정 상한 10만 원 이하, 하루 합계는 입력한 자금 이하, 100원 단위
+   6) 2026-11-14: 자동으로 빼는 경주 — 그날 마지막 경주(사람들이 배당 높은 말을 더 사서 그 배당이 실제보다 낮음: 20배↑ 말의
+        실제 우승 ÷ 배당이 말하는 우승 = 0.68, 그 밖 경주 0.86; 계획 마권 216장 67%), 1200m 이하(모델의 시장 대비 우위가 절반, 계획 마권 103%)
+        — pipeline/checks/last_race.py, crowd_bias.py. 사용자가 켜고 끌 수 있음: race.use === true 면 자동 제외를 무시, false 면 뺌.
+        이 두 기준은 같은 과거 자료를 보고 정했으므로 검증 숫자는 그만큼 낙관적.
+   7) 자금 모두 쓰기: 금액 = 켈리 비율 × 자금 ÷ (ALL.kbar × 살 수 있는 경주 수). 살 수 있는 경주 수 = 앞에서 마권을 산 경주 + 이 경주 + 아직 남은 켜진 경주
+        → 경주를 끄면 남은 경주 몫이 커지고, 살 말이 없던 경주의 몫은 뒤로 넘어감 (최소 ALL.minRaces 경주로 나눔)
+   8) 세금 문턱: 한 장의 환급금이 200만 원을 넘거나, 100배를 넘는 배당에서 10만 원을 넘으면 기타소득세가 붙으므로 그 아래가 되게 금액을 줄임 (b.tax)
    주의: 확정 배당으로 고른 결과라 실제(살 때 배당)는 더 나쁠 수 있음. 배당은 마감까지 바뀌므로 될수록 늦게 넣을 것. */
 (function (root) {
   "use strict";
@@ -30,7 +37,10 @@
     "복승식": {k: 2, minP: 0.08}, "쌍승식": {k: 2, minP: 0.05}, "복연승식": {k: 2, minP: 0.15},
     "삼복승식": {k: 2, minP: 0.04}, "삼쌍승식": {k: 2, minP: 0.012}
   };
-  const MODES = {safe: 0.125, normal: 0.25, all: 22};
+  const MODES = {safe: 0.125, normal: 0.25};
+  const AUTO = {last: true, sprint: 1200};                 // 자동으로 빼는 경주: 그날 마지막 경주, 이 거리(m) 이하
+  const ALL = {kbar: 0.005, minRaces: 3};                  // 자금 모두 쓰기: 과거 검증에서 마권을 산 날 평균 자금의 약 80%를 쓰게 맞춘 값
+  const TAX = {pay: 2000000, odds: 100, payHigh: 100000};  // 환급금 과세 문턱 (소득세법 과세최저한)
 
   function norm(o) { const s = Object.values(o).reduce((a, b) => a + b, 0); const r = {}; for (const k in o) r[k] = o[k] / s; return r; }
 
@@ -83,10 +93,13 @@
     const out = new Set((race.out || []).map(String));
     if (race.void) return {skip: race.void};
     if (race.done) return {skip: "끝난 경주"};
+    const auto = AUTO.last && race.last ? "last" : (AUTO.sprint && +race.dist > 0 && +race.dist <= AUTO.sprint ? "sprint" : null);
+    if (race.use === false) return {skip: "직접 뺀 경주", off: "user", auto};
+    if (auto && race.use !== true) return {skip: auto === "last" ? "그날 마지막 경주는 자동으로 뺌" : `${AUTO.sprint}m 이하 경주는 자동으로 뺌`, off: auto, auto};
     const pm = race.pm || null, odds = race.odds || {};
     const ids = (race.ids || Object.keys(pm || race.p || {})).map(String).filter(k => !out.has(k));   // ids: 출전표의 번호들 (배당을 넣기 전에도 두수를 알도록)
     if (ids.length < 3) return {skip: "출전마가 너무 적음"};
-    if (!pm || !ids.every(i => +odds[i] > 1 && pm[i] != null)) return {skip: "단승 배당을 모두 넣으면 계산", wait: true, src: "wait"};
+    if (!pm || !ids.every(i => +odds[i] > 1 && pm[i] != null)) return {skip: "단승 배당을 모두 넣으면 계산", wait: true, src: "wait", auto};
     const P = norm(Object.fromEntries(ids.map(i => [i, Math.max(+pm[i], 1e-9)])));
     const top = Math.max(...Object.values(P));
     const bets = [];
@@ -94,37 +107,47 @@
       const p = P[i], o = +odds[i], ev = p * o;
       if (p >= VALUE.minP && ev >= VALUE.minEV) bets.push({pool: "단승식", key: String(i), nums: [+i], p, cur: o, ev, minOdds: Math.max(1.1, ceil1(VALUE.minEV / p))});
     }
-    if (!bets.length) return {skip: `기대값 ${VALUE.minEV} 넘는 말 없음`, src: "mkt", top};
-    return {bets: bets.sort((a, b) => b.ev - a.ev), src: "mkt", top};
+    if (!bets.length) return {skip: `기대값 ${VALUE.minEV} 넘는 말 없음`, src: "mkt", top, auto};
+    return {bets: bets.sort((a, b) => b.ev - a.ev), src: "mkt", top, auto};
   }
 
   /** 켈리 비율: 배당 o 에서 확률 p 인 마권에 자금의 몇 %를 거는지 */
   // 낮은 배당에서 '10% 남는다'는 가정이 그대로 커지지 않게 한 마권 비율은 10%까지
   const kelly = (p, o) => Math.min(0.1, Math.max(0, (p * o - 1) / (o - 1)));
 
-  /** 하루 계획: races 배열, opt = {bankroll, mode:'safe'|'normal'|'all', pools, margin} */
+  /** 하루 계획: races 배열(위 race 에 last·dist·use 추가), opt = {bankroll, mode:'safe'|'normal'|'all', spent: 끝난 경주에 쓴 돈, betRaces: 끝난 경주 중 마권을 산 경주 수} */
   function plan(races, opt) {
     const B = Math.max(0, Math.floor(+opt.bankroll || 0));
-    const frac = MODES[opt.mode] ?? 0.25;
-    const res = races.map(r => ({race: r.race, ...candidates(r, opt)}));
+    const all = opt.mode === "all", frac = MODES[opt.mode] ?? 0.25;
+    const res = races.map(r => ({race: r.race, void: !!r.void, ...candidates(r, opt)})).sort((x, y) => x.race - y.race);
     const raceCap = Math.min(RACE_CAP, B);
-    let left = Math.max(0, B - Math.max(0, +opt.spent || 0));
-    // 앞 경주부터: 켈리 × 운용 비율 → 경주 상한·남은 자금으로 줄임 → 100원 단위 (내림), 100원 미만은 뺌
-    for (const r of res.slice().sort((x, y) => x.race - y.race)) {
-      if (!r.bets) continue;
-      for (const b of r.bets) { b.k = kelly(b.p * (VALUE.shrink || 1), b.cur ?? b.minOdds); b.amt = frac * b.k * B; }
+    let left = Math.max(0, B - Math.max(0, +opt.spent || 0)), bought = Math.max(0, +opt.betRaces || 0);
+    const pending = r => !r.off && !r.void && (r.wait || r.bets || r.src === "mkt");      // 아직 살 수 있는 경주 (끝난·취소·뺀 경주 제외)
+    // 앞 경주부터: 켈리 × 운용 비율 → 세금 문턱·경주 상한·남은 자금으로 줄임 → 100원 단위 (내림), 100원 미만은 뺌
+    res.forEach((r, i) => {
+      if (!r.bets) return;
+      const slots = Math.max(ALL.minRaces, bought + 1 + res.slice(i + 1).filter(pending).length);
+      for (const b of r.bets) {
+        b.k = kelly(b.p * (VALUE.shrink || 1), b.cur ?? b.minOdds);
+        b.amt = all ? b.k * B / (ALL.kbar * slots) : frac * b.k * B;
+      }
       const sum = r.bets.reduce((a, b) => a + b.amt, 0), lim = Math.min(raceCap, left);
       if (sum > lim) r.bets.forEach(b => b.amt *= lim / sum);
-      r.bets.forEach(b => b.stake = Math.floor(b.amt / UNIT) * UNIT);
+      for (const b of r.bets) {
+        b.stake = Math.floor(b.amt / UNIT) * UNIT;
+        const o = b.cur ?? b.minOdds, mx = Math.floor((o > TAX.odds ? TAX.payHigh : TAX.pay) / o / UNIT) * UNIT;   // 세금 문턱 아래로
+        if (b.stake > mx) { b.stake = mx; b.tax = true; }
+      }
       r.bets = r.bets.filter(b => b.stake >= UNIT);
       r.total = r.bets.reduce((a, b) => a + b.stake, 0);
       left -= r.total;
-      if (!r.bets.length) { delete r.bets; r.skip = lim < UNIT ? "오늘 자금을 다 씀" : "추천 금액이 100원 미만 (자금을 늘리거나 운용 방식을 바꾸면 들어감)"; }
-    }
+      if (r.bets.length) bought++;
+      else { delete r.bets; r.skip = lim < UNIT ? "오늘 자금을 다 씀" : "추천 금액이 100원 미만 (자금을 늘리거나 운용 방식을 바꾸면 들어감)"; }
+    });
     const total = res.reduce((a, r) => a + (r.total || 0), 0);
-    return {races: res, total, bankroll: B, raceCap, left};
+    return {races: res, total, bankroll: B, raceCap, left, on: res.filter(pending).length};
   }
 
-  const api = {plan, candidates, combos, combine, kelly, POOLS, RULES, RACE_CAP, MODES, BLEND, VALUE};
+  const api = {plan, candidates, combos, combine, kelly, POOLS, RULES, RACE_CAP, MODES, BLEND, VALUE, AUTO, ALL, TAX};
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.Planner = api;
 })(typeof self !== "undefined" ? self : this);

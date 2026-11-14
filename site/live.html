@@ -71,6 +71,16 @@
 .pr .cb{display:flex;align-items:center;gap:7px;min-width:0}
 .pr .cb b{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pr .amt{font-size:16px;font-weight:800;text-align:right;font-variant-numeric:tabular-nums}
+.tg{display:inline-flex;align-items:center;gap:6px;border:0;background:none;padding:4px 0;font:inherit;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer}
+.tg i{position:relative;width:34px;height:20px;border-radius:999px;background:var(--line);transition:background .15s}
+.tg i::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--panel);box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+.tg[aria-checked="true"]{color:var(--ink)}
+.tg[aria-checked="true"] i{background:var(--good)}
+.tg[aria-checked="true"] i::after{transform:translateX(14px)}
+.tg:focus-visible{outline:2px solid var(--good);outline-offset:3px;border-radius:6px}
+@media (prefers-reduced-motion:reduce){.tg i,.tg i::after{transition:none}}
+.useline{display:flex;justify-content:space-between;align-items:center;gap:10px;padding-bottom:6px}
+.pr .taxn{color:var(--warn-ink);font-weight:600}
 .pr .cond{grid-column:1 / 3;display:flex;gap:4px 12px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
 .pr .cond b{color:var(--ink)}
 .pr .cond .ev{color:var(--good);font-weight:800}
@@ -192,16 +202,19 @@ function probs(n){
 
 /* 베팅 계획 (plan.html 과 같은 입력 → 같은 결과): 배당 반영 확률이 있는 경주만 계산, 앞 경주에 기록한 금액은 남은 자금에서 뺌 */
 function planAll(){
-  const s = S(), doneSet = new Set();
+  const s = S(), doneSet = new Set(), use = store.get(`plan:use:${DAY.date}`) || {};
+  const lastNo = Math.max(...races().filter(n => !PR(n).void));            // 그날 마지막으로 치르는 경주
   const R = races().map(n => {
     const P = probs(n), uo = userOdds(n), done = hasResult(n) || started(n);
     if (done) doneSet.add(n);
     const ids = P.ids.map(String), odds = {};
     for (const i of ids) if (+uo[i] > 1) odds[i] = +uo[i];
-    return {race: n, ids, pm: P.src === "mkt" && Object.keys(odds).length === ids.length ? P.final : null, odds, out: [...P.out], void: PR(n).void, done};
+    return {race: n, ids, pm: P.src === "mkt" && Object.keys(odds).length === ids.length ? P.final : null, odds, out: [...P.out], void: PR(n).void, done,
+      dist: +rowsOf(n)[0]?.rcDist || 0, last: n === lastNo, use: use[n]};
   });
-  const spent = (store.get("horse-bets-v1") || []).filter(b => b.date === DAY.date && doneSet.has(+b.race)).reduce((a, b) => a + (+b.amount || 0), 0);
-  return {pl: PRED ? Planner.plan(R, {bankroll: s.bank, mode: s.mode, spent}) : null, s, spent};
+  const mine = (store.get("horse-bets-v1") || []).filter(b => b.date === DAY.date && doneSet.has(+b.race));
+  const spent = mine.reduce((a, b) => a + (+b.amount || 0), 0);
+  return {pl: PRED ? Planner.plan(R, {bankroll: s.bank, mode: s.mode, spent, betRaces: new Set(mine.map(b => +b.race)).size}) : null, s, spent};
 }
 
 /* ---------- 그리기 ---------- */
@@ -281,17 +294,27 @@ function renderPlan(){
   $("planLink").href = `plan.html?date=${DAY.date}`;
   if (!pl){ $("plan").innerHTML = `<p class="hint">예측이 없어 계획을 만들 수 없습니다.</p>`; return; }
   const p = pl.races.find(x => x.race === n);
+  const gone = p?.skip === "끝난 경주" || p?.void;
+  const sw = gone || !p ? "" : `<div class="useline"><span class="hint">${p.off === "last" ? "마지막 경주라 자동으로 뺐습니다" : p.off === "sprint" ? "1200m 이하 경주라 자동으로 뺐습니다" : p.off ? "직접 뺀 경주입니다" : p.auto ? `자동으로 빼는 경주(${p.auto === "last" ? "마지막 경주" : "단거리"})를 직접 켰습니다` : "이 경주를 계획에 넣었습니다"}</span>
+    <button class="tg" type="button" role="switch" aria-checked="${!p.off}" id="useBtn" aria-label="이 경주를 계획에 넣기"><i></i>${p.off ? "뺌" : "넣음"}</button></div>`;
+  const useClick = () => { const b = $("useBtn"); if (b) b.onclick = () => {
+    const use = store.get(`plan:use:${DAY.date}`) || {}, want = !!p.off;                 // 지금 빠져 있으면 넣기
+    if (want === !p.auto) delete use[n]; else use[n] = want;
+    store.set(`plan:use:${DAY.date}`, use); renderPlan(); $("useBtn")?.focus();
+  }; };
   if (!p?.bets){
     const P = probs(n), need = P.ids.filter(i => !(+userOdds(n)[i] > 1)).length;
     const why = p?.skip === "끝난 경주" ? "출발한 경주라 계획이 없습니다."
+      : p?.off ? (p.off === "user" ? "스위치를 켜면 이 경주도 계산합니다." : `과거 검증에서 ${p.off === "last" ? "마지막 경주 마권은 손실이었습니다(사람들이 배당 높은 말을 평소보다 많이 삼)" : "이 거리는 이익이 거의 없었습니다"}. 스위치를 켜면 같은 기준으로 계산합니다.`)
       : p?.wait ? (!MKX ? "이 경주일은 배당 반영 확률을 계산할 자료가 아직 없습니다." : need ? `위 칸에 단승 배당을 ${need === P.ids.length ? "모두" : `${need}두 더`} 넣으면 계산합니다. 출발 1~2분 전 배당판 값을 넣으세요.` : "배당 반영 확률을 계산하는 중입니다.")
       : `이 경주는 건너뜁니다: ${esc(p?.skip || "기준을 넘는 말 없음")}`;
-    $("plan").innerHTML = `<p class="hint">${why}</p>`; return;
+    $("plan").innerHTML = sw + `<p class="hint">${why}</p>`; useClick(); return;
   }
   const nm = i => rowsOf(n).find(r => +r.chulNo === i)?.hrName || "";
   const rows = p.bets.map(b => `<div class="pr"><span class="cb">${chip(b.nums[0], "sm")}<b>${esc(nm(b.nums[0]))}</b></span><span class="amt">${won(b.stake)}</span>
-      <div class="cond"><span>배당 <b>${b.cur}</b></span><span>확률 <b>${pct(b.p)}</b></span><span>기대 <span class="ev">${b.ev.toFixed(2)}</span></span><span>배당이 <b>${b.minOdds}</b> 아래로 내려가면 사지 않기</span></div></div>`).join("");
-  $("plan").innerHTML = rows + `<div class="actions" style="margin-top:6px"><button class="btn primary" type="button" id="recBtn">산 대로 기록 · ${won(p.total)}</button><span class="msg" id="recMsg"></span></div>`;
+      <div class="cond"><span>배당 <b>${b.cur}</b></span><span>확률 <b>${pct(b.p)}</b></span><span>기대 <span class="ev">${b.ev.toFixed(2)}</span></span><span>배당이 <b>${b.minOdds}</b> 아래로 내려가면 사지 않기</span>${b.tax ? `<span class="taxn">세금 문턱(환급금 200만 원) 때문에 금액을 줄임</span>` : ""}</div></div>`).join("");
+  $("plan").innerHTML = sw + rows + `<div class="actions" style="margin-top:6px"><button class="btn primary" type="button" id="recBtn">산 대로 기록 · ${won(p.total)}</button><span class="msg" id="recMsg"></span></div>`;
+  useClick();
   $("recBtn").onclick = () => record(p);
 }
 function record(p){

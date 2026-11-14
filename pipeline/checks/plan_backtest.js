@@ -3,6 +3,7 @@
 //   (그 전 해까지 학습한 모델), 확정 단승 배당, 1착. 코로나 무관중(2020-02-23~2021-10-31) 제외.
 // - 단승 배당은 마감 후 확정 배당을 넣었다고 가정 (실제로는 산 뒤에도 배당이 바뀜 → 이 결과는 실제보다 유리하게 나올 수 있음)
 // - 하루마다 같은 자금으로 시작 (전날 손익을 이어 가지 않음)
+// - 마지막 경주·1200m 이하 경주는 planner.js 가 자동으로 뺌 (--auto 로 끌 수 있음)
 // 사용: node pipeline/checks/plan_backtest.js [--mode normal] [--bank 100000] [--flat yes] [--json out.json]
 //       node pipeline/checks/plan_backtest.js --site site/data/plan_check.json   (사이트 표: 네 가지 설정)
 const fs = require("fs"), path = require("path"), zlib = require("zlib");
@@ -10,6 +11,10 @@ const ROOT = path.resolve(__dirname, "../..");
 const P = require(path.join(ROOT, "site/assets/planner.js"));
 const arg = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : d; };
 if (arg("value")) Object.assign(P.VALUE, JSON.parse(arg("value")));
+if (arg("auto")) Object.assign(P.AUTO, JSON.parse(arg("auto")));          // 예: --auto '{"last":false,"sprint":0}' = 자동 제외 없이
+if (arg("all")) Object.assign(P.ALL, JSON.parse(arg("all")));
+// 경주 속성 (거리, 그날 마지막 경주 여부): work/backtest_race_attrs.py
+const attrs = JSON.parse(zlib.gunzipSync(fs.readFileSync(path.join(ROOT, "work/backtest/race_attrs.json.gz"))).toString("utf8"));
 const days = JSON.parse(zlib.gunzipSync(fs.readFileSync(path.join(ROOT, "work/backtest/mkt_win.json.gz"))).toString("utf8"));
 const half = d => d < "20230101" ? "2016~2022" : "2023~2026";
 
@@ -19,7 +24,7 @@ function run(mode, bankroll, flat) {
   const add = (k, n, h, s, r) => { const o = per[k] ||= [0, 0, 0, 0]; o[0] += n; o[1] += h; o[2] += s; o[3] += r; };
   for (const d of Object.keys(days).sort()) {
     const R = days[d];
-    const races = Object.entries(R).map(([n, r]) => ({race: +n, pm: r.p, odds: r.odds}));
+    const races = Object.entries(R).map(([n, r]) => ({race: +n, pm: r.p, odds: r.odds, dist: attrs[d]?.[n]?.[0], last: !!attrs[d]?.[n]?.[1]}));
     const pl = P.plan(races, {bankroll, mode});
     let ds = 0, dr = 0, dn = 0, dh = 0;
     for (const x of pl.races) {
