@@ -57,7 +57,7 @@ for (const d of days) {
     if (t.races[n]) continue;
     let x;
     if (inp.void) x = {skip: "경주 취소"};
-    else if (pr.off) x = {skip: pr.skip, off: pr.off};
+    else if (pr.off) x = {skip: pr.skip, off: pr.off, ...(pr.best != null ? {top: +pr.best.toFixed(3)} : {})};
     else if (!pr.bets) x = {skip: pr.skip, top: inp.pm ? +Math.max(...Object.keys(inp.pm).map(i => inp.pm[i] * inp.odds[i])).toFixed(3) : null};
     else {
       let spent = 0, ret = 0;

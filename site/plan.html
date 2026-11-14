@@ -77,6 +77,7 @@
 .tg[aria-checked="true"] i{background:var(--good)}
 .tg[aria-checked="true"] i::after{transform:translateX(14px)}
 .rc-h .right .tg{margin-left:auto}
+.linkbtn{border:0;background:none;padding:0;font:inherit;color:var(--good);font-weight:700;text-decoration:underline;cursor:pointer}
 .tg:focus-visible{outline:2px solid var(--good);outline-offset:3px;border-radius:6px}
 @media (prefers-reduced-motion:reduce){.tg i,.tg i::after{transition:none}}
 .bt .taxn{display:block;font-size:11.5px;color:var(--warn-ink);font-weight:600}
@@ -124,7 +125,7 @@
 <main id="main" class="page">
   <header class="page-head">
     <h1>베팅 계획</h1>
-    <p>배당판의 단승 배당을 넣으면, 배당 반영 확률 × 배당(기대값)이 1.2 이상인 말의 단승만 골라 금액을 나눠 드립니다. 그날 마지막 경주와 1200m 이하 경주는 자동으로 빼고, 경주마다 스위치로 직접 넣고 뺄 수 있습니다. 한 경주 합계는 10만 원 이하.</p>
+    <p>배당판의 단승 배당을 넣으면, 배당 반영 확률 × 배당(기대값)이 1.2 이상인 말의 단승만 골라 금액을 나눠 드립니다. 살 말이 없는 경주, 그날 마지막 경주, 1200m 이하 경주는 자동으로 빼고, 경주마다 스위치로 직접 넣고 뺄 수 있습니다. 한 경주 합계는 10만 원 이하.</p>
   </header>
 
   <details class="setup panel" id="setupBox" aria-label="계획 설정">
@@ -168,7 +169,7 @@
       <li><b>살 말</b>: 확률 5% 이상이고, 확률 × 단승 배당(기대값)이 1.2 이상인 말. 한 경주에 여러 마리일 수 있습니다. '기준 배당'은 지금 확률로 기대값 1.2가 되는 배당입니다. 배당은 마감까지 바뀌므로 출발 1~2분 전 배당판 값을 다시 넣고, 기준 아래로 내려간 말은 사지 마세요.</li>
       <li><b>금액</b>: 켈리 기준(확률과 배당으로 정하는 자금 비율, 한 마권 최대 10%)에 조심스럽게 1/8, 보통 1/4를 곱합니다. 이때 확률은 15% 낮춰서 씁니다. 과거 검증에서 이 기준으로 고른 말은 실제 우승이 모델 예측의 0.83~0.89배였기 때문입니다(기대값이 높아 보이는 말일수록 모델이 과신). 그래서 기대값이 1.2를 겨우 넘는 말은 금액이 아주 작거나 빠지고, 기대값이 큰 말에 금액이 실립니다. '자금 모두 쓰기'는 자금을 켜 둔 경주 수에 맞춰 나눕니다(경주를 빼면 남은 경주 몫이 커짐). 배당은 경주마다 출발 직전에야 알 수 있으므로 앞 경주부터 차례로 금액을 정하고, 기록장에 담은 앞 경주 마권 금액은 남은 자금에서 뺍니다.</li>
       <li><b>자동으로 빼는 경주</b>: 그날 마지막 경주와 1200m 이하 경주. 마지막 경주에서는 사람들이 배당 높은 말을 평소보다 많이 사서(서울 2001~2026년: 20배 넘는 말이 배당이 말하는 것의 68%만 우승, 다른 경주는 86%) 이 계획의 마지막 경주 마권은 과거에 손실이었습니다. 1200m 이하는 모델이 시장보다 나은 정도가 다른 거리의 절반이었습니다. 두 기준은 과거 검증과 같은 자료를 보고 정했습니다.</li>
-      <li><b>경주 넣고 빼기</b>: 경주마다 스위치로 직접 정할 수 있습니다. 못 가는 경주는 끄고, 자동으로 뺀 경주도 켤 수 있습니다. 바꾸면 계획이 바로 다시 계산됩니다. 스위치는 어느 말이 좋은지는 바꾸지 않고, '자금 모두 쓰기'에서만 남은 경주에 돌아가는 금액을 바꿉니다.</li>
+      <li><b>경주 넣고 빼기</b>: 경주마다 스위치로 직접 정할 수 있습니다. 못 가는 경주는 끄고, 자동으로 뺀 경주(마지막 경주, 단거리, 살 말이 없는 경주)도 켤 수 있습니다. 바꾸면 계획이 바로 다시 계산됩니다. 살 말이 없는 경주를 켜면 확률 5% 이상인 말 중 기대값이 가장 높은 한 마리를 '기준 미달'로 표시해 작은 금액(자금의 1% 이하)으로 보여 줍니다. 한 번 누른 경주는 누른 대로 고정되고, '자동으로 되돌리기'로 처음 상태가 됩니다. 직접 켠 경주의 마권은 기록장에 '직접 켠 경주'로 담겨 계획 마권과 따로 집계됩니다.</li>
       <li><b>세금 문턱</b>: 마권 한 장의 환급금이 200만 원을 넘으면(100배 넘는 배당은 10만 원을 넘으면) 기타소득세가 붙어 기대값이 1 아래로 내려갑니다. 그래서 맞았을 때 환급금이 문턱을 넘지 않게 금액을 줄이고 '세금 문턱 때문에 줄임'이라고 표시합니다. 세율과 기준은 마사회 안내로 확인하세요.</li>
       <li>한 경주 합계는 <b>10만 원 이하</b>, 하루 합계는 입력한 자금 이하, 모든 금액은 100원 단위입니다.</li>
     </ul>
@@ -277,8 +278,9 @@ function render(){
   const bet = pl.races.filter(r => r.bets), wait = pl.races.filter(r => r.wait), done = pl.races.filter(r => r.skip === "끝난 경주");
   const offs = pl.races.filter(r => r.off), skip = pl.races.filter(r => !r.bets && !r.wait && !r.off && r.skip !== "끝난 경주");
   $("sum").innerHTML = [["계획 합계", won(pl.total), S.bank ? `자금의 ${(pl.total / S.bank * 100).toFixed(0)}%` : ""], ["살 경주", `${bet.length}경주`, ""],
-    PAST ? null : ["배당 대기", `${wait.length}경주`, "배당을 넣으면 계산"], ["건너뛸 경주", `${skip.length}경주`, done.length ? `출발한 경주 ${done.length}` : ""],
+    PAST ? null : ["배당 대기", `${wait.length}경주`, "배당을 넣으면 계산"], skip.length || done.length ? ["그 밖", `${skip.length + done.length}경주`, done.length ? `출발한 경주 ${done.length}` : ""] : null,
     ["뺀 경주", `${offs.length}경주`, offs.length ? `자동 ${offs.filter(r => r.off !== "user").length} · 직접 ${offs.filter(r => r.off === "user").length}` : ""],
+    Object.keys(USE).length ? ["직접 정한 경주", `${Object.keys(USE).length}경주`, `<button class="linkbtn" type="button" id="useReset">자동으로 되돌리기</button>`] : null,
     spent ? ["앞 경주에 쓴 돈", won(spent), `남은 자금 ${won(Math.max(0, S.bank - spent))}`] : null].filter(Boolean)
     .map(([a, b, c]) => `<div><span>${a}</span><b>${b}</b>${c ? `<small>${c}</small>` : ""}</div>`).join("");
   $("warnline").innerHTML = PAST ? "" : `<b>배당은 마감까지 바뀝니다.</b> 출발 1~2분 전 배당판의 단승 배당을 현장 화면이나 예측 화면에 넣으면 이 계획이 그 배당으로 다시 계산됩니다. 과거 검증에서는 10경주 중 9경주꼴로 건너뛰거나 뺐고, 산 날의 70% 이상은 손실이었습니다(가끔 맞는 높은 배당이 이익을 만듦).`;
@@ -289,10 +291,13 @@ function render(){
     if (p.skip === "끝난 경주")
       return `<article class="rc panel skip"><div class="rc-h">${head(r)}<span class="right"><span class="pill">${r.started && !r.result?.length ? "출발함" : "끝남"}</span></span></div></article>`;
     const sw = `<button class="tg" type="button" role="switch" aria-checked="${!p.off}" data-use="${p.race}" aria-label="${p.race}경주를 계획에 넣기"><i></i>${p.off ? "뺌" : "넣음"}</button>`;
-    const forced = !p.off && p.auto ? `<span class="pill" title="자동으로 빼는 경주를 직접 켰습니다">${p.auto === "last" ? "마지막 경주" : "단거리"} · 직접 켬</span>` : "";
+    const forced = !p.off && p.auto ? `<span class="pill" title="자동으로 빼는 경주를 직접 켰습니다">${p.auto === "last" ? "마지막 경주" : p.auto === "sprint" ? "단거리" : "기준 미달"} · 직접 켬</span>` : "";
     if (p.off)
       return `<article class="rc panel skip"><div class="rc-h">${head(r)}<span class="right"><span class="pill">${p.off === "user" ? "직접 뺌" : "자동으로 뺌"}</span>${sw}</span></div>
-        <p class="why">${p.off === "user" ? "이 경주는 계획에서 뺐습니다." : p.off === "last" ? "그날 마지막 경주입니다. 과거 검증에서 이 계획의 마지막 경주 마권은 손실이었습니다(사람들이 배당 높은 말을 평소보다 많이 삼). 스위치를 켜면 같은 기준으로 계산합니다." : "1200m 이하 경주입니다. 과거 검증에서 이 거리는 이익이 거의 없었습니다. 스위치를 켜면 같은 기준으로 계산합니다."}</p></article>`;
+        <p class="why">${p.off === "user" ? "이 경주는 계획에서 뺐습니다."
+          : p.off === "last" ? "그날 마지막 경주입니다. 과거 검증에서 이 계획의 마지막 경주 마권은 손실이었습니다(사람들이 배당 높은 말을 평소보다 많이 삼). 스위치를 켜면 같은 기준으로 계산합니다."
+          : p.off === "sprint" ? "1200m 이하 경주입니다. 과거 검증에서 이 거리는 이익이 거의 없었습니다. 스위치를 켜면 같은 기준으로 계산합니다."
+          : `기대값 1.2를 넘는 말이 없습니다${p.best != null ? `(확률 5% 이상인 말 중 가장 높은 값 ${p.best.toFixed(2)})` : ""}. 스위치를 켜면 그중 기대값이 가장 높은 말을 작은 금액으로 보여 줍니다. 기대값이 1.2에 못 미치는 말은 과거 검증에서 평균적으로 손해였습니다.`}</p></article>`;
     if (p.wait && PAST)
       return `<article class="rc panel skip"><div class="rc-h">${head(r)}<span class="right"><span class="pill">건너뛰기</span>${sw}</span></div><p class="why">확정 단승 배당이 모두 있지 않아 계산하지 못했습니다.</p></article>`;
     if (p.wait)
@@ -308,9 +313,9 @@ function render(){
     const rows = p.bets.map(b => {
       const n = b.nums[0], st = PAST && r.result?.length ? (n === r.result[0] ? "win" : "lose") : null;
       if (st){ spentR += b.stake; if (st === "win") retR += b.stake * b.cur; }
-      const odd = PAST ? `<b>${b.cur}</b><small>확정 배당</small>` : `<b>${b.cur}</b><small>${b.minOdds} 아래면 사지 않기</small>`;
+      const odd = PAST ? `<b>${b.cur}</b><small>확정 배당</small>` : `<b>${b.cur}</b><small>${b.forced ? `기준은 ${b.minOdds} 이상` : `${b.minOdds} 아래면 사지 않기`}</small>`;
       const tax = b.tax ? `<span class="taxn">세금 문턱 때문에 줄임</span>` : "";
-      const last = st ? `<td class="r res ${st}">${st === "win" ? `적중 ${won(b.stake * b.cur)}` : "미적중"}</td>` : `<td class="r ev">${b.ev.toFixed(2)}</td>`;
+      const last = st ? `<td class="r res ${st}">${st === "win" ? `적중 ${won(b.stake * b.cur)}` : "미적중"}</td>` : `<td class="r ${b.forced ? "" : "ev"}">${b.ev.toFixed(2)}${b.forced ? `<span class="taxn">기준 미달</span>` : ""}</td>`;
       return `<tr><td><span class="hn">${chip(n)}<b>${esc(r.names[n] || "")}</b></span></td><td class="r stake">${won(b.stake)}${tax}</td><td class="odd">${odd}</td><td class="r">${pct(b.p)}</td>${last}</tr>`;
     }).join("");
     if (PAST){ p.spent = spentR; p.ret = retR; }
@@ -329,21 +334,22 @@ function render(){
   }
 }
 
-// 경주 넣고 빼기: 자동 판단과 같아지면 기록을 지움 (다음에도 자동을 따르게)
+// 경주 넣고 빼기: 한 번 누르면 그 경주는 누른 대로 고정 ('자동으로 되돌리기'로 모두 지움)
 $("list").addEventListener("click", e => {
   const t = e.target.closest("[data-use]"); if (!t || !LAST) return;
-  const n = +t.dataset.use, p = LAST.races.find(x => x.race === n), want = !!p.off;      // 지금 빠져 있으면 넣기
-  if (want === !p.auto) delete USE[n]; else USE[n] = want;
+  const n = +t.dataset.use, p = LAST.races.find(x => x.race === n);
+  USE[n] = !!p.off;                                        // 빠져 있으면 넣기(true: 자동 제외도 무시), 들어 있으면 빼기(false)
   store.set(`plan:use:${DAY.date}`, USE);
   render();
   $("list").querySelector(`[data-use="${n}"]`)?.focus();
 });
+$("sum").addEventListener("click", e => { if (e.target.id === "useReset"){ USE = {}; store.set(`plan:use:${DAY.date}`, USE); render(); } });
 // 산 마권을 기록장(bets.html)에 담기
 $("list").addEventListener("click", e => {
   const b = e.target.closest("[data-rec]"); if (!b || !LAST) return;
   const n = +b.dataset.rec, p = LAST.races.find(x => x.race === n); if (!p?.bets) return;
   const bets = store.get("horse-bets-v1") || [], now = Date.now(), grp = `p${now}`;
-  p.bets.forEach((x, k) => bets.push({id: `${now}-${k}-${Math.random().toString(36).slice(2,7)}`, grp: `${grp}-${k}`, date: DAY.date, race: n, pool: x.pool, nums: x.nums, amount: x.stake, memo: "베팅 계획", created: now + k}));
+  p.bets.forEach((x, k) => bets.push({id: `${now}-${k}-${Math.random().toString(36).slice(2,7)}`, grp: `${grp}-${k}`, date: DAY.date, race: n, pool: x.pool, nums: x.nums, amount: x.stake, memo: x.forced || p.auto ? "직접 켠 경주" : "베팅 계획", created: now + k}));
   const ok = store.set("horse-bets-v1", bets);
   $(`msg-${n}`).innerHTML = ok ? `${p.bets.length}장 ${won(p.total)} 담음 · <a href="bets.html">기록장에서 고치기</a>` : "이 브라우저에서는 저장할 수 없습니다.";
 });

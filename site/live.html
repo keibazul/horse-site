@@ -295,16 +295,17 @@ function renderPlan(){
   if (!pl){ $("plan").innerHTML = `<p class="hint">예측이 없어 계획을 만들 수 없습니다.</p>`; return; }
   const p = pl.races.find(x => x.race === n);
   const gone = p?.skip === "끝난 경주" || p?.void;
-  const sw = gone || !p ? "" : `<div class="useline"><span class="hint">${p.off === "last" ? "마지막 경주라 자동으로 뺐습니다" : p.off === "sprint" ? "1200m 이하 경주라 자동으로 뺐습니다" : p.off ? "직접 뺀 경주입니다" : p.auto ? `자동으로 빼는 경주(${p.auto === "last" ? "마지막 경주" : "단거리"})를 직접 켰습니다` : "이 경주를 계획에 넣었습니다"}</span>
+  const sw = gone || !p ? "" : `<div class="useline"><span class="hint">${p.off === "last" ? "마지막 경주라 자동으로 뺐습니다" : p.off === "sprint" ? "1200m 이하 경주라 자동으로 뺐습니다" : p.off === "novalue" ? "살 말이 없어 자동으로 뺐습니다" : p.off ? "직접 뺀 경주입니다" : p.auto ? `자동으로 빼는 경주(${p.auto === "last" ? "마지막 경주" : p.auto === "sprint" ? "단거리" : "기준 미달"})를 직접 켰습니다` : "이 경주를 계획에 넣었습니다"}</span>
     <button class="tg" type="button" role="switch" aria-checked="${!p.off}" id="useBtn" aria-label="이 경주를 계획에 넣기"><i></i>${p.off ? "뺌" : "넣음"}</button></div>`;
   const useClick = () => { const b = $("useBtn"); if (b) b.onclick = () => {
-    const use = store.get(`plan:use:${DAY.date}`) || {}, want = !!p.off;                 // 지금 빠져 있으면 넣기
-    if (want === !p.auto) delete use[n]; else use[n] = want;
+    const use = store.get(`plan:use:${DAY.date}`) || {};
+    use[n] = !!p.off;                                      // 빠져 있으면 넣기(자동 제외도 무시), 들어 있으면 빼기
     store.set(`plan:use:${DAY.date}`, use); renderPlan(); $("useBtn")?.focus();
   }; };
   if (!p?.bets){
     const P = probs(n), need = P.ids.filter(i => !(+userOdds(n)[i] > 1)).length;
     const why = p?.skip === "끝난 경주" ? "출발한 경주라 계획이 없습니다."
+      : p?.off === "novalue" ? `기대값 1.2를 넘는 말이 없습니다${p.best != null ? `(가장 높은 값 ${p.best.toFixed(2)})` : ""}. 스위치를 켜면 그중 기대값이 가장 높은 말을 작은 금액으로 보여 줍니다. 기준에 못 미치는 말은 과거 검증에서 평균적으로 손해였습니다.`
       : p?.off ? (p.off === "user" ? "스위치를 켜면 이 경주도 계산합니다." : `과거 검증에서 ${p.off === "last" ? "마지막 경주 마권은 손실이었습니다(사람들이 배당 높은 말을 평소보다 많이 삼)" : "이 거리는 이익이 거의 없었습니다"}. 스위치를 켜면 같은 기준으로 계산합니다.`)
       : p?.wait ? (!MKX ? "이 경주일은 배당 반영 확률을 계산할 자료가 아직 없습니다." : need ? `위 칸에 단승 배당을 ${need === P.ids.length ? "모두" : `${need}두 더`} 넣으면 계산합니다. 출발 1~2분 전 배당판 값을 넣으세요.` : "배당 반영 확률을 계산하는 중입니다.")
       : `이 경주는 건너뜁니다: ${esc(p?.skip || "기준을 넘는 말 없음")}`;
@@ -312,14 +313,14 @@ function renderPlan(){
   }
   const nm = i => rowsOf(n).find(r => +r.chulNo === i)?.hrName || "";
   const rows = p.bets.map(b => `<div class="pr"><span class="cb">${chip(b.nums[0], "sm")}<b>${esc(nm(b.nums[0]))}</b></span><span class="amt">${won(b.stake)}</span>
-      <div class="cond"><span>배당 <b>${b.cur}</b></span><span>확률 <b>${pct(b.p)}</b></span><span>기대 <span class="ev">${b.ev.toFixed(2)}</span></span><span>배당이 <b>${b.minOdds}</b> 아래로 내려가면 사지 않기</span>${b.tax ? `<span class="taxn">세금 문턱(환급금 200만 원) 때문에 금액을 줄임</span>` : ""}</div></div>`).join("");
+      <div class="cond"><span>배당 <b>${b.cur}</b></span><span>확률 <b>${pct(b.p)}</b></span><span>기대 <span class="${b.forced ? "" : "ev"}">${b.ev.toFixed(2)}</span></span>${b.forced ? `<span class="taxn">기준(1.2) 미달 · 금액을 작게 잡음</span>` : ""}${b.forced ? `<span>기준을 넘으려면 배당 <b>${b.minOdds}</b> 이상</span>` : `<span>배당이 <b>${b.minOdds}</b> 아래로 내려가면 사지 않기</span>`}${b.tax ? `<span class="taxn">세금 문턱(환급금 200만 원) 때문에 금액을 줄임</span>` : ""}</div></div>`).join("");
   $("plan").innerHTML = sw + rows + `<div class="actions" style="margin-top:6px"><button class="btn primary" type="button" id="recBtn">산 대로 기록 · ${won(p.total)}</button><span class="msg" id="recMsg"></span></div>`;
   useClick();
   $("recBtn").onclick = () => record(p);
 }
 function record(p){
   const bets = store.get("horse-bets-v1") || [], t = Date.now();
-  p.bets.forEach((x, k) => bets.push({id: `${t}-${k}-${Math.random().toString(36).slice(2,7)}`, grp: `p${t}-${k}`, date: DAY.date, race: p.race, pool: x.pool, nums: x.nums, amount: x.stake, memo: "현장 화면", created: t + k}));
+  p.bets.forEach((x, k) => bets.push({id: `${t}-${k}-${Math.random().toString(36).slice(2,7)}`, grp: `p${t}-${k}`, date: DAY.date, race: p.race, pool: x.pool, nums: x.nums, amount: x.stake, memo: x.forced || p.auto ? "직접 켠 경주" : "현장 화면", created: t + k}));
   const ok = store.set("horse-bets-v1", bets);
   renderMine();
   $("recMsg").textContent = ok ? `${p.bets.length}장 ${won(p.total)} 담음` : "이 브라우저에서는 저장할 수 없습니다.";

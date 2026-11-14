@@ -21,6 +21,9 @@
         이 두 기준은 같은 과거 자료를 보고 정했으므로 검증 숫자는 그만큼 낙관적.
    7) 자금 모두 쓰기: 금액 = 켈리 비율 × 자금 ÷ (ALL.kbar × 살 수 있는 경주 수). 살 수 있는 경주 수 = 앞에서 마권을 산 경주 + 이 경주 + 아직 남은 켜진 경주
         → 경주를 끄면 남은 경주 몫이 커지고, 살 말이 없던 경주의 몫은 뒤로 넘어감 (최소 ALL.minRaces 경주로 나눔)
+   9) 살 말이 없는 경주(기대값 1.2 넘는 말 없음)도 '자동으로 뺌'(off: "novalue"). 사용자가 켜면(race.use === true) 확률 5% 이상인 말 중
+        기대값이 가장 높은 한 마리를 '기준 미달'(b.forced)로 보여 줌. 금액은 기대값이 딱 1.2 라고 쳤을 때의 켈리 금액, 100원 이상·자금의 1% 이하.
+        기준 미달 마권은 과거 검증에서 평균 손해(기대값 1.0~1.2 구간 회수율 91~107%)였음.
    8) 세금 문턱: 한 장의 환급금이 200만 원을 넘거나, 100배를 넘는 배당에서 10만 원을 넘으면 기타소득세가 붙으므로 그 아래가 되게 금액을 줄임 (b.tax)
    주의: 확정 배당으로 고른 결과라 실제(살 때 배당)는 더 나쁠 수 있음. 배당은 마감까지 바뀌므로 될수록 늦게 넣을 것. */
 (function (root) {
@@ -107,7 +110,12 @@
       const p = P[i], o = +odds[i], ev = p * o;
       if (p >= VALUE.minP && ev >= VALUE.minEV) bets.push({pool: "단승식", key: String(i), nums: [+i], p, cur: o, ev, minOdds: Math.max(1.1, ceil1(VALUE.minEV / p))});
     }
-    if (!bets.length) return {skip: `기대값 ${VALUE.minEV} 넘는 말 없음`, src: "mkt", top, auto};
+    if (!bets.length) {
+      const c = ids.filter(i => P[i] >= VALUE.minP).map(i => ({i, p: P[i], o: +odds[i], ev: P[i] * +odds[i]})).sort((a, b) => b.ev - a.ev)[0];
+      if (race.use === true && c)      // 직접 켠 경주: 기준에는 못 미치지만 그중 나은 한 마리
+        return {bets: [{pool: "단승식", key: String(c.i), nums: [+c.i], p: c.p, cur: c.o, ev: c.ev, minOdds: Math.max(1.1, ceil1(VALUE.minEV / c.p)), forced: true}], src: "mkt", top, auto: auto || "novalue", forced: true};
+      return {skip: `기대값 ${VALUE.minEV} 넘는 말 없음`, off: "novalue", auto: auto || "novalue", src: "mkt", top, best: c ? c.ev : null};
+    }
     return {bets: bets.sort((a, b) => b.ev - a.ev), src: "mkt", top, auto};
   }
 
@@ -122,14 +130,17 @@
     const res = races.map(r => ({race: r.race, void: !!r.void, ...candidates(r, opt)})).sort((x, y) => x.race - y.race);
     const raceCap = Math.min(RACE_CAP, B);
     let left = Math.max(0, B - Math.max(0, +opt.spent || 0)), bought = Math.max(0, +opt.betRaces || 0);
-    const pending = r => !r.off && !r.void && (r.wait || r.bets || r.src === "mkt");      // 아직 살 수 있는 경주 (끝난·취소·뺀 경주 제외)
+    // 아직 살 수 있는 경주 (끝난·취소·뺀 경주 제외). 살 말이 없어 빠진 경주는 센다 — 현장에서는 배당을 넣기 전이라 알 수 없으므로 과거 검증도 같게
+    const pending = r => (!r.off || r.off === "novalue") && !r.void && (r.wait || r.bets || r.src === "mkt");
     // 앞 경주부터: 켈리 × 운용 비율 → 세금 문턱·경주 상한·남은 자금으로 줄임 → 100원 단위 (내림), 100원 미만은 뺌
     res.forEach((r, i) => {
       if (!r.bets) return;
       const slots = Math.max(ALL.minRaces, bought + 1 + res.slice(i + 1).filter(pending).length);
       for (const b of r.bets) {
-        b.k = kelly(b.p * (VALUE.shrink || 1), b.cur ?? b.minOdds);
+        const o = b.cur ?? b.minOdds;
+        b.k = b.forced ? kelly((VALUE.shrink || 1) * VALUE.minEV / o, o) : kelly(b.p * (VALUE.shrink || 1), o);
         b.amt = all ? b.k * B / (ALL.kbar * slots) : frac * b.k * B;
+        if (b.forced) b.amt = Math.max(UNIT, Math.min(b.amt, 0.01 * B));
       }
       const sum = r.bets.reduce((a, b) => a + b.amt, 0), lim = Math.min(raceCap, left);
       if (sum > lim) r.bets.forEach(b => b.amt *= lim / sum);
@@ -145,7 +156,7 @@
       else { delete r.bets; r.skip = lim < UNIT ? "오늘 자금을 다 씀" : "추천 금액이 100원 미만 (자금을 늘리거나 운용 방식을 바꾸면 들어감)"; }
     });
     const total = res.reduce((a, r) => a + (r.total || 0), 0);
-    return {races: res, total, bankroll: B, raceCap, left, on: res.filter(pending).length};
+    return {races: res, total, bankroll: B, raceCap, left, on: res.filter(r => pending(r) && !r.off).length};
   }
 
   const api = {plan, candidates, combos, combine, kelly, POOLS, RULES, RACE_CAP, MODES, BLEND, VALUE, AUTO, ALL, TAX};
