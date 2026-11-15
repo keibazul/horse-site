@@ -1,1 +1,1 @@
-{"date":"20261115","bank":100000,"mode":"normal","tracks":{"ev":{"label":"단승 기대값 1.2 이상 · 보통","races":{}}}}
+{"date":"20261115","bank":100000,"mode":"normal","tracks":{"ev":{"label":"단승 기대값 1.2 이상 · 보통","races":{"1":{"skip":"1200m 이하 경주는 자동으로 뺌","off":"sprint"}}}}}
