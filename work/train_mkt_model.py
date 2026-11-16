@@ -13,6 +13,10 @@
 사이트: 사용자가 단승 배당을 모두 넣으면 브라우저가 이 모델을 직접 계산 (site/data/model/mkt_v1.json, site/assets/mktmodel.js).
 말마다 특징은 site_export 가 site/data/mkx/날짜.json 에 저장.
 
+2026-11-16 고침: 인기 순위(m_rank)를 rank(method="first") 로 매기면 배당이 같은 말끼리 기록의 행 순서(= 착순)대로 갈라져
+  결과가 샜음(단승 배당 동률은 출주의 1.8%). → rank_desc: 동률은 출전 번호 순 (브라우저와 같음). 위 검증 숫자는 고치기 전 값,
+  고친 뒤 값은 claude/progress_notes.md 2026-11-16 항목.
+
 사용: python train_mkt_model.py [--features-pkl 특징.pkl] [--until 20261101]
 """
 import argparse
@@ -39,12 +43,19 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SITE_MODEL = os.path.join(HERE, "..", "site", "data", "model", "mkt_v1.json")
 
 
+def rank_desc(v: pd.Series, rid: pd.Series, chul: pd.Series) -> pd.Series:
+    """경주 안에서 큰 값부터 1, 2, … 값이 같으면 출전 번호가 작은 말이 앞 (브라우저 mktmodel.js 와 같음).
+    rank(method="first") 를 쓰면 안 됨 — 기록의 행 순서가 착순이라 동률인 말끼리 먼저 들어온 말이 앞 순위가 되어 결과가 샘."""
+    o = pd.DataFrame({"r": rid, "v": -v, "c": pd.to_numeric(chul, errors="coerce")}).sort_values(["r", "v", "c"], kind="stable")
+    return (o.groupby("r").cumcount() + 1).reindex(v.index).astype(float)
+
+
 def market_features(df: pd.DataFrame, rid: pd.Series, odds: pd.Series) -> pd.DataFrame:
-    """경주 안 단승 배당 → 시장 특징 (브라우저 mktmodel.js 와 같은 계산)"""
+    """경주 안 단승 배당 → 시장 특징 (브라우저 mktmodel.js 와 같은 계산). df 에 chulNo(출전 번호) 필요."""
     q = 1 / odds
     q = q / q.groupby(rid).transform("sum")
     g = q.groupby(rid)
-    return pd.DataFrame({"m_lq": np.log(q), "m_rank": g.rank(ascending=False, method="first"), "m_rel": q / g.transform("max"),
+    return pd.DataFrame({"m_lq": np.log(q), "m_rank": rank_desc(q, rid, df["chulNo"]), "m_rel": q / g.transform("max"),
                          "m_n": g.transform("size").astype(float), "m_top": g.transform("max")}, index=df.index)
 
 

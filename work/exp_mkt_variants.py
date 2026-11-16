@@ -10,7 +10,7 @@
   1) 순위 특징의 동률 처리: rank(method="first") 는 행 순서(= 착순)대로 동률을 가름 → 배당이 같은 말끼리 먼저 들어온 말이 앞 순위.
      단승 배당 동률은 출주의 1.8% 라 지금 모델 영향은 작았지만(1.7656 → 1.7657), 연승 배당은 동률이 10.6%(우승마의 15%)라
      p_rank 를 그렇게 만들면 손실이 −0.0166 이나 '좋아지는' 가짜 결과가 나옴. → 이 파일의 rank_desc (동률은 출전 번호 순, 브라우저와 같음).
-     train_mkt_model.market_features 는 아직 method="first" (고칠지는 사용자 확인 뒤).
+     train_mkt_model.market_features 도 2026-11-16 에 고침 (rank_desc).
   2) 연승 배당 자체는 결과와 무관: 서울 연승 배당 = 0.8 × 풀 ÷ (입상 두수 × 그 말 매출) → Σ 0.8/(3×연승 배당) = 0.977 (사분위 0.972~0.981),
      실제 입상한 인기마 수에 따라 달라지지 않음 (경주 전 정보로 설명하고 남는 잔차 차이 0.01 미만).
 
@@ -55,15 +55,12 @@ MK = tm.MK
 PL = ["p_lq", "p_rank", "p_diff"]                    # 후보 5: 연승 풀 몫(로그)·순위·단승 풀과의 차이
 RC = ["m_ent", "m_sd", "m_gap", "m_gapr"]            # 후보 6: 배당 엔트로피·로그 확률 표준편차·1·2번 인기 차(차이, 로그 비)
 S1 = ["s_ord", "s_top3", "s_ord_rel", "s_top3_rel"]  # 후보 23: 표본외 착순 점수·3착 안 점수 (+ 경주 안 상대값)
+ORD = ["o_last", "o_left"]                            # 변형 7 (2026-11-16): 그날 마지막 경주 여부, 남은 경주 수
 MONO = {"m_lq": 1, "m_rank": -1, "m_rel": 1}         # 후보 24
 STEP, MAX_TREES = 50, 1500
 
 
-def rank_desc(v, rid, chul):
-    """경주 안에서 큰 값부터 1, 2, … 값이 같으면 출전 번호가 작은 말이 앞 (브라우저 mktmodel.js 와 같음).
-    rank(method="first") 는 행 순서(= 착순)대로 동률을 갈라 결과가 샘."""
-    o = pd.DataFrame({"r": rid, "v": -v, "c": pd.to_numeric(chul, errors="coerce")}).sort_values(["r", "v", "c"], kind="stable")
-    return (o.groupby("r").cumcount() + 1).reindex(v.index).astype(float)
+rank_desc = tm.rank_desc        # 동률은 출전 번호 순 (rank(method="first") 금지)
 
 
 def place_features(rid, plc, m_lq, chul):
@@ -128,9 +125,11 @@ def prep(history="merged.csv"):
 
 def load():
     df = pd.read_pickle(f"{EXP}/data.pkl")
+    # 경주 순서 (출전표로 미리 앎): 그날 마지막 경주 여부, 남은 경주 수 — 거르기 전 그날 모든 경주로 셈
+    last_no = df.groupby("date")["race_no"].transform("max")
+    df["o_last"] = (df["race_no"] == last_no).astype(float); df["o_left"] = (last_no - df["race_no"]).astype(float)
     df = df[df.ok].reset_index(drop=True)
-    df = pd.concat([df, tm.market_features(df, df["rid"], df["winOdds"])], axis=1)
-    df["m_rank"] = rank_desc(np.exp(df["m_lq"]), df["rid"], df["chulNo"])      # 동률 누수 고침 (train_mkt_model 은 아직 method="first")
+    df = pd.concat([df, tm.market_features(df, df["rid"], df["winOdds"])], axis=1)   # m_rank 동률은 출전 번호 순 (2026-11-16 고침)
     df = pd.concat([df, place_features(df["rid"], df["plcOdds"], df["m_lq"], df["chulNo"])], axis=1)
     q = np.exp(df["m_lq"])
     df["m_ent"] = (-(q * df["m_lq"])).groupby(df["rid"]).transform("sum")
@@ -191,6 +190,7 @@ def variants(df):
         "s1": dict(feats=F + S1),
         "mono": dict(feats=F, mono=MONO),
         "k40": dict(feats=pruned(df, 40)) if os.path.exists(f"{EXP}/prune.json") else None,
+        "order": dict(feats=F + ORD),
     }
 
 

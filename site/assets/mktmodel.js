@@ -11,7 +11,8 @@
   /* 시장 특징 (train_mkt_model.market_features 와 같게): q = (1/배당) 경주 안 합 1, ln q, 인기 순위, q/최대 q, 두수, 최대 q */
   function market(ids, odds){
     const inv = ids.map(i => 1 / odds[i]), s = inv.reduce((a, b) => a + b, 0), q = inv.map(v => v / s), top = Math.max(...q);
-    const order = ids.map((i, k) => k).sort((a, b) => q[b] - q[a] || a - b), rank = new Array(ids.length);
+    // 배당이 같으면 출전 번호가 작은 말이 앞 (train_mkt_model.rank_desc 와 같음)
+    const order = ids.map((i, k) => k).sort((a, b) => q[b] - q[a] || (+ids[a]) - (+ids[b]) || a - b), rank = new Array(ids.length);
     order.forEach((k, r) => rank[k] = r + 1);
     return ids.map((i, k) => [Math.log(q[k]), rank[k], q[k] / top, ids.length, top]);
   }
