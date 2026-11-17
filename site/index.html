@@ -41,9 +41,9 @@
 .tile{flex:0 0 auto;width:96px;display:grid;gap:2px;align-content:start;padding:9px 10px 10px;border-radius:10px;text-decoration:none;color:inherit;
   background:rgb(255 255 255 / .06);border:1px solid rgb(255 255 255 / .1);position:relative}
 .tile:hover{background:rgb(255 255 255 / .1)}
-.tile .tm{font-size:12px;color:var(--brand-muted);font-weight:700}
+.tile .tm{font-size:13px;color:var(--brand-muted);font-weight:700}
 .tile b{font-size:22px;font-weight:800;letter-spacing:-.04em;line-height:1.1}
-.tile .who{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--brand-muted);font-weight:600;min-height:21px;margin-top:4px}
+.tile .who{display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--brand-muted);font-weight:600;min-height:21px;margin-top:4px}
 .tile.next{border-color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold);background:rgb(255 255 255 / .1)}
 .tile.next .tm{color:#f3d48c}
 .tile .nx{position:absolute;top:8px;right:8px;font-size:10.5px;font-weight:800;color:var(--brand);background:#f3d48c;border-radius:4px;padding:0 5px;line-height:17px}
@@ -62,7 +62,7 @@
 .list > .gone:first-child summary{border-top:0}
 .lrow:hover{background:var(--soft)}
 .lrow .no b{display:block;font-size:19px;font-weight:800;letter-spacing:-.04em;line-height:1.1}
-.lrow .no span{font-size:12.5px;color:var(--muted);font-weight:600}
+.lrow .no span{font-size:13px;color:var(--muted);font-weight:600}
 .lrow .cond{font-size:13.5px;color:var(--muted);line-height:1.4}
 .lrow .cond b{color:var(--ink);font-weight:700}
 .lrow .cond .c2{display:block}
@@ -73,13 +73,13 @@
 .pk .pv{font-weight:800;font-size:14px;margin-left:auto;padding-left:6px}
 .pk .bar{flex:0 0 min(30%,160px);height:6px;background:var(--soft);border-radius:99px;overflow:hidden}
 .pk .bar i{display:block;height:100%;background:var(--bar);border-radius:99px}
-.rest{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;color:var(--muted);font-size:12.5px;font-weight:600}
+.rest{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;color:var(--muted);font-size:13px;font-weight:600}
 .rest .gap{width:6px}
-.res{display:grid;justify-items:end;gap:4px;font-size:12.5px;color:var(--muted);font-weight:600}
+.res{display:grid;justify-items:end;gap:4px;font-size:13px;color:var(--muted);font-weight:600}
 .res .chips{display:flex;gap:3px}
 @media (max-width:720px){
   .lrow{grid-template-columns:50px minmax(0,1fr);gap:4px 12px;padding:12px 14px}
-  .lrow .cond{grid-column:2;font-size:12.5px}
+  .lrow .cond{grid-column:2;font-size:13px}
   .lrow .cond .c2{display:inline;margin-left:6px}
   .lrow .picks{grid-column:2}
   .lrow .res{grid-column:2;justify-items:start;grid-auto-flow:column;justify-content:start;align-items:center}
@@ -92,7 +92,7 @@
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
 .stat{padding:16px 18px;display:grid;gap:12px;align-content:start}
 .stat h3{font-size:15px;font-weight:800}
-.stat h3 small{font-weight:600;color:var(--muted);font-size:12.5px;margin-left:6px}
+.stat h3 small{font-weight:600;color:var(--muted);font-size:13px;margin-left:6px}
 .meter{display:grid;grid-template-columns:96px minmax(0,1fr) 64px;gap:10px;align-items:center;font-size:13.5px}
 .meter .lab{color:var(--muted);font-weight:600}
 .meter .tr{height:9px;background:var(--soft);border-radius:99px;overflow:hidden}
@@ -137,7 +137,7 @@
     <section style="display:grid;gap:10px" aria-labelledby="listH">
       <div class="sec-title"><h2 id="listH">경주별 1순위</h2><span class="aside" id="listAside"></span></div>
       <div class="list panel" id="list"><p class="empty">불러오는 중…</p></div>
-      <p class="note">확률은 경주 전 정보로 낸 모델 값입니다. 경주 직전 배당을 넣으면 예측 화면에서 배당과 섞은 확률로 바뀝니다.</p>
+      <p class="note">확률은 경주 전 정보로 낸 모델 값입니다. 경주 직전 단승 배당을 모두 넣으면 현장 화면과 예측 화면에서 배당 반영 확률로 바뀌고, 살 말과 금액이 나옵니다.</p>
     </section>
 
     <section style="display:grid;gap:10px" aria-labelledby="statH">
@@ -184,7 +184,7 @@ const ic = k => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 
 $("feats").innerHTML = [
   ["live", "live.html", "현장 화면", "경마장에서 쓰는 화면. 다음 경주 하나만 크게: 1순위와 확률, 배당판 단승 배당 넣기, 이 경주 베팅 계획, 산 마권 기록. 경주가 출발하면 다음 경주로 넘어갑니다."],
-  ["race", "race.html", "경주 예측", "출전마마다 우승 확률. 경주 직전 단승 배당을 넣으면 배당과 섞은 확률과 7가지 승식의 유력 조합을 보여 줍니다."],
+  ["race", "race.html", "경주 예측", "출전마마다 우승 확률. 경주 직전 단승 배당을 넣으면 배당 반영 확률과 기대값, 7가지 승식의 유력 조합을 보여 줍니다."],
   ["plan", "plan.html", "베팅 계획", "단승 배당을 넣으면 배당 반영 확률 × 배당이 1.2 이상인 말의 단승만 골라 금액을 나눠 줍니다. 한 경주 10만 원 상한, 그런 말이 없으면 건너뜁니다."],
   ["sim", "race.html", "전개 시뮬레이션", "구간 기록 모델과 물리 엔진으로 경주를 수천 번 돌려 초반 자리다툼과 막판 추입을 그림으로 봅니다. 예측 화면의 경주 카드에서 엽니다."],
   ["review", "review.html", "주간 복기", "주말이 끝나면 경주마다 예측과 실제 착순을 나란히 놓고, 크게 빗나간 경주에서 무엇이 달랐는지 정리합니다."],

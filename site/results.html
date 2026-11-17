@@ -24,26 +24,26 @@ p{margin:0}
 
 /* 회수율 막대 */
 .bars{display:grid;gap:4px;position:relative}
-.grp{font-size:12.5px;font-weight:600;color:var(--muted);margin-top:8px}
+.grp{font-size:13px;font-weight:600;color:var(--muted);margin-top:8px}
 .grp:first-child{margin-top:0}
 .br{display:grid;grid-template-columns:minmax(0,12em) minmax(0,1fr);gap:4px 12px;align-items:center;padding:4px 0}
 .br .nm{font-size:14px;font-weight:600;line-height:1.3;display:flex;flex-wrap:wrap;align-items:baseline;gap:0 8px}
 .br .nm .roi{font-family:var(--f-data);font-size:15px;font-weight:600}
-.br .nm small{flex-basis:100%;font-weight:400;font-size:11.5px;color:var(--muted)}
+.br .nm small{flex-basis:100%;font-weight:400;font-size:12.5px;color:var(--muted)}
 .track{position:relative;height:26px}
 .track .fill{position:absolute;left:0;top:5px;height:16px;background:var(--bar);border-radius:0 4px 4px 0}
 .track .fill.odds,.key i.odds{background:repeating-linear-gradient(135deg,var(--bar-odds) 0 5px,color-mix(in srgb,var(--bar-odds) 45%,var(--panel)) 5px 8px)}
 .track .ci{position:absolute;top:12px;height:2px;background:var(--ink);opacity:.55}
 .track .ci::before,.track .ci::after{content:"";position:absolute;top:-4px;width:2px;height:10px;background:var(--ink)}
 .track .ci::before{left:0}.track .ci::after{right:0}
-.br .det{grid-column:2;font-size:12px;color:var(--muted);font-family:var(--f-data);margin-top:-2px}
+.br .det{grid-column:2;font-size:13px;color:var(--muted);font-family:var(--f-data);margin-top:-2px}
 .br .det span{white-space:nowrap}
 .even{position:absolute;top:0;bottom:0;width:0;border-left:2px dashed var(--even);pointer-events:none}
-.even span{position:absolute;top:-2px;left:5px;font-size:11.5px;font-weight:600;color:var(--ink);white-space:nowrap;background:var(--panel);padding:0 3px}
+.even span{position:absolute;top:-2px;left:5px;font-size:12.5px;font-weight:600;color:var(--ink);white-space:nowrap;background:var(--panel);padding:0 3px}
 .axis{display:grid;grid-template-columns:minmax(0,12em) minmax(0,1fr);gap:12px}
-.axis div{position:relative;height:16px;font-family:var(--f-data);font-size:11px;color:var(--muted)}
+.axis div{position:relative;height:16px;font-family:var(--f-data);font-size:12px;color:var(--muted)}
 .axis span{position:absolute;transform:translateX(-50%)}
-.key{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--muted)}
+.key{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted)}
 .key i{display:inline-block;width:14px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
 
 /* 손익 추이 */
@@ -54,11 +54,11 @@ p{margin:0}
 .chart .grid line{stroke:var(--line);stroke-width:1}
 .chart .zero{stroke:var(--muted);stroke-width:1.5}
 .chart text{font-family:var(--f-data);font-size:11px;fill:var(--muted)}
-.chart text.lab{font-family:var(--f-body);font-size:12px;font-weight:600;fill:var(--ink)}
+.chart text.lab{font-family:var(--f-body);font-size:13px;font-weight:600;fill:var(--ink)}
 .chart path.s{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
 .chart .cross{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
 .chart circle.dot{stroke:var(--panel);stroke-width:2}
-.tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:12.5px;box-shadow:0 4px 14px rgb(0 0 0 / .14);min-width:170px}
+.tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;box-shadow:0 4px 14px rgb(0 0 0 / .14);min-width:170px}
 .tip b{display:block;font-size:13px;margin-bottom:3px}
 .tip div{display:flex;justify-content:space-between;gap:12px}
 .tip div span:last-child{font-family:var(--f-data)}

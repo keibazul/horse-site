@@ -36,14 +36,14 @@
 .money input{width:150px;text-align:right;font-size:17px;font-weight:800}
 .money .unit{font-weight:700;color:var(--muted)}
 .quick{display:flex;flex-wrap:wrap;gap:5px}
-.quick button{border:1px solid var(--line-strong);background:var(--panel);border-radius:999px;padding:3px 11px;font-size:12.5px;font-weight:700;cursor:pointer}
-.hint{font-size:12.5px;color:var(--muted);line-height:1.5}
+.quick button{border:1px solid var(--line-strong);background:var(--panel);border-radius:999px;padding:3px 11px;font-size:13px;font-weight:700;cursor:pointer}
+.hint{font-size:13px;color:var(--muted);line-height:1.5}
 
 .sum{display:flex;flex-wrap:wrap;gap:6px 26px;align-items:baseline;border-bottom:2px solid var(--ink);padding-bottom:12px}
 .sum div{display:grid}
-.sum span{font-size:12.5px;color:var(--muted);font-weight:600}
+.sum span{font-size:13px;color:var(--muted);font-weight:600}
 .sum b{font-size:22px;font-weight:800;letter-spacing:-.03em}
-.sum small{font-size:12px;color:var(--muted);font-weight:600}
+.sum small{font-size:13px;color:var(--muted);font-weight:600}
 .warnline{font-size:13.5px;color:var(--muted)}
 .warnline b{color:var(--ink)}
 
@@ -57,20 +57,20 @@
 .rc .why{padding:0 16px 13px;font-size:13.5px;color:var(--muted);margin-top:-4px}
 .bt{width:100%;border-collapse:collapse;font-size:14px}
 .bt th,.bt td{padding:9px 10px;border-top:1px solid var(--line);text-align:left;white-space:nowrap;vertical-align:middle}
-.bt th{font-size:11.5px;color:var(--muted);font-weight:700;background:var(--soft)}
+.bt th{font-size:12.5px;color:var(--muted);font-weight:700;background:var(--soft)}
 .bt th:first-child,.bt td:first-child{padding-left:16px}
 .bt td.r,.bt th.r{text-align:right}
 .bt .hn{display:inline-flex;gap:7px;align-items:center;min-width:0}
 .bt .hn b{font-weight:700;overflow:hidden;text-overflow:ellipsis}
 .bt .stake{font-weight:800;font-size:15px}
 .bt .odd b{font-weight:800}
-.bt .odd small{display:block;font-size:11.5px;color:var(--muted);font-weight:600}
+.bt .odd small{display:block;font-size:12.5px;color:var(--muted);font-weight:600}
 .bt .ev{font-weight:800;color:var(--good)}
 .bt .res.win{color:var(--good);font-weight:800}
 .wait{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:0 16px 13px}
 .wait .btn{padding:6px 11px;font-size:13px}
 .wait .msg{font-size:13.5px;color:var(--muted);flex-basis:100%}
-.tg{display:inline-flex;align-items:center;gap:6px;border:0;background:none;padding:4px 0;font:inherit;font-size:12.5px;font-weight:700;color:var(--muted);cursor:pointer}
+.tg{display:inline-flex;align-items:center;gap:6px;border:0;background:none;padding:4px 0;font:inherit;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer}
 .tg i{position:relative;width:34px;height:20px;border-radius:999px;background:var(--line);transition:background .15s}
 .tg i::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--panel);box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
 .tg[aria-checked="true"]{color:var(--ink)}
@@ -80,14 +80,14 @@
 .linkbtn{border:0;background:none;padding:0;font:inherit;color:var(--good);font-weight:700;text-decoration:underline;cursor:pointer}
 .tg:focus-visible{outline:2px solid var(--good);outline-offset:3px;border-radius:6px}
 @media (prefers-reduced-motion:reduce){.tg i,.tg i::after{transition:none}}
-.bt .taxn{display:block;font-size:11.5px;color:var(--warn-ink);font-weight:600}
+.bt .taxn{display:block;font-size:12.5px;color:var(--warn-ink);font-weight:600}
 .years{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
-.years span{display:grid;gap:1px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;font-size:12px;color:var(--muted);text-align:center;min-width:52px}
+.years span{display:grid;gap:1px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;font-size:13px;color:var(--muted);text-align:center;min-width:52px}
 .years span b{font-size:13.5px;color:var(--ink)}
 .years span.lo b{color:var(--bad)}
 .rc-f{display:flex;flex-wrap:wrap;gap:6px;padding:10px 16px 13px;border-top:1px solid var(--line)}
 .rc-f .btn{padding:6px 11px;font-size:13px}
-.rc-f .msg{font-size:12.5px;color:var(--good);font-weight:700;align-self:center}
+.rc-f .msg{font-size:13px;color:var(--good);font-weight:700;align-self:center}
 @media (max-width:620px){
   /* 휴대폰: 한 말 = 두 줄 (말 | 금액 / 배당 · 확률 · 기대값) */
   .bt thead{display:none}
@@ -115,7 +115,7 @@
 .chk{width:100%;border-collapse:collapse;font-size:13.5px;max-width:560px}
 .chk th,.chk td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 .chk th:first-child,.chk td:first-child{text-align:left}
-.chk th{font-size:12px;color:var(--muted);font-weight:700}
+.chk th{font-size:13px;color:var(--muted);font-weight:700}
 </style>
 </head>
 <body data-page="plan">
@@ -134,6 +134,7 @@
       <div class="fld"><label class="lab" for="daySel">경주일</label><select id="daySel"></select></div>
       <div class="fld"><label class="lab" for="bank">오늘 쓸 자금</label>
         <div class="money"><input id="bank" type="number" inputmode="numeric" min="0" step="1000" value="100000"><span class="unit">원</span></div>
+        <p class="hint" id="bankLock" hidden></p>
         <div class="quick" id="quick"><button type="button" data-v="50000">5만</button><button type="button" data-v="100000">10만</button><button type="button" data-v="300000">30만</button><button type="button" data-v="500000">50만</button><button type="button" data-v="1000000">100만</button></div>
       </div>
       <div class="fld"><span class="lab" id="modeLab">운용 방식</span>
@@ -171,7 +172,8 @@
       <li><b>자동으로 빼는 경주</b>: 그날 마지막 경주와 1200m 이하 경주. 마지막 경주에서는 사람들이 배당 높은 말을 평소보다 많이 사서(서울 2001~2026년: 20배 넘는 말이 배당이 말하는 것의 68%만 우승, 다른 경주는 86%) 이 계획의 마지막 경주 마권은 과거 검증에서 회수율 81%로 손실이었습니다(기간에 따라 28~125%로 들쭉날쭉). 1200m 이하는 모델이 시장보다 나은 정도가 다른 거리의 절반이었습니다. 두 기준은 과거 검증과 같은 자료를 보고 정했습니다.</li>
       <li><b>경주 넣고 빼기</b>: 경주마다 스위치로 직접 정할 수 있습니다. 못 가는 경주는 끄고, 자동으로 뺀 경주(마지막 경주, 단거리, 살 말이 없는 경주)도 켤 수 있습니다. 바꾸면 계획이 바로 다시 계산됩니다. 살 말이 없는 경주를 켜면 확률 5% 이상인 말 중 기대값이 가장 높은 한 마리를 '기준 미달'로 표시해 작은 금액(자금의 1% 이하)으로 보여 줍니다. 한 번 누른 경주는 누른 대로 고정되고, '자동으로 되돌리기'로 처음 상태가 됩니다. 직접 켠 경주의 마권은 기록장에 '직접 켠 경주'로 담겨 계획 마권과 따로 집계됩니다.</li>
       <li><b>세금 문턱</b>: 마권 한 장의 환급금이 200만 원을 넘으면(100배 넘는 배당은 10만 원을 넘으면) 기타소득세가 붙어 기대값이 1 아래로 내려갑니다. 그래서 맞았을 때 환급금이 문턱을 넘지 않게 금액을 줄이고 '세금 문턱 때문에 줄임'이라고 표시합니다. 세율과 기준은 마사회 안내로 확인하세요.</li>
-      <li>한 경주 합계는 <b>10만 원 이하</b>, 하루 합계는 입력한 자금 이하, 모든 금액은 100원 단위입니다.</li>
+      <li>한 경주 합계는 <b>10만 원 이하</b>, 하루 합계는 입력한 자금 이하, 모든 금액은 100원 단위입니다. 경주가 있는 날에는 그날 처음 정한 자금보다 올릴 수 없고, 올린 값은 다음 경주일부터 적용됩니다.</li>
+      <li>잃은 돈을 되찾으려고 더 사게 되거나 경마 때문에 생활이 힘들면 한국도박문제예방치유원 상담전화 <b>1336</b>(24시간, 무료)에 연락할 수 있습니다.</li>
     </ul>
     <h2 id="chkH" style="margin-top:6px">지난 경주에 이대로 샀다면</h2>
     <div id="check"><p class="muted" style="font-size:14px">검증 결과를 불러오는 중…</p></div>
@@ -212,11 +214,36 @@ function saveS(){ store.set("plan:settings", S); }
 function renderSetup(){
   $("setupSum").innerHTML = `<span>${DAY ? short(DAY.date) : ""}</span><b>${won(S.bank)}</b><span>· ${MODE_NAME[S.mode] || "보통"}</span><span>· 단승</span><span class="chg"></span>`;
   $("bank").value = S.bank;
+  if (INDEX) renderLock();
   [...$("mode").children].forEach(b => b.setAttribute("aria-pressed", b.dataset.m === S.mode));
   $("modeHint").textContent = MODE_HINT[S.mode] || "";
 }
-$("bank").addEventListener("input", () => { S.bank = Math.max(0, Math.floor(+$("bank").value || 0)); saveS(); render(); });
-$("quick").onclick = e => { const b = e.target.closest("[data-v]"); if (!b) return; S.bank = +b.dataset.v; saveS(); renderSetup(); render(); };
+/* 경주일 자금 잠금: 경주가 있는 날에는 그날 처음 정한 자금보다 올릴 수 없음(내렸다가 그 값까지 되돌리는 것은 됨).
+   더 올리고 싶으면 다음 경주일부터 적용 (S.next). 연구: 스스로 정하고 올리지 않은 한도가 손실 추격을 막음, 한도 올리기는 위험 신호 */
+function bankLock(){
+  const t = ymd(new Date());
+  if (!INDEX?.days?.some(d => d.date === t)) return null;
+  let L = store.get("plan:banklock");
+  if (!L || L.date !== t){
+    if (S.next){ S.bank = S.next; delete S.next; saveS(); }
+    L = {date: t, bank: S.bank}; store.set("plan:banklock", L);
+  }
+  return L;
+}
+function setBank(v){
+  v = Math.max(0, Math.floor(+v || 0));
+  const L = bankLock();
+  if (L && v > L.bank){ S.next = v; S.bank = L.bank; } else { S.bank = v; if (!L) delete S.next; }
+  saveS(); renderSetup(); render();
+}
+function renderLock(){
+  const L = bankLock(), el = $("bankLock");
+  el.hidden = !L && !S.next;
+  el.innerHTML = L ? `오늘은 경주일이라 자금을 <b>${won(L.bank)}</b>보다 올릴 수 없습니다.${S.next ? ` 다음 경주일부터 <b>${won(S.next)}</b>.` : ""}` : S.next ? `다음 경주일부터 ${won(S.next)}.` : "";
+}
+$("bank").addEventListener("change", () => setBank($("bank").value));
+$("bank").addEventListener("keydown", e => { if (e.key === "Enter") $("bank").blur(); });
+$("quick").onclick = e => { const b = e.target.closest("[data-v]"); if (!b) return; setBank(b.dataset.v); };
 $("mode").onclick = e => { const b = e.target.closest("[data-m]"); if (!b) return; S.mode = b.dataset.m; saveS(); renderSetup(); render(); };
 $("daySel").onchange = async e => { await openDay(e.target.value); renderSetup(); };
 
@@ -349,7 +376,7 @@ $("list").addEventListener("click", e => {
   const b = e.target.closest("[data-rec]"); if (!b || !LAST) return;
   const n = +b.dataset.rec, p = LAST.races.find(x => x.race === n); if (!p?.bets) return;
   const bets = store.get("horse-bets-v1") || [], now = Date.now(), grp = `p${now}`;
-  p.bets.forEach((x, k) => bets.push({id: `${now}-${k}-${Math.random().toString(36).slice(2,7)}`, grp: `${grp}-${k}`, date: DAY.date, race: n, pool: x.pool, nums: x.nums, amount: x.stake, memo: x.forced || p.auto ? "직접 켠 경주" : "베팅 계획", created: now + k}));
+  p.bets.forEach((x, k) => bets.push({id: `${now}-${k}-${Math.random().toString(36).slice(2,7)}`, grp: `${grp}-${k}`, date: DAY.date, race: n, pool: x.pool, nums: x.nums, amount: x.stake, memo: x.forced || p.auto ? "직접 켠 경주" : "베팅 계획", odds: x.cur, p: +x.p.toFixed(4), ev: +x.ev.toFixed(3), created: now + k}));
   const ok = store.set("horse-bets-v1", bets);
   $(`msg-${n}`).innerHTML = ok ? `${p.bets.length}장 ${won(p.total)} 담음 · <a href="bets.html">기록장에서 고치기</a>` : "이 브라우저에서는 저장할 수 없습니다.";
 });

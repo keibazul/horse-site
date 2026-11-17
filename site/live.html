@@ -16,9 +16,9 @@
 /* 경주 띠: 지금 보는 경주만 강조 */
 .strip{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 0 4px;margin-inline:-2px}
 .strip::-webkit-scrollbar{display:none}
-.strip button{flex:0 0 auto;display:grid;justify-items:center;gap:1px;min-width:54px;padding:6px 8px 7px;border:1px solid var(--line);border-radius:9px;background:var(--panel);cursor:pointer;color:var(--ink)}
+.strip button{flex:0 0 auto;display:grid;justify-items:center;align-content:center;gap:1px;min-width:56px;min-height:48px;padding:6px 8px 7px;border:1px solid var(--line);border-radius:9px;background:var(--panel);cursor:pointer;color:var(--ink)}
 .strip button b{font-size:15px;font-weight:800;line-height:1.1}
-.strip button small{font-size:11.5px;color:var(--muted);font-weight:600}
+.strip button small{font-size:13px;color:var(--muted);font-weight:600}
 .strip button.gone{background:transparent;border-style:dashed}
 .strip button.gone b{color:var(--muted)}
 .strip button[aria-current="true"]{border:2px solid var(--gold);padding:5px 7px 6px;background:var(--gold-soft)}
@@ -35,33 +35,56 @@
 .now .pick .chip{width:34px;height:31px;font-size:16px}
 .now .pick .nm{flex:1;min-width:0}
 .now .pick .nm b{display:block;font-size:17px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.now .pick .nm span{font-size:12.5px;color:var(--brand-muted)}
+.now .pick .nm span{font-size:13px;color:var(--brand-muted)}
 .now .pick .pv{font-size:24px;font-weight:800;color:#f0c65f;font-variant-numeric:tabular-nums}
 .now .meta{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:13px;color:var(--brand-muted)}
-.now .wake{border:1px solid rgb(255 255 255 / .25);background:transparent;color:var(--brand-ink);border-radius:999px;padding:4px 11px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap}
+.now .wake{border:1px solid rgb(255 255 255 / .25);background:transparent;color:var(--brand-ink);border-radius:999px;min-height:44px;padding:0 14px;font-size:13.5px;font-weight:700;cursor:pointer;white-space:nowrap}
 .now .wake[aria-pressed="true"]{background:var(--brand-ink);color:var(--brand)}
+/* 결론: 배당을 다 넣으면 살 말·금액, 아니면 사지 않음/넣을 배당 */
+.now .verdict{display:grid;gap:6px;background:rgb(255 255 255 / .09);border-radius:12px;padding:12px 14px 14px}
+.now .verdict.buy{background:rgb(255 255 255 / .14);box-shadow:inset 0 0 0 2px #f0c65f}
+.now .vt{font-size:19px;font-weight:800;letter-spacing:-.01em}
+.now .verdict.no .vt{color:var(--brand-muted)}
+.now .vl{display:flex;align-items:center;gap:10px}
+.now .vl .chip{width:34px;height:31px;font-size:16px}
+.now .vl b{flex:1;min-width:0;font-size:18px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.now .vl .va{font-size:22px;font-weight:800;color:#f0c65f;font-variant-numeric:tabular-nums}
+.now .vs{font-size:14px;color:var(--brand-muted);line-height:1.5}
+.now .vs b{color:var(--brand-ink)}
+.now .vbtn{min-height:50px;border:0;border-radius:10px;background:#f0c65f;color:#1c1608;font:inherit;font-size:16.5px;font-weight:800;cursor:pointer;margin-top:4px}
+.now .vbtn.again{background:transparent;color:var(--brand-ink);box-shadow:inset 0 0 0 1px rgb(255 255 255 / .35);font-size:14.5px}
+.now .vbtn:focus-visible,.now .wake:focus-visible{outline:3px solid #f0c65f;outline-offset:2px}
+.now .alt{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--brand-muted)}
+.now .alt b{color:var(--brand-ink);font-weight:700}
+.now .alt .chip{width:26px;height:24px;font-size:13px}
+.stage{font-size:14px;font-weight:600;color:var(--ink);background:var(--gold-soft);border-radius:8px;padding:8px 12px}
+.oddwarn{font-size:14px;font-weight:700;color:var(--warn-ink);background:var(--warn-bg);border-radius:8px;padding:8px 12px}
 .banner{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;background:var(--warn-bg);color:var(--warn-ink);border-radius:10px;padding:10px 14px;font-size:14px;font-weight:600}
 
 /* 블록 */
 .blk{padding:14px 16px 16px;display:grid;gap:10px}
 .blk h2{font-size:16.5px;font-weight:800;display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
 .blk h2 .aside{font-size:13px;font-weight:600;color:var(--muted)}
-.blk h2 a{font-size:13px;font-weight:700;text-decoration:none}
+.blk h2 a{font-size:14px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;min-height:44px}
 .hint{font-size:13.5px;color:var(--muted);line-height:1.55}
 
 /* 말 목록 */
 .hl{display:grid}
-.hr{display:grid;grid-template-columns:30px minmax(0,1fr) 62px 72px;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.hr{display:grid;grid-template-columns:30px minmax(0,1fr) 68px 72px;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
 .hr:first-child{border-top:0}
 .hr.out{opacity:.45}
 .hr .nm b{display:block;font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hr .nm span{display:block;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hr .nm .flag{font-style:normal;font-size:11.5px;font-weight:800;padding:1px 6px;border-radius:999px;background:var(--gold-soft);color:var(--gold);margin-left:4px;vertical-align:1px}
+.hr .nm span{display:block;font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hr .nm .flag{font-style:normal;font-size:13px;font-weight:800;padding:1px 6px;border-radius:999px;background:var(--gold-soft);color:var(--gold);margin-left:4px;vertical-align:1px}
 .hr .pv{text-align:right;font-weight:800;font-size:15.5px;font-variant-numeric:tabular-nums}
-.hr .pv small{display:block;font-size:11.5px;font-weight:600;color:var(--muted)}
+.hr .pv small{display:block;white-space:nowrap;font-size:13px;font-weight:600;color:var(--muted)}
 .hr.top .pv{color:var(--gold)}
 .hr .pv small.evp{color:var(--good);font-weight:800}
-.hr input{width:100%;font-size:16px;font-weight:700;text-align:right;padding:6px 8px;border-radius:8px}
+.hr input{width:100%;min-height:44px;font-size:17px;font-weight:700;text-align:right;padding:6px 8px;border-radius:8px}
+.hr .od{display:grid;gap:2px}
+.hr .was{font-size:13px;color:var(--muted);text-align:right;font-weight:600}
+.hr .nm .buyf{font-style:normal;font-size:13px;font-weight:800;padding:1px 6px;border-radius:999px;background:var(--good);color:var(--panel);margin-left:4px;vertical-align:1px}
+.hr.buy{box-shadow:inset 3px 0 0 var(--good);padding-left:8px;margin-left:-8px}
 .hr input:disabled{background:transparent;border-style:dashed}
 .srcline{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;justify-content:space-between}
 
@@ -71,7 +94,7 @@
 .pr .cb{display:flex;align-items:center;gap:7px;min-width:0}
 .pr .cb b{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pr .amt{font-size:16px;font-weight:800;text-align:right;font-variant-numeric:tabular-nums}
-.tg{display:inline-flex;align-items:center;gap:6px;border:0;background:none;padding:4px 0;font:inherit;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer}
+.tg{display:inline-flex;align-items:center;gap:6px;border:0;background:none;min-height:44px;padding:0;font:inherit;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer}
 .tg i{position:relative;width:34px;height:20px;border-radius:999px;background:var(--line);transition:background .15s}
 .tg i::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--panel);box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
 .tg[aria-checked="true"]{color:var(--ink)}
@@ -98,7 +121,7 @@
 .res{display:flex;align-items:center;gap:5px;flex-wrap:wrap;font-size:14px}
 .res .chip{width:30px;height:27px}
 @media (max-width:420px){
-  .hr{grid-template-columns:28px minmax(0,1fr) 54px 66px;gap:8px}
+  .hr{grid-template-columns:28px minmax(0,1fr) 64px 66px;gap:8px}
   .blk{padding:12px 13px 14px}
 }
 </style>
@@ -112,6 +135,8 @@
 
   <section class="panel blk" aria-labelledby="hH">
     <h2 id="hH">우승 확률 <span class="aside" id="srcAside"></span></h2>
+    <p class="stage" id="stage" hidden></p>
+    <p class="oddwarn" id="oddwarn" hidden></p>
     <div class="hl" id="horses"></div>
     <div class="srcline"><p class="hint" id="srcNote"></p><a class="btn" id="photoBtn" href="race.html">배당판 사진으로 읽기</a></div>
   </section>
@@ -217,6 +242,17 @@ function planAll(){
   return {pl: PRED ? Planner.plan(R, {bankroll: s.bank, mode: s.mode, spent, betRaces: new Set(mine.map(b => +b.race)).size}) : null, s, spent};
 }
 
+/* 넣은 배당 기록 (assets/oddslog.js): 1차 = 모든 말 배당이 처음 채워진 입력, 2차 = 그 뒤 30초 넘게 지나 다시 고친 입력 */
+const hm = t => { const d = new Date(t); return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; };
+function stages(n){
+  const ids = probs(n).ids.map(String), list = OddsLog.all()?.[DAY.date]?.[n] || [];
+  const first = list.find(x => ids.every(i => +x.o[i] > 1)) || null, last = list[list.length - 1];
+  return {first, second: first && last && last.t - first.t > 30000 ? last : null};
+}
+const minsLeft = n => { const t = minsOf(timeOf(n)); return DAY.date === today() && t != null ? t - nowM() : null; };
+function curPlan(n){ const {pl} = planAll(); return pl?.races.find(x => x.race === n) || null; }
+const OFF_WHY = {last: "그날 마지막 경주라 자동으로 뺐습니다", sprint: "1200m 이하 경주라 자동으로 뺐습니다", user: "직접 뺀 경주입니다"};
+
 /* ---------- 그리기 ---------- */
 function renderStrip(){
   const nx = nextRace();
@@ -241,18 +277,46 @@ function countdown(n){
 }
 let wakeLock = null, wantWake = false;      // 화면 켜 두기: 다른 앱에 갔다 오면 다시 켬
 function renderNow(){
-  const n = RACE, r0 = rowsOf(n)[0] || {}, P = probs(n);
+  const n = RACE, r0 = rowsOf(n)[0] || {}, P = probs(n), gone = hasResult(n) || started(n) || !!PR(n).void;
   const top = P.final ? +Object.keys(P.final).reduce((a, b) => P.final[a] >= P.final[b] ? a : b) : null;
   const tr = top != null ? rowsOf(n).find(r => +r.chulNo === top) : null;
-  const nLive = P.ids.length;
-  const meta = [short(DAY.date), r0.rcDist && `${r0.rcDist}m`, r0.rank, `${nLive}두`, r0.rcName && r0.rcName !== "일반" ? r0.rcName : ""].filter(Boolean);
+  const nm = i => rowsOf(n).find(r => +r.chulNo === +i)?.hrName || "";
+  const meta = [short(DAY.date), r0.rcDist && `${r0.rcDist}m`, r0.rank, `${P.ids.length}두`, r0.rcName && r0.rcName !== "일반" ? r0.rcName : ""].filter(Boolean);
   const wakeOK = "wakeLock" in navigator;
+  const srcName = {mkt:"배당 반영 확률", comb:"결합 확률", model:"모델 확률", market:"배당 확률"}[P.src];
+  // 결론: 출발 전이면 살 말·금액 / 사지 않음 / 넣을 배당
+  let verdict = "";
+  const p = !gone && PRED ? curPlan(n) : null;
+  if (p){
+    const st = stages(n), left = minsLeft(n);
+    const again = st.second ? `1차 ${hm(st.first.t)} · 2차 ${hm(st.second.t)}에 넣은 배당으로 계산했습니다.`
+      : st.first ? `1차 ${hm(st.first.t)}에 넣은 배당입니다. 출발 2분 전쯤 배당판을 다시 보고 바뀐 말만 고치세요.` : "";
+    if (p.bets){
+      const done = mineOf(n).some(b => p.bets.some(x => b.pool === x.pool && b.nums.join() === x.nums.join()));
+      verdict = `<div class="verdict buy"><p class="vt">${p.forced ? "직접 켠 경주 · " : ""}단승 ${p.bets.length > 1 ? p.bets.length + "마리 " : ""}${won(p.total)}</p>
+        ${p.bets.map(b => `<div class="vl">${chip(b.nums[0])}<b>${esc(nm(b.nums[0]))}</b><span class="va">${won(b.stake)}</span></div>
+          <p class="vs">지금 배당 <b>${b.cur}</b> · ${b.forced ? `기준 미달(기대 ${b.ev.toFixed(2)}), 금액을 작게 잡음` : `배당이 <b>${b.minOdds}</b> 아래로 내려가면 사지 않기`}${b.tax ? " · 세금 문턱 때문에 금액을 줄임" : ""}</p>`).join("")}
+        ${again ? `<p class="vs">${again}</p>` : ""}
+        <button class="vbtn ${done ? "again" : ""}" type="button" id="recTop">${done ? "이미 담음 · 한 번 더 담기" : `산 대로 기록 · ${won(p.total)}`}</button><p class="vs" id="recMsg" aria-live="polite"></p></div>`;
+    } else if (p.wait){
+      const need = P.ids.filter(i => !(+userOdds(n)[i] > 1)).length;
+      verdict = `<div class="verdict"><p class="vt">${!MKX ? "배당 반영 확률 자료 없음" : need === P.ids.length ? `단승 배당 ${need}두 넣기` : `배당 ${need}두 더 넣기`}</p>
+        <p class="vs">${!MKX ? "이 경주일은 계획을 계산할 자료가 아직 없습니다." : left != null && left > 7 ? "출발 5분 전쯤 배당판의 단승 배당을 아래 칸에 넣으면 살 말과 금액이 여기 나옵니다." : "아래 칸에 배당판의 단승 배당을 넣으면 살 말과 금액이 여기 나옵니다."}</p></div>`;
+    } else {
+      const why = p.off === "novalue" ? `기대값 1.2를 넘는 말이 없습니다${p.best != null ? ` (가장 높은 값 ${p.best.toFixed(2)})` : ""}` : OFF_WHY[p.off] || esc(p.skip || "");
+      verdict = `<div class="verdict no"><p class="vt">이 경주는 사지 않음</p><p class="vs">${why}. 사고 싶으면 아래 계획 칸의 스위치를 켜세요.</p>${again ? `<p class="vs">${again}</p>` : ""}</div>`;
+    }
+  }
+  const pick = tr ? (verdict ? `<p class="alt">확률 1순위 ${chip(top)}<b>${esc(tr.hrName)}</b>${pct(P.final[top])}</p>`
+      : `<div class="pick">${chip(top)}<div class="nm"><b>${esc(tr.hrName)}</b><span>1순위 · ${esc(tr.jkName || "")} · ${srcName}</span></div><span class="pv">${pct(P.final[top])}</span></div>`)
+    : `<p class="hint" style="color:var(--brand-muted)">이 경주는 아직 예측이 없습니다.</p>`;
   $("now").innerHTML = `
     <div class="top"><div><p class="rn"><b>${n}경주</b>${timeOf(n)} 출발</p></div>${wakeOK ? `<button class="wake" type="button" id="wake" aria-pressed="${wantWake && !!wakeLock}">화면 켜 두기</button>` : ""}</div>
     <div class="cd num">${countdown(n)}</div>
-    ${tr ? `<div class="pick">${chip(top)}<div class="nm"><b>${esc(tr.hrName)}</b><span>1순위 · ${esc(tr.jkName || "")} · ${{mkt:"배당 반영 확률", comb:"결합 확률", model:"모델 확률", market:"배당 확률"}[P.src]}</span></div><span class="pv">${pct(P.final[top])}</span></div>` : `<p class="hint" style="color:var(--brand-muted)">이 경주는 아직 예측이 없습니다.</p>`}
+    ${verdict}${pick}
     <div class="meta">${meta.map(x => `<span>${esc(x)}</span>`).join("")}</div>`;
   const w = $("wake"); if (w) w.onclick = toggleWake;
+  const rb = $("recTop"); if (rb) rb.onclick = () => record(p);
 }
 async function setWake(on){
   wantWake = on;
@@ -266,7 +330,9 @@ const toggleWake = () => setWake(!wantWake);
 function renderHorses(){
   const n = RACE, P = probs(n), uo = userOdds(n), off = PR(n).odds || {}, chg = ENT.chg || {}, gone = hasResult(n) || started(n);
   const top = P.final ? +Object.keys(P.final).reduce((a, b) => P.final[a] >= P.final[b] ? a : b) : null;
-  const order = rowsOf(n).slice().sort((a, b) => (P.final?.[b.chulNo] ?? -1) - (P.final?.[a.chulNo] ?? -1));
+  const order = rowsOf(n);                    // 배당판과 같은 말 번호 순
+  const plan = !gone && PRED ? curPlan(n) : null, buy = new Set((plan?.bets || []).map(b => b.nums[0]));
+  const st = gone ? {} : stages(n);
   $("horses").innerHTML = order.map(r => {
     const i = +r.chulNo, out = P.out.has(i), p = P.final?.[i], c2 = chgRow(n, i, "기수변경"), e2 = chg[`${n}-${i}`];
     const cg = c2 || e2 ? {before: c2?.before || e2?.jk?.[0], why: c2?.why || ""} : null, sw = chgRow(n, i, "말취소")?.why;
@@ -275,16 +341,26 @@ function renderHorses(){
     const ev = !out && p != null && (P.src === "mkt" || P.src === "comb") ? p * +(uo[i] ?? off[i]) : null;
     const pv = out ? "" : p != null ? `${pct(p)}${ev != null ? `<small class="${ev >= 1.2 && p >= 0.05 && P.src === "mkt" ? "evp" : ""}">기대 ${ev.toFixed(2)}</small>` : ""}` : "-";
     const v = uo[i] ?? off[i] ?? "";
-    return `<div class="hr ${out ? "out" : ""} ${i === top ? "top" : ""}">${chip(i)}
-      <div class="nm"><b>${esc(r.hrName)}${cg ? `<em class="flag">기수 변경</em>` : ""}</b><span>${esc(sub)}</span></div>
+    const f0 = st.first?.o?.[i], was = f0 && v !== "" && +v !== +f0 ? `<small class="was">처음 ${f0}</small>` : "";
+    return `<div class="hr ${out ? "out" : ""} ${i === top ? "top" : ""} ${buy.has(i) ? "buy" : ""}">${chip(i)}
+      <div class="nm"><b>${esc(r.hrName)}${buy.has(i) ? `<em class="buyf">살 말</em>` : ""}${cg ? `<em class="flag">기수 변경</em>` : ""}</b><span>${esc(sub)}</span></div>
       <div class="pv">${pv}</div>
-      <input type="text" inputmode="decimal" autocomplete="off" placeholder="배당" data-od="${i}" value="${esc(v)}" aria-label="${i}번 단승 배당" ${out || gone ? "disabled" : ""}>
+      <div class="od"><input type="text" inputmode="decimal" enterkeyhint="next" autocomplete="off" placeholder="배당" data-od="${i}" value="${esc(v)}" aria-label="${i}번 단승 배당" ${out || gone ? "disabled" : ""}>${was}</div>
     </div>`;
   }).join("") || `<p class="empty">출전표가 없습니다.</p>`;
   const nOd = P.ids.filter(i => +(uo[i] ?? off[i]) > 1).length, need = P.ids.length - nOd;
   $("srcAside").textContent = {mkt: "배당 반영", comb: "모델 + 배당", model: "모델", market: "배당만", none: ""}[P.src];
   const bias = BIAS?.races?.[n]?.ib != null ? " 당일 주로 보정을 반영했습니다." : "";
   $("srcNote").textContent = gone ? "출발한 경주입니다." : nOd === 0 ? `배당판의 단승 배당을 오른쪽 칸에 넣으면 배당 반영 확률로 바뀝니다.${bias}` : need > 0 ? `${need}두 더 넣으면 배당 반영 확률로 바뀝니다.` : P.src === "mkt" ? `배당판 배당을 말 정보와 함께 넣어 계산한 확률입니다. '기대'는 확률 × 배당입니다. 확률 5% 이상이면서 기대 1.2 이상(초록)인 말이 베팅 계획에서 사는 말입니다(과거 검증 회수율 100% 넘음, 확실하지는 않음).${bias}` : `배당판 배당과 섞은 확률입니다.${bias}`;
+  // 1차·2차 안내와 배당 합계 검산 (단승 환급률 약 80% → 1/배당 합은 보통 1.2~1.3)
+  const left = minsLeft(n);
+  const stage = gone ? "" : st.first && !st.second && left != null && left <= 4 ? `2차: 배당판을 다시 보고 바뀐 말만 고치세요. 처음 넣은 값과 다르면 칸 아래에 '처음'이 보입니다.`
+    : !st.first && nOd > 0 && need > 0 ? `1차: ${need}두 남았습니다.` : "";
+  $("stage").hidden = !stage; $("stage").textContent = stage;
+  const sum = need === 0 && nOd ? P.ids.reduce((a, i) => a + 1 / +(uo[i] ?? off[i]), 0) : null;
+  const bad = !gone && sum != null && (sum < 1.15 || sum > 1.45);
+  $("oddwarn").hidden = !bad;
+  if (bad) $("oddwarn").textContent = `배당 합계가 평소와 다릅니다(1/배당 합 ${sum.toFixed(2)}, 보통 1.2~1.3). ${sum > 1.45 ? "너무 낮게" : "너무 높게"} 넣은 칸이 없는지 확인하세요.`;
   $("photoBtn").href = `race.html?date=${DAY.date}&race=${n}#odds`;
   $("photoBtn").hidden = gone;
 }
@@ -314,16 +390,17 @@ function renderPlan(){
   const nm = i => rowsOf(n).find(r => +r.chulNo === i)?.hrName || "";
   const rows = p.bets.map(b => `<div class="pr"><span class="cb">${chip(b.nums[0], "sm")}<b>${esc(nm(b.nums[0]))}</b></span><span class="amt">${won(b.stake)}</span>
       <div class="cond"><span>배당 <b>${b.cur}</b></span><span>확률 <b>${pct(b.p)}</b></span><span>기대 <span class="${b.forced ? "" : "ev"}">${b.ev.toFixed(2)}</span></span>${b.forced ? `<span class="taxn">기준(1.2) 미달 · 금액을 작게 잡음</span>` : ""}${b.forced ? `<span>기준을 넘으려면 배당 <b>${b.minOdds}</b> 이상</span>` : `<span>배당이 <b>${b.minOdds}</b> 아래로 내려가면 사지 않기</span>`}${b.tax ? `<span class="taxn">세금 문턱(환급금 200만 원) 때문에 금액을 줄임</span>` : ""}</div></div>`).join("");
-  $("plan").innerHTML = sw + rows + `<div class="actions" style="margin-top:6px"><button class="btn primary" type="button" id="recBtn">산 대로 기록 · ${won(p.total)}</button><span class="msg" id="recMsg"></span></div>`;
+  $("plan").innerHTML = sw + rows + `<p class="hint" style="margin-top:6px">맨 위 '산 대로 기록'을 누르면 이 마권이 산 배당과 함께 기록장에 담깁니다.</p>`;
   useClick();
-  $("recBtn").onclick = () => record(p);
 }
 function record(p){
   const bets = store.get("horse-bets-v1") || [], t = Date.now();
-  p.bets.forEach((x, k) => bets.push({id: `${t}-${k}-${Math.random().toString(36).slice(2,7)}`, grp: `p${t}-${k}`, date: DAY.date, race: p.race, pool: x.pool, nums: x.nums, amount: x.stake, memo: x.forced || p.auto ? "직접 켠 경주" : "현장 화면", created: t + k}));
+  // odds: 산 때 넣은 배당 (확정 배당과 비교해 '산 배당 대비 확정 배당' 측정), p·ev: 그때 확률·기대값
+  p.bets.forEach((x, k) => bets.push({id: `${t}-${k}-${Math.random().toString(36).slice(2,7)}`, grp: `p${t}-${k}`, date: DAY.date, race: p.race, pool: x.pool, nums: x.nums, amount: x.stake,
+    memo: x.forced || p.auto ? "직접 켠 경주" : "현장 화면", odds: x.cur, p: +x.p.toFixed(4), ev: +x.ev.toFixed(3), created: t + k}));
   const ok = store.set("horse-bets-v1", bets);
-  renderMine();
-  $("recMsg").textContent = ok ? `${p.bets.length}장 ${won(p.total)} 담음` : "이 브라우저에서는 저장할 수 없습니다.";
+  renderNow(); renderMine();
+  const m = $("recMsg"); if (m) m.textContent = ok ? `${p.bets.length}장 ${won(p.total)}을 기록장에 담았습니다.` : "이 브라우저에서는 저장할 수 없습니다.";
 }
 /* 산 마권 정산: 단승·연승은 경주 끝나고 바로(당일 결과), 나머지는 확정 배당이 들어오는 저녁에 */
 function settle(b){
@@ -397,6 +474,12 @@ document.addEventListener("input", e => {
     store.set(oddsKey(RACE), {...sv, user}); OddsLog.add(DAY.date, RACE, user);
   } else return;
   clearTimeout(tmr); tmr = setTimeout(render, 700);
+});
+document.addEventListener("keydown", e => {
+  const t = e.target; if (e.key !== "Enter" || !t.dataset?.od) return;
+  e.preventDefault();
+  const all = [...document.querySelectorAll("[data-od]:not(:disabled)")], k = all.indexOf(t);
+  (all[k + 1] || t).focus(); if (!all[k + 1]) t.blur();
 });
 addEventListener("pageshow", e => { if (e.persisted) render(); });    // 예측 화면에서 배당을 넣고 돌아옴
 addEventListener("storage", e => { if (e.key && (e.key.startsWith("odds:") || e.key.startsWith("plan:") || e.key === "horse-bets-v1")) render(); });

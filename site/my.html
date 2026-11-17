@@ -20,7 +20,7 @@
 /* 맨 위: 손익 한 줄 */
 .sumrow{display:flex;flex-wrap:wrap;gap:6px 24px;align-items:baseline;border-bottom:2px solid var(--ink);padding-bottom:10px}
 .sumrow div{display:grid}
-.sumrow span{font-size:12px;color:var(--muted)}
+.sumrow span{font-size:13px;color:var(--muted)}
 .sumrow b{font-family:var(--f-data);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
 .sumrow .plus b{color:var(--good)} .sumrow .minus b{color:var(--bad)}
 
@@ -38,8 +38,8 @@
 .meter .band{position:absolute;top:9px;height:12px;border-radius:6px;background:color-mix(in srgb,var(--brand) 22%,transparent)}
 .meter .exp{position:absolute;top:6px;width:2px;height:18px;background:var(--brand);transform:translateX(-1px)}
 .meter .act{position:absolute;top:7px;width:16px;height:16px;border-radius:50%;background:var(--gold);border:2px solid var(--panel);transform:translateX(-8px)}
-.meter-lab{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);font-family:var(--f-data)}
-.mkey{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+.meter-lab{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);font-family:var(--f-data)}
+.mkey{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
 .mkey i{display:inline-block;vertical-align:-2px;margin-right:5px}
 .mkey .k1{width:12px;height:10px;border-radius:5px;background:color-mix(in srgb,var(--brand) 22%,transparent)}
 .mkey .k2{width:2px;height:12px;background:var(--brand)}
@@ -55,21 +55,25 @@
 .chart circle.pt{fill:var(--brand);stroke:var(--panel);stroke-width:2}
 .chart .cross{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
 .chart circle.dot{fill:var(--brand);stroke:var(--panel);stroke-width:2}
-.tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:12.5px;box-shadow:0 4px 14px rgb(0 0 0 / .14);min-width:170px;z-index:2}
+.tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;box-shadow:0 4px 14px rgb(0 0 0 / .14);min-width:170px;z-index:2}
 .tip b{display:block;font-size:13px;margin-bottom:3px}
 .tip div{display:flex;justify-content:space-between;gap:12px}
 .tip div span:last-child{font-family:var(--f-data)}
 
 /* 나눠 보기 표 */
 .tbl{width:100%;border-collapse:collapse;font-size:14px}
-.tbl th{font-size:12px;color:var(--muted);font-weight:600;text-align:right;padding:4px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+.kpis{display:flex;flex-wrap:wrap;gap:8px 24px}
+.kpis div{display:grid}
+.kpis span{font-size:13px;color:var(--muted)}
+.kpis b{font-family:var(--f-data);font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.tbl th{font-size:13px;color:var(--muted);font-weight:600;text-align:right;padding:4px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
 .tbl th:first-child,.tbl td:first-child{text-align:left}
 .tbl td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:right;font-family:var(--f-data);font-variant-numeric:tabular-nums;white-space:nowrap}
 .tbl td:first-child{font-family:var(--f-body);font-weight:700;white-space:normal}
 .tbl tr:last-child td{border-bottom:0}
 .tbl .roi.up{color:var(--good);font-weight:700}
 .tbl .roi.down{color:var(--bad)}
-.tbl small{display:block;font-family:var(--f-body);font-weight:500;color:var(--muted);font-size:11.5px}
+.tbl small{display:block;font-family:var(--f-body);font-weight:500;color:var(--muted);font-size:12.5px}
 .split{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 @media (max-width:720px){ .split{grid-template-columns:1fr} }
 @media (max-width:520px){ .top h1{font-size:26px} .sumrow b{font-size:17px} .tbl .hide-s{display:none} .luck .big{font-size:28px} }
@@ -78,7 +82,7 @@
 .win{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line);font-size:14px;flex-wrap:wrap}
 .win:first-child{border-top:0}
 .win .combo{display:inline-flex;gap:3px;align-items:center}
-.win .combo em{font-style:normal;color:var(--muted);font-size:12px}
+.win .combo em{font-style:normal;color:var(--muted);font-size:13px}
 .win b.r{font-family:var(--f-data);color:var(--good)}
 .empty{display:grid;gap:10px;padding:22px 18px;text-align:left}
 .empty h2{font-size:18px}
@@ -210,7 +214,7 @@ async function main(){
   // 나눠 보기
   const P = Object.keys(PI);
   html += `<div class="split">` + table("승식별", "", P.map(p => [p.replace("식", ""), done.filter(x => x.b.pool === p)]));
-  html += table("어떻게 골랐나", "계획대로 = 베팅 계획·현장 화면의 '산 대로 기록'.", [["계획대로", done.filter(x => source(x.b) === "plan")], ["직접 고름", done.filter(x => source(x.b) === "self")]]) + `</div>`;
+  html += table("어떻게 골랐나", "계획대로 = 베팅 계획·현장 화면의 '산 대로 기록'. 직접 켠 경주 = 자동으로 뺀 경주를 스위치로 켜고 산 것.", [["계획대로", done.filter(x => source(x.b) === "plan")], ["직접 켠 경주", done.filter(x => source(x.b) === "forced")], ["직접 고름", done.filter(x => source(x.b) === "self")]]) + `</div>`;
   const hasTop = x => x.r.top != null && x.b.nums.includes(x.r.top);
   html += `<div class="split">` + table("모델 1순위 말이 들어갔나", "", [["들어감", done.filter(hasTop), "1순위 말이 조합에 있음"], ["안 들어감", done.filter(x => x.r.top != null && !hasTop(x))]]);
   const amtBand = x => x.b.amount <= 1000 ? "1천원 이하" : x.b.amount <= 5000 ? "1천~5천원" : x.b.amount <= 20000 ? "5천~2만원" : "2만원 넘게";
@@ -234,39 +238,68 @@ addEventListener("storage", e => { if (e.key === Ledger.KEY) main(); });
 })();
 </script>
 <script>
-/* 넣은 배당 기록 (assets/oddslog.js): 출발 전 마지막으로 넣은 단승 배당과 확정 배당을 비교 */
+/* 넣은 배당과 확정 배당 (assets/oddslog.js, 기록장의 산 배당)
+   1) 산 배당 대비 확정 배당: 산 단승 마권마다 ln(산 배당 / 확정 배당). +면 산 뒤 배당이 내려감(돈이 같은 말로 몰림 = 좋은 신호), −면 반대
+      산 배당 = '산 대로 기록'이 남긴 odds, 없으면 그 말의 출발 전 마지막 입력 배당
+   2) 1차(모든 말 처음 채운 입력) → 2차(그 뒤 다시 고친 입력) → 확정 배당 변화 크기
+   판정(미리 정함): 산 단승 100장 이상에서 평균의 95% 구간 위쪽이 0보다 작으면 → 기대값 기준이 역선택을 당한다는 뜻, 기준을 다시 봄 */
 (async () => {
   "use strict";
   const el = document.getElementById("olog"), L = OddsLog.all(), days = Object.keys(L).sort();
+  const B = Ledger.store.load().filter(b => b.pool === "단승식");
   const get = u => fetch(u, {cache: "no-cache"}).then(r => r.ok ? r.json() : null).catch(() => null);
   const med = a => { const b = a.slice().sort((x, y) => x - y); return b.length ? b[b.length >> 1] : null; };
-  const head = `<h2>넣은 배당과 확정 배당</h2><p class="sub">현장 화면이나 경주 예측에 단승 배당을 넣으면 시각과 함께 이 브라우저에 저장됩니다. 베팅 계획의 과거 검증은 확정 배당으로 계산했기 때문에, 실제로 살 때 본 배당이 확정 배당과 얼마나 다른지 여기서 잽니다. 몇 주 쌓이면 '내려받기' 파일로 계획을 살 때 배당 기준으로 다시 검증할 수 있습니다.</p>`;
-  if (!days.length){ el.innerHTML = `<section class="box">${head}<p class="sub">아직 넣은 배당이 없습니다.</p></section>`; return; }
-  const X = []; let nr = 0, wait = 0, late = 0;
-  for (const d of days.slice(-12)){
+  const pc = v => v == null ? "-" : `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v * 100).toFixed(1)}%`;
+  const head = `<h2>산 배당과 확정 배당</h2><p class="sub">과거 검증은 마감 후 확정 배당으로 계산했습니다. 실제로 산 배당이 확정 배당과 얼마나 다른지가 이 계획이 현장에서도 통하는지를 가장 빨리 알려 줍니다(수익률보다 훨씬 적은 마권으로 판단 가능). 현장 화면이나 경주 예측에 넣은 배당과 '산 대로 기록'의 배당을 씁니다.</p>`;
+  const allDays = [...new Set([...days, ...B.map(b => b.date)])].sort().slice(-20);
+  if (!allDays.length){ el.innerHTML = `<section class="box">${head}<p class="sub">아직 넣은 배당이나 산 단승 마권이 없습니다.</p></section>`; return; }
+  const C = [], X = [], S12 = [], S2f = []; let nr = 0, wait = 0;
+  for (const d of allDays){
     const [ent, pred] = await Promise.all([get(`data/entries/${d}.json`), get(`data/pred/${d}.json`)]);
-    for (const [n, list] of Object.entries(L[d])){
-      const fin = pred?.races?.[n]?.odds, m = String(ent?.rows?.find(r => +r.rcNo === +n)?.stTime ?? "").match(/(\d{1,2}):?(\d{2})/);
-      if (!fin || !pred.races[n].result?.length || !m){ wait++; continue; }
-      const start = new Date(+d.slice(0,4), +d.slice(4,6)-1, +d.slice(6,8), +m[1], +m[2]).getTime();
-      const snap = list.filter(x => x.t < start).pop();
-      if (!snap){ late++; continue; }
+    const startOf = n => { const m = String(ent?.rows?.find(r => +r.rcNo === +n)?.stTime ?? "").match(/(\d{1,2}):?(\d{2})/); return m ? new Date(+d.slice(0,4), +d.slice(4,6)-1, +d.slice(6,8), +m[1], +m[2]).getTime() : null; };
+    const fin = n => { const r = pred?.races?.[n]; return r?.result?.length && !r.partial ? r.odds || null : null; };
+    // 넣은 배당 (모든 말)
+    for (const [n, list] of Object.entries(L[d] || {})){
+      const f = fin(n), st = startOf(n);
+      if (!f || st == null){ wait++; continue; }
+      const pre = list.filter(x => x.t < st), snap = pre[pre.length - 1];
+      if (!snap) continue;
       nr++;
-      for (const [k, o] of Object.entries(snap.o)) if (+fin[k] > 1) X.push({o, r: fin[k] / o, lead: (start - snap.t) / 60000});
+      for (const [k, o] of Object.entries(snap.o)) if (+f[k] > 1) X.push({o, r: f[k] / o, lead: (st - snap.t) / 60000});
+      const ids = Object.keys(f), first = pre.find(x => ids.every(i => +x.o[i] > 1));
+      if (first && snap.t - first.t > 30000) for (const k of ids) if (+first.o[k] > 1 && +snap.o[k] > 1){ S12.push(Math.abs(Math.log(snap.o[k] / first.o[k]))); S2f.push(Math.abs(Math.log(f[k] / snap.o[k]))); }
+    }
+    // 산 단승 마권
+    for (const b of B.filter(b => b.date === d)){
+      const f = fin(b.race), k = String(b.nums[0]); if (!f || !(+f[k] > 1)) continue;
+      let o = +b.odds;
+      if (!(o > 1)){ const st = startOf(b.race), pre = (L[d]?.[b.race] || []).filter(x => st == null || x.t < st); o = +pre[pre.length - 1]?.o?.[k]; }
+      if (o > 1) C.push({c: Math.log(o / f[k]), down: f[k] < o, plan: Ledger.source(b) === "plan"});
     }
   }
-  const pc = v => v == null ? "-" : `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v * 100).toFixed(1)}%`;
+  // 1) 산 배당 대비 확정 배당
+  let clv = `<p class="sub">아직 결과가 나온 산 단승 마권이 없습니다. '산 대로 기록'으로 담으면 산 배당이 같이 저장됩니다.</p>`;
+  if (C.length){
+    const n = C.length, m = C.reduce((a, x) => a + x.c, 0) / n, sd = Math.sqrt(C.reduce((a, x) => a + (x.c - m) ** 2, 0) / Math.max(1, n - 1)), se = sd / Math.sqrt(n);
+    const ci = n >= 10 ? ` (95% 구간 ${pc(Math.exp(m - 1.96 * se) - 1)} ~ ${pc(Math.exp(m + 1.96 * se) - 1)})` : "";
+    const verdict = n < 100 ? `판단에는 산 단승 100장이 필요합니다(지금 ${n}장).`
+      : m + 1.96 * se < 0 ? `<b>산 뒤 배당이 오르는 쪽으로 확실히 치우쳐 있습니다.</b> 계획이 고른 말에 마지막 돈이 반대로 들어간다는 뜻이라, 기대값 기준을 다시 봐야 합니다.`
+      : m - 1.96 * se > 0 ? `<b>산 뒤 배당이 내려가는 쪽으로 확실히 치우쳐 있습니다.</b> 좋은 신호입니다(마지막 돈이 같은 말로 들어감).`
+      : `아직 어느 쪽이라고 하기 어렵습니다.`;
+    clv = `<div class="kpis"><div><span>산 단승</span><b>${n}장</b></div><div><span>산 배당 ÷ 확정 배당</span><b>${pc(Math.exp(m) - 1)}</b></div><div><span>산 뒤 배당이 내려간 비율</span><b>${(C.filter(x => x.down).length / n * 100).toFixed(0)}%</b></div></div>
+      <p class="sub">산 배당이 확정 배당보다 평균 ${pc(Math.exp(m) - 1)}${ci}. +면 산 뒤 그 말 배당이 내려갔다는 뜻(좋은 신호), −면 올랐다는 뜻입니다. ${verdict}</p>`;
+  }
+  // 2) 넣은 배당 전체
   const bucket = (a, b) => { const x = X.filter(z => z.o >= a && z.o < b); return `<tr><td>${a}~${b === Infinity ? "" : b}배</td><td>${x.length}</td><td>${pc(med(x.map(z => z.r - 1)))}</td><td>${x.length ? (med(x.map(z => Math.abs(z.r - 1))) * 100).toFixed(1) + "%" : "-"}</td></tr>`; };
-  const body = nr ? `<p class="sub">비교한 경주 <b>${nr}</b>개(말 ${X.length}마리), 넣은 시각은 출발 <b>${med(X.map(z => z.lead)).toFixed(0)}분</b> 전(중앙값). 넣은 뒤 확정까지 배당 변화 크기 중앙값 <b>${(med(X.map(z => Math.abs(z.r - 1))) * 100).toFixed(1)}%</b>.</p>
-    <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>넣은 배당</th><th>말</th><th>확정까지 변화(중앙값)</th><th>변화 크기(중앙값)</th></tr></thead><tbody>${bucket(1, 5)}${bucket(5, 20)}${bucket(20, Infinity)}</tbody></table></div>`
-    : `<p class="sub">아직 비교할 수 있는 경주가 없습니다.</p>`;
-  el.innerHTML = `<section class="box">${head}${body}
-    <p class="sub">기록 ${days.length}일${wait ? ` · 결과를 기다리는 경주 ${wait}개` : ""}${late ? ` · 출발 뒤에 넣어 뺀 경주 ${late}개` : ""}</p>
+  const all = nr ? `<h3 style="font-size:15px;margin-top:6px">넣은 배당 전체 (모든 말)</h3><p class="sub">비교한 경주 <b>${nr}</b>개(말 ${X.length}마리), 마지막으로 넣은 시각은 출발 <b>${med(X.map(z => z.lead)).toFixed(0)}분</b> 전(중앙값). 넣은 뒤 확정까지 배당 변화 크기 중앙값 <b>${(med(X.map(z => Math.abs(z.r - 1))) * 100).toFixed(1)}%</b>.${S12.length ? ` 1차→2차 변화 크기 중앙값 <b>${((Math.exp(med(S12)) - 1) * 100).toFixed(1)}%</b>, 2차→확정 <b>${((Math.exp(med(S2f)) - 1) * 100).toFixed(1)}%</b>(${S12.length}마리).` : ""}</p>
+    <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>넣은 배당</th><th>말</th><th>확정까지 변화(중앙값)</th><th>변화 크기(중앙값)</th></tr></thead><tbody>${bucket(1, 5)}${bucket(5, 20)}${bucket(20, Infinity)}</tbody></table></div>` : "";
+  el.innerHTML = `<section class="box">${head}${clv}${all}
+    <p class="sub">기록 ${days.length}일${wait ? ` · 결과를 기다리는 경주 ${wait}개` : ""}. 넣은 배당은 이 브라우저에만 있습니다. 몇 주 쌓이면 내려받아 보내 주세요(살 때 배당 기준 재검증).</p>
     <div><button class="btn" type="button" id="ologDl">배당 기록 내려받기</button></div></section>`;
   document.getElementById("ologDl").onclick = () => {
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([JSON.stringify({made: new Date().toISOString(), log: L})], {type: "application/json"}));
-    a.download = `odds-log-${days[days.length - 1]}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    a.href = URL.createObjectURL(new Blob([JSON.stringify({made: new Date().toISOString(), log: L, bets: B})], {type: "application/json"}));
+    a.download = `odds-log-${allDays[allDays.length - 1]}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   };
 })();
 </script>

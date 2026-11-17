@@ -61,8 +61,8 @@
     return {st: "lose", ret: 0, text: "미적중", prob, res, top};
   }
 
-  /* 기록이 어디서 왔나: 베팅 계획·현장 화면의 '산 대로 기록' = 계획대로, 나머지 = 직접 */
-  const source = b => (b.memo === "베팅 계획" || b.memo === "현장 화면") ? "plan" : "self";
+  /* 기록이 어디서 왔나: 베팅 계획·현장 화면의 '산 대로 기록' = 계획대로, 스위치로 직접 켠 경주의 '산 대로 기록' = 직접 켠 경주, 나머지 = 직접 */
+  const source = b => (b.memo === "베팅 계획" || b.memo === "현장 화면") ? "plan" : b.memo === "직접 켠 경주" ? "forced" : "self";
 
   root.Ledger = {KEY, POOLS, PI, store, getJSON, comboKey, comboProb, settle, source};
 })(typeof self !== "undefined" ? self : this);

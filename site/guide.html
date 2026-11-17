@@ -23,7 +23,7 @@
 .doc section{display:grid;gap:12px;scroll-margin-top:16px}
 .doc h2{font-size:21px;font-weight:800}
 .doc p,.doc li{font-size:15px;line-height:1.75}
-.doc ul{margin:0;padding-left:20px;display:grid;gap:6px}
+.doc ul,.doc ol:not(.steps){margin:0;padding-left:20px;display:grid;gap:6px}
 .doc b{font-weight:700}
 .steps{list-style:none;margin:0;padding:0;display:grid;gap:0;counter-reset:s}
 .steps li{counter-increment:s;display:grid;grid-template-columns:34px minmax(0,1fr);gap:4px 14px;padding:14px 0;border-top:1px solid var(--line)}
@@ -32,7 +32,7 @@
 .steps span{color:var(--muted);font-size:14.5px;line-height:1.65}
 .tbl{width:100%;border-collapse:collapse;font-size:14px}
 .tbl th,.tbl td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
-.tbl th{font-size:12.5px;color:var(--muted);font-weight:700}
+.tbl th{font-size:13px;color:var(--muted);font-weight:700}
 .tbl td:first-child{font-weight:700;white-space:nowrap}
 .callout{background:var(--warn-bg);color:var(--warn-ink);border-radius:10px;padding:14px 16px;font-size:14.5px;line-height:1.7}
 .ex{display:inline-flex;gap:3px;vertical-align:-4px}
@@ -75,12 +75,19 @@
       <section id="live" aria-labelledby="liveH">
         <h2 id="liveH">경마장에서: 현장 화면</h2>
         <p>아래 탭의 '현장'은 경주일에 경마장에서 쓰는 화면입니다. 다음 출발 경주 하나만 크게 보여 주고, 그 경주가 출발하면 다음 경주로 저절로 넘어갑니다. 위쪽 경주 띠에서 다른 경주를 누르면 그 경주에 머뭅니다.</p>
+        <p><b>현장 60초 순서</b></p>
+        <ol>
+          <li><b>출발 5분 전쯤 (1차)</b>: 배당판의 단승 배당을 말 번호 순서대로 칸에 넣습니다. 칸은 배당판과 같은 말 번호 순이고, 엔터를 누르면 다음 칸으로 갑니다.</li>
+          <li><b>맨 위 결론 확인</b>: 다 넣으면 맨 위 초록 카드에 '단승 ○번 ○○원' 또는 '이 경주는 사지 않음'이 바로 나옵니다. 살 말은 목록에도 '살 말'로 표시됩니다.</li>
+          <li><b>출발 2분 전쯤 (2차)</b>: 배당판을 다시 보고 바뀐 말만 고칩니다. 처음 넣은 값과 다르면 칸 아래에 '처음 ○○'이 보이고, 결론도 새 배당으로 다시 계산됩니다. 살 말의 배당이 '기준' 아래로 내려가면 사지 마세요.</li>
+          <li><b>사고 나서</b>: 맨 위 '산 대로 기록'을 누르면 산 배당과 함께 기록장에 담깁니다. 이 산 배당과 확정 배당의 차이가 '내 마권 분석'에 쌓여, 이 계획이 현장에서도 통하는지를 가장 빨리 알려 줍니다.</li>
+        </ol>
         <ul>
-          <li><b>우승 확률</b>: 오른쪽 칸에 배당판의 단승 배당을 넣으면 배당과 섞은 확률로 바뀝니다. '배당판 사진으로 읽기'는 예측 화면의 사진 읽기로 연결됩니다.</li>
-          <li><b>이 경주 베팅 계획</b>: 베팅 계획 화면과 같은 자금·운용 방식으로 만든 이 경주 몫입니다. 위 칸에 단승 배당을 모두 넣으면 살 말과 금액이 나오고, 배당이 '기준' 아래로 내려가면 사지 마세요. 앞 경주에 '산 대로 기록'한 금액은 남은 자금에서 뺍니다. 스위치로 이 경주를 계획에 넣거나 뺄 수 있습니다.</li>
-          <li><b>산 대로 기록</b>을 누르면 넘긴 마권을 뺀 나머지를 내 마권 기록장에 담습니다. 단승·연승은 경주가 끝나고 결과가 들어오면 바로 적중 여부와 환급이 나오고, 나머지 승식의 환급은 저녁에 확정 배당이 들어오면 나옵니다.</li>
-          <li>'화면 켜 두기'를 누르면 화면이 저절로 꺼지지 않습니다(지원하는 브라우저만).</li>
-          <li>기록이 쌓이면 기록장의 '내 마권 분석'에서 승식별 회수율, 계획대로 산 것과 직접 고른 것의 차이, 모델 확률로 본 기대 적중과 실제 적중(운이 좋았는지), 경주일마다 쌓인 손익을 볼 수 있습니다.</li>
+          <li>넣은 배당의 1/배당 합이 평소(1.2~1.3)와 크게 다르면 '잘못 넣은 칸이 없는지 확인하세요'라는 경고가 나옵니다.</li>
+          <li>'이 경주 베팅 계획' 칸에서 스위치로 이 경주를 계획에 넣거나 뺄 수 있습니다. 앞 경주에 '산 대로 기록'한 금액은 남은 자금에서 뺍니다.</li>
+          <li>단승·연승은 경주가 끝나고 결과가 들어오면 바로 적중 여부와 환급이 나오고, 나머지 승식의 환급은 저녁에 확정 배당이 들어오면 나옵니다.</li>
+          <li>'화면 켜 두기'를 누르면 화면이 저절로 꺼지지 않습니다(지원하는 브라우저만). '배당판 사진으로 읽기'는 예측 화면의 사진 읽기로 연결됩니다.</li>
+          <li>기록이 쌓이면 '내 마권 분석'에서 산 배당과 확정 배당의 차이, 승식별 회수율, 계획대로 산 것·직접 켠 경주·직접 고른 것의 차이, 경주일마다 쌓인 손익을 볼 수 있습니다.</li>
         </ul>
       </section>
       <section id="prob" aria-labelledby="probH">
@@ -145,12 +152,14 @@
 
       <section id="limits" aria-labelledby="limH">
         <h2 id="limH">한계와 주의</h2>
-        <p class="callout">2009~2026년 확정배당 백테스트에서 꾸준히 100%를 넘긴 승식이나 구입 방법은 없었습니다. 지난 1년 동안 모델 1순위의 우승 비율은 약 32%로, 인기마(약 39%)보다 낮았습니다. 이 사이트는 경주를 이해하기 위한 도구이며 수익을 보장하지 않습니다.</p>
+        <p class="callout">모델 확률만으로는 시장(배당)보다 약했고, 지난 1년 모델 1순위의 우승 비율은 약 32%로 인기마(약 39%)보다 낮았습니다. 배당을 함께 넣은 베팅 계획은 과거 검증에서 100%를 넘었지만, 마감 후 확정 배당으로 계산했고 같은 자료를 보며 기준을 정했기 때문에 실제보다 좋게 나왔을 가능성이 큽니다. 실제로 통하는지는 실전 기록이 몇 달 쌓여야 알 수 있습니다. 이 사이트는 수익을 보장하지 않습니다.</p>
         <ul>
           <li>경주 전 실시간 배당은 공공데이터로 받을 수 없어 직접 넣어야 합니다. 끝난 경주의 배당 칸에는 마감 후 확정 배당이 들어가므로 실제 산 시점의 배당과 다릅니다.</li>
           <li>모델 학습에 들어간 기간의 경주는 확률이 실제보다 잘 맞아 보입니다. 그런 날은 예측 화면에 안내가 나옵니다.</li>
           <li>진료·조교·장구 같은 참고 정보는 검증에서 예측을 나아지게 하지 않아 확률에는 넣지 않았습니다.</li>
           <li>마권 기록은 쓰는 기기의 브라우저에만 저장됩니다. 다른 기기로 옮기려면 기록장에서 파일로 내보내세요.</li>
+          <li>경주가 있는 날에는 베팅 계획의 '오늘 쓸 자금'을 그날 처음 정한 금액보다 올릴 수 없습니다. 올린 값은 다음 경주일부터 적용됩니다. 잃은 돈을 되찾으려고 더 사게 되는 것을 막기 위한 장치입니다.</li>
+          <li>경마 때문에 생활이 힘들거나 그만두기 어렵다면 한국도박문제예방치유원 상담전화 <b>1336</b>(24시간, 무료)에 연락할 수 있습니다.</li>
         </ul>
       </section>
     </div>
