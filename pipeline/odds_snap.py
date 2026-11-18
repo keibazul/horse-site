@@ -4,6 +4,7 @@
       아니면 한 번 정해지는 초기 값인지(그러면 초기 배당 → 확정 배당 변화가 예측에 도움이 되는지 나중에 검증).
 저장: 처음 본 값과 그 뒤 바뀐 값만 한 줄씩 (t, rcNo, chulNo, odds). 실행마다 work/odds_snap/날짜.log 에 (t, 받은 행 수, 바뀐 행 수).
 사이트에는 쓰지 않음. 사용: python pipeline/odds_snap.py [--date 20261114]
+2026-11-18: run_all 에서 뺌 (11/14·15 확인: 경주 전에는 값이 안 바뀌고 경주 뒤에 확정 배당으로 바뀜 = 실시간 아님).
 """
 from __future__ import annotations
 
