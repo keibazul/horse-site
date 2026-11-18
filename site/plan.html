@@ -211,6 +211,7 @@ const MODE_HINT = {safe: "켈리 비율의 1/8. 과거 검증에서 자금 10만
 let S = Object.assign({bank: 100000, mode: "normal"}, store.get("plan:settings") || {});
 let INDEX = null, DAY = null, ENT = null, PRED = null, PAST = false, BIAS = null, MKX = null, MKT = null, PP = null, USE = {};   // PP: 11/14 전 지난 경주일의 연도별 표본외 확률   // USE: {경주: true 넣음 | false 뺌} — 없으면 자동
 const mktReady = MktModel.load().then(m => { MKT = m; return m; });
+let PPSUM = null; const ppReady = get("data/plan_past/summary.json").then(x => PPSUM = x);   // 지난 1년 연습 보기 모아 보기
 
 function saveS(){ store.set("plan:settings", S); }
 function renderSetup(){
@@ -254,7 +255,7 @@ async function openDay(d){
   PAST = !!DAY.past;
   USE = store.get(`plan:use:${d}`) || {};
   [ENT, PRED, BIAS, MKX, PP] = await Promise.all([get(`data/${DAY.entries}`), DAY.pred ? get(`data/${DAY.pred}`) : null, get(`data/bias/${d}.json`), DAY.mkx ? get(`data/mkx/${d}.json`) : null,
-    PAST && !DAY.mkx && DAY.pp ? get(`data/plan_past/${d}.json`) : null, mktReady]);
+    PAST && !DAY.mkx && DAY.pp ? get(`data/plan_past/${d}.json`) : null, mktReady, ppReady]);
   render();
 }
 
@@ -364,7 +365,9 @@ function render(){
   $("list").innerHTML = (ahead.map(card).join("") + (gone.length ? `<details class="gone"><summary>+ 출발한 경주 ${gone.length}개</summary>${gone.map(card).join("")}</details>` : "")) || `<p class="empty">출전표가 없습니다.</p>`;
   if (PAST){
     const sp = pl.races.reduce((a, x) => a + (x.spent || 0), 0), rt = pl.races.reduce((a, x) => a + (x.ret || 0), 0);
-    $("warnline").innerHTML = `<b>지난 경주일 연습 보기</b>: 확정 단승 배당을 넣었다고 보고 계산했습니다.${PP && !MKX ? " 이날은 지금 모델이 학습한 기간이라, 과거 검증과 같은 확률(그 전 해까지의 경주로만 학습한 모델, 당일 주로 보정 없음)을 썼습니다." : ""} 산 금액 <b>${won(sp)}</b>, 환급 <b>${won(rt)}</b>, 회수율 <b>${sp ? (rt / sp * 100).toFixed(0) + "%" : "-"}</b>. 하루 결과는 운의 영향이 매우 큽니다.`;
+    const T = PPSUM?.total, Td = PPSUM?.days?.find(x => x.d === DAY.date);
+    const all = T ? `<br><b>지난 1년 모아 보기</b>(자금 10만 원·보통, 이 화면과 같은 계산): ${T.days}일 중 산 날 <b>${T.betDays}일</b>, 그중 적중한 날 <b>${T.hitDays}일</b>, 마권 ${T.bets}장 중 적중 ${T.hits}장, 합계 <b>${won(T.spent)} → ${won(T.ret)}</b>(회수율 ${(T.ret / T.spent * 100).toFixed(0)}%). 이 계획은 마권의 약 15%만 맞고 대부분의 날은 0원이며, 가끔 맞는 높은 배당이 이익을 만듭니다. 제외 기준을 같은 기간 자료를 보고 정했으므로 실제보다 좋게 나온 숫자입니다.` : "";
+    $("warnline").innerHTML = `<b>지난 경주일 연습 보기</b>: 확정 단승 배당을 넣었다고 보고 계산했습니다.${PP && !MKX ? " 이날은 지금 모델이 학습한 기간이라, 과거 검증과 같은 확률(그 전 해까지의 경주로만 학습한 모델, 당일 주로 보정 없음)을 썼습니다." : ""} 산 금액 <b>${won(sp)}</b>, 환급 <b>${won(rt)}</b>, 회수율 <b>${sp ? (rt / sp * 100).toFixed(0) + "%" : "-"}</b>. 하루 결과는 운의 영향이 매우 큽니다.${all}`;
   }
 }
 
